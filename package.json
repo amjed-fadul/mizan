@@ -1,0 +1,14 @@
+{
+  "name": "mizan",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Mizan — a multi-product design system built to demonstrate a full design-system operating model.",
+  "workspaces": [
+    "legacy",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=22"
+  }
+}
