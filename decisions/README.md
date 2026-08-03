@@ -31,3 +31,7 @@ Entries are numbered sequentially in the order decisions actually happen. Number
 | [004](./004-generate-v0-rather-than-fork.md) | v0 is generated, not forked from an existing open-source product | 0 |
 | [005](./005-two-products-not-one.md) | The sandbox is two products, and specifically these two | 0 |
 | [006](./006-agents-are-consumers-of-the-contribution-flow.md) | Agents are consumers of the system, not contributors to it | 1 |
+| [007](./007-modes-for-shared-namespaces-for-unique.md) | Modes for what both products have, namespaces for what only one has | 2 |
+| [008](./008-the-colour-consolidation.md) | Thirty-three colours walked in — the merges, and the three refusals | 2 |
+| [009](./009-the-text-ramp-loses-a-tier.md) | The neutral text ramp has two tiers, not three | 2 |
+| [010](./010-contrast-is-a-token-layer-guarantee.md) | Contrast is guaranteed at the token layer and enforced by a build gate | 2 |
