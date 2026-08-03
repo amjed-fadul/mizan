@@ -1,0 +1,371 @@
+/* Mizan Move styles. Started from a copy of shared/styles.css. */
+
+:root {
+  --text-primary: #343434;
+  --text-secondary: #6b6b6b;
+  --text-muted: #9b9b9b;
+  --surface: #fafafa;
+  --line: #e0e0e0;
+  --accent: #1a6fb5;
+  --accent-dark: #14568c;
+
+  --eta: #1a6fb5;
+  --fare: #343434;
+  --surge: #d97706;
+  --safety: #b3261e;
+  --status-active: #1a6fb5;
+  --status-done: #4a7c59;
+
+  --gap-sm: 6px;
+  --gap-md: 10px;
+  --gap-lg: 20px;
+}
+
+/* ---------------------------------------------------------------
+   Ride options
+   --------------------------------------------------------------- */
+
+.mv-option-list {
+  padding-left: 0;
+  padding-right: 0;
+  margin-bottom: var(--gap-lg);
+  text-align: left;
+}
+
+.mv-card {
+  background-color: var(--white);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.16);
+  padding: 14px;
+  margin-bottom: var(--gap-md);
+  text-align: left;
+  cursor: pointer;
+}
+
+.mv-card:hover {
+  border-color: var(--gray-mid);
+}
+
+.mv-card--selected {
+  border: 2px solid var(--accent);
+  background-color: var(--surface);
+  padding: 13px;
+}
+
+.mv-card__top {
+  margin-bottom: var(--gap-sm);
+}
+
+.mv-card__vehicle {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: normal;
+  margin-right: var(--gap-sm);
+}
+
+.mv-card__type {
+  display: inline-block;
+  background-color: var(--surface);
+  color: var(--text-secondary);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  font-size: 11px;
+  padding: 2px 6px;
+  margin-right: var(--gap-sm);
+}
+
+.mv-card__row {
+  margin-top: var(--gap-sm);
+}
+
+.mv-card__eta {
+  color: var(--eta);
+  font-size: 14px;
+  font-weight: 600;
+  margin-right: var(--gap-md);
+}
+
+.mv-card__seats {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.mv-card__note {
+  color: var(--text-secondary);
+  font-size: 11px;
+  margin-top: 5px;
+}
+
+.mv-card__check {
+  float: right;
+  color: var(--accent);
+  font-size: 14px;
+  font-weight: 600;
+  margin-left: var(--gap-sm);
+}
+
+/* Copied over from the old shared card before the mv- pass. */
+.mv-chip {
+  display: inline-block;
+  background-color: var(--gray-light);
+  color: var(--gray-dark);
+  border-radius: 4px;
+  font-size: 12px;
+  padding: 4px 8px;
+  margin-right: 8px;
+}
+
+.mv-divider {
+  border-top: 1px solid var(--border);
+  margin-top: var(--gap-md);
+  margin-bottom: var(--gap-md);
+}
+
+/* ---------------------------------------------------------------
+   Fare
+   --------------------------------------------------------------- */
+
+.mv-fare {
+  display: inline-block;
+  letter-spacing: normal;
+}
+
+.mv-fare__amount {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--fare);
+  margin-right: var(--gap-sm);
+}
+
+.mv-fare__amount--estimate {
+  font-size: 14px;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.mv-fare__surcharge {
+  font-size: 11px;
+  color: var(--surge);
+  font-weight: 600;
+  margin-left: 5px;
+}
+
+.mv-fare__caption {
+  display: block;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+/* ---------------------------------------------------------------
+   Trip status
+   --------------------------------------------------------------- */
+
+.mv-trip {
+  display: block;
+  padding-top: var(--gap-sm);
+  padding-bottom: var(--gap-sm);
+  text-align: left;
+}
+
+.mv-trip__dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: var(--text-muted);
+  margin-right: var(--gap-sm);
+}
+
+.mv-trip__dot--searching {
+  background-color: var(--text-secondary);
+}
+
+.mv-trip__dot--driver-assigned {
+  background-color: var(--status-active);
+}
+
+.mv-trip__dot--arriving {
+  background-color: var(--status-active);
+}
+
+.mv-trip__dot--waiting {
+  background-color: var(--surge);
+}
+
+.mv-trip__dot--in-trip {
+  background-color: var(--status-active);
+}
+
+.mv-trip__dot--completed {
+  background-color: var(--status-done);
+}
+
+.mv-trip__dot--cancelled {
+  background-color: var(--safety);
+}
+
+.mv-trip__dot--unknown {
+  background-color: var(--gray-mid);
+}
+
+.mv-trip__label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.mv-trip__note {
+  display: block;
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+  padding-left: 16px;
+}
+
+/* ---------------------------------------------------------------
+   Booking actions
+   --------------------------------------------------------------- */
+
+.mv-action {
+  display: block;
+  width: 100%;
+  font-family: inherit;
+  font-size: 17px;
+  line-height: 1.5;
+  letter-spacing: 0.01em;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 14px 22px;
+  margin-bottom: var(--gap-md);
+  cursor: pointer;
+  text-align: center;
+}
+
+.mv-action:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.mv-action--confirm {
+  background-color: var(--accent);
+  color: var(--white);
+}
+
+.mv-action--confirm:hover:enabled {
+  background-color: var(--accent-dark);
+}
+
+.mv-action--cancel {
+  background-color: var(--white);
+  color: var(--safety);
+  border-color: var(--line);
+}
+
+.mv-action--cancel:hover:enabled {
+  background-color: var(--surface);
+}
+
+.mv-action--ghost {
+  background-color: transparent;
+  color: var(--accent);
+  border-color: transparent;
+  padding: 10px 22px;
+}
+
+.mv-action--ghost:hover:enabled {
+  background-color: var(--surface);
+}
+
+.mv-action--loading {
+  color: var(--white);
+  opacity: 0.8;
+  cursor: default;
+}
+
+.mv-action__spinner {
+  display: inline-block;
+  margin-right: 5px;
+  font-size: 14px;
+}
+
+/* ---------------------------------------------------------------
+   Map surface
+   --------------------------------------------------------------- */
+
+.mv-map {
+  position: relative;
+  width: 100%;
+  height: 260px;
+  background-color: #e8ebee;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  margin-bottom: var(--gap-lg);
+  overflow: hidden;
+}
+
+.mv-map__label {
+  position: absolute;
+  top: 120px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 14px;
+  letter-spacing: 0.01em;
+}
+
+.mv-map__pin {
+  position: absolute;
+  top: 90px;
+  left: 50%;
+  margin-left: -5px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: var(--accent);
+}
+
+.mv-map__badge {
+  position: absolute;
+  top: var(--gap-md);
+  left: var(--gap-md);
+  background-color: var(--white);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.16);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 8px;
+}
+
+.mv-map__recenter {
+  position: absolute;
+  top: var(--gap-md);
+  right: var(--gap-md);
+  background-color: var(--white);
+  color: var(--accent);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 11px;
+  padding: 5px 8px;
+  cursor: pointer;
+}
+
+.mv-map__footer {
+  position: absolute;
+  left: var(--gap-md);
+  right: var(--gap-md);
+  bottom: var(--gap-md);
+  background-color: var(--white);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.16);
+  padding: var(--gap-md);
+  text-align: left;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
