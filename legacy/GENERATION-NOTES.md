@@ -18,9 +18,9 @@ The test applied throughout: **every defect must be traceable to a plausible dec
 
 Mizan Labs built **Mizan Market** first. Eighteen months later a second team started **Mizan Move** and copied Market's stylesheet as a starting point — *before* Market's visual refresh. Neither team did anything unreasonable. Each solved its own problems, on its own deadlines, without a shared owner.
 
-## The three layers
+## The four layers
 
-v0 was built in three sequential passes, each committed separately, so the history reads as accretion rather than as a pile.
+v0 was built in four sequential passes, each committed separately, so the history reads as accretion rather than as a pile.
 
 ### Layer 1 — the ancestor (`src/shared/`)
 
@@ -48,6 +48,26 @@ Two years of shipping under deadline. A visual refresh midway introduced `--colo
 Move copied the ancestor pre-refresh, so it **never adopted Market's scheme and has never heard of it.** It kept some ancestor tokens verbatim and invented a third scheme (`--text-*`, `--gap-*`, `--mv-*`) for everything else, in ignorance of what Market was doing in parallel.
 
 Move is also a genuinely different product. Some of its divergence is **legitimate product difference**, not drift — and separating the two is the audit's hardest job.
+
+### Layer 4 — the crunch (the five screens)
+
+A launch date moved up. One person spent two weeks touching whatever was in front of them, shipping fixes that worked. Not incompetent — *rushed*. Every change is the fastest thing that works, made by someone who knew better and had no time.
+
+This layer landed unevenly across the screens, the way real crunch lands wherever the bugs were. Category and product detail were hit hardest; booking barely at all.
+
+| Planted | The implied reason |
+|---|---|
+| Raw hex inline in `style={{}}` — `#2e2e2e`, `#767676`, `#eaeaea`, `#c0392b` | Someone needed a colour to look right and typed one. `#2e2e2e` is a **fourth** dark gray, bypassing all three token schemes. |
+| Magic numbers — `7px`, `13px`, `18px`, `22px`, `26px` | Fit none of the three spacing rhythms. Nudged until it looked right. |
+| Five `<div onClick>` used as buttons | Faster than restyling a real button. No `role`, no `tabIndex`, no keyboard handling. |
+| Three `<button className="btn btn-cta">` | Markup copied from somewhere; the styles never came with it. `btn-cta` exists in no stylesheet, so these render unstyled. |
+| Inline styles contradicting their own class | `.mk-card` with `style={{ borderRadius: '4px', padding: '13px' }}` — the class was close, the override was quicker than a new one. |
+| A JSX block copied between screens with a small edit | Reuse would have meant refactoring the component. |
+| Five abandoned TODOs | `// FIXME: hardcoded, move to config`, `// don't touch, breaks the layout`, and similar. They meant to come back. |
+
+One visual defect emerged from this layer that was not specified: the quick-view overlay collides with the image placeholder text on the category screen. It was kept — an overlay landing on top of existing content is exactly what a rushed absolute-position fix produces, and it is a legitimate audit finding.
+
+**Everything still works.** This is code that shipped. Every screen renders, every link navigates, the cart stepper, ride selection and trip status all respond. It is ugly, not broken — which is the harder and more realistic thing to be.
 
 ---
 

@@ -78,7 +78,9 @@ export default function BookingScreen() {
         <span className="mv-field__value">{DROPOFF}</span>
       </div>
 
-      <div className="mv-section-title">Choose a ride</div>
+      <div className="mv-section-title" style={{ fontSize: '18px', marginBottom: '7px' }}>
+        Choose a ride
+      </div>
 
       <div className="mv-option-list">
         {RIDE_OPTIONS.map(function (option) {
@@ -105,7 +107,19 @@ export default function BookingScreen() {
         </div>
         <div className="mv-summary__row">
           <span className="mv-summary__label">Payment</span>
-          <span>Visa ending 4412</span>
+          <span style={{ color: '#2e2e2e' }}>Visa ending 4412</span>
+          <div
+            onClick={() => setSelectedId('economy')}
+            style={{
+              display: 'inline-block',
+              fontSize: '13px',
+              color: '#767676',
+              marginLeft: '13px',
+              cursor: 'pointer'
+            }}
+          >
+            Reset
+          </div>
         </div>
         <div className="mv-summary__row">
           <span className="mv-summary__label">Estimated fare</span>
@@ -124,6 +138,9 @@ export default function BookingScreen() {
       <PrimaryButton variant="secondary" size="md">
         Schedule for Later
       </PrimaryButton>
+      <div style={{ marginTop: '26px', fontSize: '13px', color: '#767676' }}>
+        Fares are estimates and may change with traffic.
+      </div>
     </div>
   )
 }

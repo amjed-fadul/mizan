@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import '../market.css'
 import Button from '../../shared/Button'
@@ -96,8 +97,19 @@ var STOCK_TEXT = {
   'out-of-stock': 'Out of stock'
 }
 
+// FIXME: hardcoded, move to config
+var FILTERS = [
+  'All',
+  'Dairy & Eggs',
+  'Bakery',
+  'Pantry',
+  'Beverages',
+  'Electronics'
+]
+
 export default function CategoryScreen() {
   var navigate = useNavigate()
+  var [activeFilter, setActiveFilter] = useState('All')
 
   return (
     <div className="container">
@@ -108,22 +120,39 @@ export default function CategoryScreen() {
 
       <div className="category-header">
         <h1>Grocery &amp; Everyday</h1>
-        <p className="muted">Delivered across Dubai and Sharjah, seven days a week.</p>
+        <p className="muted" style={{ color: '#767676', fontSize: '13px' }}>
+          Delivered across Dubai and Sharjah, seven days a week.
+        </p>
       </div>
 
-      <div className="card category-filters">
-        <span className="badge">All</span>
-        <span className="badge">Dairy &amp; Eggs</span>
-        <span className="badge">Bakery</span>
-        <span className="badge">Pantry</span>
-        <span className="badge">Beverages</span>
-        <span className="badge">Electronics</span>
+      <div className="card category-filters" style={{ padding: '13px' }}>
+        {FILTERS.map(function (label) {
+          return (
+            <div
+              key={label}
+              className="badge"
+              onClick={() => setActiveFilter(label)}
+              style={{
+                backgroundColor: label === activeFilter ? '#eaeaea' : '#ffffff',
+                color: label === activeFilter ? '#2e2e2e' : '#767676',
+                border: '1px solid #eaeaea',
+                padding: '7px 13px',
+                cursor: 'pointer'
+              }}
+            >
+              {label}
+            </div>
+          )
+        })}
         <div className="product-card-actions">
           <Button type="secondary">Sort by Price</Button>
           <Button type="secondary">Filter</Button>
           <PrimaryButton size="sm" onClick={() => navigate('/market/cart')}>
             View Cart (4)
           </PrimaryButton>
+          <button className="btn btn-cta" onClick={() => navigate('/market/cart')}>
+            Add All to Cart
+          </button>
         </div>
       </div>
 
@@ -142,10 +171,30 @@ export default function CategoryScreen() {
           return (
             <div className="product-grid-item" key={product.id}>
               <div className="product-card">
-                <div className="product-card-image">IMG</div>
+                <div className="product-card-image" style={{ position: 'relative' }}>
+                  IMG
+                  <div
+                    onClick={() => navigate('/market/product/' + product.id)}
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '96px',
+                      lineHeight: '96px',
+                      fontSize: '13px',
+                      color: '#767676',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Quick view
+                  </div>
+                </div>
                 <div className="product-card-body">
                   {product.wasPrice ? (
-                    <span className="product-discount">{'-' + percentOff + '%'}</span>
+                    <span className="product-discount" style={{ color: '#c0392b', fontSize: '13px' }}>
+                      {'-' + percentOff + '%'}
+                    </span>
                   ) : null}
                   <div className="product-card-title">
                     <Link to={'/market/product/' + product.id}>
@@ -161,8 +210,12 @@ export default function CategoryScreen() {
                   <div className="product-card-unit">
                     {'AED ' + product.unit.toFixed(2) + ' per ' + product.unitLabel}
                   </div>
-                  <div className="product-card-meta">{stockText}</div>
-                  <div className="delivery-note">{'Get it ' + product.delivery}</div>
+                  <div className="product-card-meta" style={{ color: '#2e2e2e' }}>
+                    {stockText}
+                  </div>
+                  <div className="delivery-note" style={{ marginTop: '7px', fontSize: '13px' }}>
+                    {'Get it ' + product.delivery}
+                  </div>
                   <div className="product-card-actions">
                     <Button disabled={product.stock === 'out-of-stock'}>Add to Cart</Button>
                   </div>

@@ -123,18 +123,76 @@ export default function ProductDetailScreen() {
         <Link to="/market/cart">Cart</Link> | <Link to="/move">Mizan Move</Link>
       </div>
 
+      {/* copied from CategoryScreen, refactor later */}
+      <div className="card category-filters" style={{ padding: '13px' }}>
+        <div
+          className="badge"
+          style={{
+            backgroundColor: '#eaeaea',
+            color: '#2e2e2e',
+            border: '1px solid #eaeaea',
+            padding: '7px 13px',
+            cursor: 'pointer'
+          }}
+        >
+          All
+        </div>
+        <div
+          className="badge"
+          style={{
+            backgroundColor: '#ffffff',
+            color: '#767676',
+            border: '1px solid #eaeaea',
+            padding: '7px 13px',
+            cursor: 'pointer'
+          }}
+        >
+          Dairy &amp; Eggs
+        </div>
+        <div
+          className="badge"
+          style={{
+            backgroundColor: '#ffffff',
+            color: '#767676',
+            border: '1px solid #eaeaea',
+            padding: '7px 13px',
+            cursor: 'pointer'
+          }}
+        >
+          Pantry
+        </div>
+        <div
+          className="badge"
+          style={{
+            backgroundColor: '#ffffff',
+            color: '#767676',
+            border: '1px solid #eaeaea',
+            padding: '7px 13px',
+            cursor: 'pointer'
+          }}
+        >
+          Beverages
+        </div>
+      </div>
+
       <div className="product-detail">
         <div className="product-detail-media">
           <div className="mk-card__media">Image</div>
         </div>
 
         <div className="product-detail-info">
-          <div className="product-detail-title">{product.name + ' - ' + product.size}</div>
-          <div className="product-card-meta">{'Brand: ' + product.brand}</div>
+          <div className="product-detail-title" style={{ fontSize: '22px' }}>
+            {product.name + ' - ' + product.size}
+          </div>
+          <div className="product-card-meta" style={{ color: '#767676' }}>
+            {'Brand: ' + product.brand}
+          </div>
 
           {product.wasPrice ? (
             <div className="product-card-row">
-              <span className="mk-badge-discount">{'Save ' + percentOff + '%'}</span>
+              <span className="mk-badge-discount" style={{ backgroundColor: '#c0392b' }}>
+                {'Save ' + percentOff + '%'}
+              </span>
             </div>
           ) : null}
 
@@ -158,20 +216,29 @@ export default function ProductDetailScreen() {
             <Button type="secondary" onClick={() => navigate('/market')}>
               Back to Grocery
             </Button>
+            <button className="btn btn-cta" onClick={() => navigate('/market/cart')}>
+              Buy Now
+            </button>
           </div>
         </div>
       </div>
 
-      <div className="mk-card product-detail-section">
-        <h3>Product Details</h3>
-        <p>{product.description}</p>
+      <div
+        className="mk-card product-detail-section"
+        style={{ borderRadius: '4px', padding: '13px' }}
+      >
+        <h3 style={{ fontSize: '18px', marginBottom: '7px' }}>Product Details</h3>
+        <p style={{ color: '#2e2e2e' }}>{product.description}</p>
         <div className="product-detail-spec">{'Size: ' + product.size}</div>
         <div className="product-detail-spec">{'Country of origin: ' + product.origin}</div>
-        <div className="product-detail-spec">{'SKU: ' + product.sku}</div>
+        <div className="product-detail-spec" style={{ color: '#767676' }}>
+          {'SKU: ' + product.sku}
+        </div>
       </div>
 
+      {/* temporary - use the real component once design signs off */}
       <div className="product-detail-section">
-        <h2>Customers Also Bought</h2>
+        <h2 style={{ fontSize: '22px', marginBottom: '18px' }}>Customers Also Bought</h2>
         <div className="product-grid">
           <div className="product-grid-item">
             <div className="product-card">

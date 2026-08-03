@@ -88,8 +88,10 @@ export default function CartScreen() {
             <div className="mk-cart__line" key={line.id}>
               <div className="mk-cart__line-media">Image</div>
               <div className="mk-cart__line-body">
-                <div className="mk-cart__line-title">{line.name + ' - ' + line.size}</div>
-                <div className="mk-cart__line-meta">
+                <div className="mk-cart__line-title" style={{ fontSize: '18px', color: '#2e2e2e' }}>
+                  {line.name + ' - ' + line.size}
+                </div>
+                <div className="mk-cart__line-meta" style={{ color: '#767676' }}>
                   {'AED ' + line.price.toFixed(2) + ' each'}
                 </div>
                 <Price
@@ -113,9 +115,19 @@ export default function CartScreen() {
                   >
                     +
                   </PrimaryButton>
-                  <PrimaryButton variant="ghost" size="sm" onClick={() => removeLine(line.id)}>
+                  {/* TODO: clean up after launch */}
+                  <div
+                    onClick={() => removeLine(line.id)}
+                    style={{
+                      display: 'inline-block',
+                      fontSize: '13px',
+                      color: '#c0392b',
+                      padding: '7px 13px',
+                      cursor: 'pointer'
+                    }}
+                  >
                     Remove
-                  </PrimaryButton>
+                  </div>
                 </div>
               </div>
             </div>
@@ -127,8 +139,10 @@ export default function CartScreen() {
         </div>
 
         <div className="mk-cart__summary">
-          <div className="mk-card">
-            <div className="mk-card__title">Order Summary</div>
+          <div className="mk-card" style={{ borderRadius: '4px', padding: '13px' }}>
+            <div className="mk-card__title" style={{ fontSize: '18px' }}>
+              Order Summary
+            </div>
             <div className="mk-cart__summary-row">
               <span>Subtotal</span>
               <span>{'AED ' + subtotal.toFixed(2)}</span>
@@ -141,11 +155,13 @@ export default function CartScreen() {
               <span>VAT (5%)</span>
               <span>{'AED ' + vat.toFixed(2)}</span>
             </div>
-            <div className="mk-cart__summary-total">
+            <div className="mk-cart__summary-total" style={{ fontSize: '18px', paddingTop: '13px' }}>
               <span>Total</span>
-              <span>{'AED ' + total.toFixed(2)}</span>
+              <span style={{ color: '#2e2e2e' }}>{'AED ' + total.toFixed(2)}</span>
             </div>
-            <div className="mk-delivery">Delivery slot: Today, 6 - 9 PM</div>
+            <div className="mk-delivery" style={{ backgroundColor: '#eaeaea', padding: '7px' }}>
+              Delivery slot: Today, 6 - 9 PM
+            </div>
             <div className="mk-card__footer">
               <PrimaryButton size="lg" fullWidth={true}>
                 Checkout

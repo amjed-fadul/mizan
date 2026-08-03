@@ -39,7 +39,8 @@ export default function TripScreen() {
 
       <MapPlaceholder pickup={TRIP.pickup} dropoff={TRIP.dropoff} etaMinutes={TRIP.etaMinutes} />
 
-      <div className="mv-panel">
+      {/* don't touch, breaks the layout */}
+      <div className="mv-panel" style={{ padding: '22px', borderRadius: '4px' }}>
         <TripStatus
           status={status}
           driverName={DRIVER.name}
@@ -49,31 +50,54 @@ export default function TripScreen() {
         <div className="mv-divider"></div>
 
         <div className="mv-driver">
-          <span className="mv-driver__avatar">{DRIVER.initials}</span>
+          <span className="mv-driver__avatar" style={{ backgroundColor: '#eaeaea', color: '#2e2e2e' }}>
+            {DRIVER.initials}
+          </span>
           <span className="mv-driver__body">
-            <span className="mv-driver__name">{DRIVER.name}</span>
+            <span className="mv-driver__name" style={{ fontSize: '18px' }}>
+              {DRIVER.name}
+            </span>
             <div className="mv-driver__vehicle">{DRIVER.vehicle}</div>
             <span className="mv-driver__plate">{DRIVER.plate}</span>
-            <span className="mv-chip">{DRIVER.rating + ' rating'}</span>
+            <span className="mv-chip" style={{ marginLeft: '7px' }}>
+              {DRIVER.rating + ' rating'}
+            </span>
+            <button className="btn btn-cta" onClick={() => setStatus('arriving')}>
+              Call Driver
+            </button>
           </span>
         </div>
 
         <div className="mv-trip-line">{'Pickup: ' + TRIP.pickup}</div>
         <div className="mv-trip-line">{'Dropoff: ' + TRIP.dropoff}</div>
-        <div className="mv-trip-line">{'Distance: ' + TRIP.distanceKm + ' km'}</div>
+        <div className="mv-trip-line" style={{ color: '#767676', fontSize: '13px' }}>
+          {'Distance: ' + TRIP.distanceKm + ' km'}
+        </div>
 
         <div className="mv-card__row">
           <Fare amount={TRIP.fare} surcharge={TRIP.surcharge} caption="Charged to Visa ending 4412 at the end of the trip" />
         </div>
       </div>
 
-      <div className="mv-trip-actions">
+      <div className="mv-trip-actions" style={{ marginTop: '26px' }}>
         <ActionButton onClick={() => setStatus('completed')}>Complete Trip</ActionButton>
         <ActionButton kind="ghost">Share Trip Status</ActionButton>
         <ActionButton kind="cancel" onClick={() => navigate('/move')}>
           Cancel Trip
         </ActionButton>
         <Button type="secondary">Contact Support</Button>
+        <div
+          onClick={() => setStatus('waiting')}
+          style={{
+            display: 'inline-block',
+            fontSize: '13px',
+            color: '#c0392b',
+            padding: '7px 13px',
+            cursor: 'pointer'
+          }}
+        >
+          Report an issue
+        </div>
       </div>
     </div>
   )
