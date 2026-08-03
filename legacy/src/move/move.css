@@ -369,3 +369,121 @@
   font-size: 14px;
   color: var(--text-secondary);
 }
+
+/* ---------------------------------------------------------------
+   Screen layout — booking and trip
+   --------------------------------------------------------------- */
+
+.mv-screen-nav {
+  font-size: 14px;
+  margin-bottom: var(--gap-lg);
+}
+
+.mv-section-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--gap-md);
+  text-align: left;
+}
+
+.mv-field {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: var(--gap-md);
+  margin-bottom: var(--gap-md);
+  text-align: left;
+}
+
+.mv-field__label {
+  display: block;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+
+.mv-field__value {
+  font-size: 15px;
+  color: var(--text-primary);
+}
+
+.mv-summary {
+  border-top: 1px solid var(--line);
+  padding-top: var(--gap-md);
+  margin-bottom: var(--gap-lg);
+  text-align: left;
+}
+
+.mv-summary__row {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: var(--gap-sm);
+}
+
+.mv-summary__label {
+  margin-right: var(--gap-sm);
+}
+
+.mv-panel {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px;
+  margin-bottom: var(--gap-lg);
+  text-align: left;
+}
+
+.mv-driver {
+  margin-bottom: var(--gap-md);
+}
+
+.mv-driver__avatar {
+  display: inline-block;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background-color: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  line-height: 44px;
+  margin-right: var(--gap-md);
+}
+
+.mv-driver__body {
+  display: inline-block;
+  vertical-align: top;
+}
+
+.mv-driver__name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.mv-driver__vehicle {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.mv-driver__plate {
+  display: inline-block;
+  background-color: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 6px;
+  margin-top: 4px;
+}
+
+.mv-trip-line {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: var(--gap-sm);
+}
+
+.mv-trip-actions {
+  margin-top: var(--gap-lg);
+}
