@@ -1,0 +1,382 @@
+/* Mizan Market styles. Loaded after shared/styles.css. */
+
+:root {
+  --color-neutral-900: #2f2f2f;
+  --color-neutral-700: #5a5a5a;
+  --color-neutral-500: #8e8e8e;
+  --color-neutral-100: #f2f2f2;
+  --color-border: #dcdcdc;
+  --color-brand-500: #2f8560;
+  --color-brand-600: #256b4d;
+
+  --price-current: #2f2f2f;
+  --price-was: #8e8e8e;
+  --discount: #c62828;
+  --stock-ok: #2f8560;
+  --stock-low: #e08a00;
+  --stock-out: #b0b0b0;
+
+  --space-1: 8px;
+  --space-2: 16px;
+  --space-3: 24px;
+  --space-4: 32px;
+}
+
+/* ---------------------------------------------------------------
+   Product listing
+   --------------------------------------------------------------- */
+
+.product-grid {
+  display: flex;
+  flex-wrap: wrap;
+  margin-left: -8px;
+  margin-right: -8px;
+}
+
+.product-grid > * {
+  padding-left: 8px;
+  padding-right: 8px;
+  margin-bottom: 16px;
+}
+
+.product-card {
+  background-color: var(--white);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  padding: 12px;
+  text-align: left;
+}
+
+.product-card:hover {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.product-card-image {
+  width: 100%;
+  height: 96px;
+  background-color: var(--color-neutral-100);
+  border-radius: 4px;
+  margin-bottom: 12px;
+  color: var(--color-neutral-500);
+  font-size: 13px;
+  text-align: center;
+  line-height: 96px;
+}
+
+.product-card-body {
+  padding-top: 4px;
+}
+
+.product-card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-neutral-900);
+  margin-bottom: 4px;
+}
+
+.product-card-meta {
+  font-size: 13px;
+  color: var(--color-neutral-700);
+  margin-top: 8px;
+}
+
+.product-card-row {
+  margin-top: 8px;
+}
+
+.product-price {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--price-current);
+  margin-right: 8px;
+}
+
+.product-price-was {
+  font-size: 13px;
+  color: var(--gray-mid);
+  text-decoration: line-through;
+  margin-right: 4px;
+}
+
+.product-discount {
+  display: inline-block;
+  background-color: var(--discount);
+  color: var(--white);
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 8px;
+  margin-right: 8px;
+  margin-bottom: 4px;
+}
+
+.delivery-note {
+  font-size: 13px;
+  color: var(--color-neutral-700);
+  margin-top: 4px;
+}
+
+.product-card-promo {
+  background-color: var(--white);
+  border: 1px solid var(--color-border);
+  border-top: 3px solid var(--discount);
+  border-radius: 6px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  padding: var(--space-2);
+  text-align: left;
+}
+
+.product-card-promo-ribbon {
+  margin-bottom: 8px;
+}
+
+.product-card-promo-note {
+  font-size: 13px;
+  color: var(--discount);
+  font-weight: 600;
+  margin-top: 12px;
+}
+
+/* Market button. Shared .btn has no sizes and no icon slot. */
+
+.market-btn {
+  display: inline-block;
+  font-family: inherit;
+  font-size: 14px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 8px 16px;
+  margin-right: 8px;
+  cursor: pointer;
+  text-align: center;
+}
+
+.market-btn-primary {
+  background-color: var(--color-brand-500);
+  color: var(--white);
+}
+
+/* ---------------------------------------------------------------
+   Refresh — mk- naming
+   --------------------------------------------------------------- */
+
+.mk-grid {
+  display: flex;
+  flex-wrap: wrap;
+  margin-left: calc(var(--space-1) * -1);
+  margin-right: calc(var(--space-1) * -1);
+}
+
+.mk-grid > * {
+  padding-left: var(--space-1);
+  padding-right: var(--space-1);
+  margin-bottom: var(--space-2);
+}
+
+.mk-card {
+  background-color: var(--white);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  padding: var(--space-2);
+  text-align: left;
+}
+
+.mk-card:hover {
+  border-color: var(--color-neutral-500);
+}
+
+.mk-card__media {
+  width: 100%;
+  height: 160px;
+  background-color: var(--color-neutral-100);
+  border-radius: 6px;
+  margin-bottom: var(--space-2);
+  color: var(--color-neutral-500);
+  font-size: 13px;
+  text-align: center;
+  line-height: 160px;
+}
+
+.mk-card__media-img {
+  width: 100%;
+  height: 160px;
+  object-fit: cover;
+  border-radius: 6px;
+  margin-bottom: var(--space-2);
+  display: block;
+}
+
+.mk-card__body {
+  padding-top: 4px;
+}
+
+.mk-card__title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-neutral-900);
+  margin-bottom: var(--space-1);
+}
+
+.mk-card__meta {
+  font-size: 13px;
+  color: var(--color-neutral-700);
+  margin-top: var(--space-1);
+}
+
+.mk-card__row {
+  margin-top: var(--space-1);
+}
+
+.mk-card__footer {
+  margin-top: var(--space-2);
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border);
+}
+
+.mk-price {
+  display: inline-block;
+  margin-right: var(--space-1);
+}
+
+.mk-price__current {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--price-current);
+  margin-right: var(--space-1);
+}
+
+.mk-price__was {
+  font-size: 13px;
+  color: var(--color-neutral-500);
+  text-decoration: line-through;
+  margin-right: 4px;
+}
+
+.mk-price__off {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--discount);
+}
+
+.mk-price--sm .mk-price__current {
+  font-size: 15px;
+}
+
+.mk-price--sm .mk-price__was {
+  font-size: 12px;
+}
+
+.mk-badge-discount {
+  display: inline-block;
+  background-color: var(--discount);
+  color: var(--white);
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 8px;
+  margin-right: var(--space-1);
+}
+
+.mk-stock {
+  display: inline-block;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background-color: var(--color-neutral-100);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 4px 12px;
+  margin-right: var(--space-1);
+}
+
+.mk-delivery {
+  font-size: 13px;
+  color: var(--color-neutral-700);
+  margin-top: 4px;
+}
+
+.mk-btn {
+  display: inline-block;
+  font-family: inherit;
+  font-size: 15px;
+  line-height: 1.5;
+  letter-spacing: 0.01em;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 10px 18px;
+  margin-right: var(--space-1);
+  cursor: pointer;
+  text-align: center;
+}
+
+.mk-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.mk-btn--primary {
+  background-color: var(--color-brand-500);
+  color: var(--white);
+}
+
+.mk-btn--primary:hover:enabled {
+  background-color: var(--color-brand-600);
+}
+
+.mk-btn--secondary {
+  background-color: var(--white);
+  color: var(--color-neutral-900);
+  border-color: var(--color-border);
+}
+
+.mk-btn--secondary:hover:enabled {
+  background-color: var(--color-neutral-100);
+}
+
+.mk-btn--ghost {
+  background-color: transparent;
+  color: var(--color-brand-600);
+}
+
+.mk-btn--ghost:hover:enabled {
+  background-color: var(--color-neutral-100);
+}
+
+.mk-btn--sm {
+  font-size: 13px;
+  padding: 6px 12px;
+  border-radius: 4px;
+}
+
+.mk-btn--md {
+  font-size: 15px;
+  padding: 10px 18px;
+}
+
+.mk-btn--lg {
+  font-size: 16px;
+  padding: 14px 24px;
+}
+
+.mk-btn--block {
+  display: block;
+  width: 100%;
+  margin-right: 0;
+  margin-bottom: var(--space-1);
+}
+
+.mk-btn__icon {
+  display: inline-block;
+  margin-right: 6px;
+}
+
+.mk-btn--lg .mk-btn__icon {
+  margin-right: var(--space-1);
+}
+
+/* Promo cards came back too tight after the refresh. */
+.mk-card--promo .mk-card__title {
+  font-size: 18px;
+  margin-bottom: 12px;
+}
