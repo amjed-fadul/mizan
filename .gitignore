@@ -1,0 +1,26 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+build/
+.vite/
+
+# environment
+.env
+.env.*
+!.env.example
+
+# os
+.DS_Store
+
+# editor
+.vscode/
+.idea/
+
+# logs
+*.log
+npm-debug.log*
+
+# unrelated local assets — not part of Mizan
+BlaBlaCar ios May 2026/
