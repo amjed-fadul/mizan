@@ -30,3 +30,4 @@ Entries are numbered sequentially in the order decisions actually happen. Number
 | [003](./003-build-the-mess-first.md) | The legacy system is built before the real one, and quarantined | 0 |
 | [004](./004-generate-v0-rather-than-fork.md) | v0 is generated, not forked from an existing open-source product | 0 |
 | [005](./005-two-products-not-one.md) | The sandbox is two products, and specifically these two | 0 |
+| [006](./006-agents-are-consumers-of-the-contribution-flow.md) | Agents are consumers of the system, not contributors to it | 1 |

@@ -1,4 +1,4 @@
-# Mizan (ميزان) — The Builder's Roadmap · v1
+# Mizan (ميزان) — The Builder's Roadmap · v1.1
 ### A complete design-system operating model — built solo with Claude Code, shipped in public
 
 **Built for:** Amjed — UX/Product/Visual Designer, 2 years design systems at Bayzat
@@ -57,7 +57,7 @@ These two were chosen *because* they force real shared-versus-specific decisions
               ▼                 ▼                 ▼
       Style Dictionary    Mizan Sync plugin   Agent knowledge
       → CSS variables     → Figma variables   (DESIGN.md, guides,
-      → iOS/Android         & modes            component metadata)
+      → iOS/Android         & modes            component contracts)
         outputs (demo)          │                 │
               ▼                 ▼                 ▼
          Components        Figma library      Kit · Banna · Rassam · Raqib
@@ -114,6 +114,28 @@ Refusals are gold. Good design system designers are component *refusal* machines
 
 ---
 
+## The rule book — how governance rules are structured
+
+Rules are small, scoped, indexed files — never one giant rules document. Four tiers, from broadest to narrowest:
+
+```
+principles/   PRN-*   apply everywhere ("semantic tokens only", "respect RTL directionality")
+components/   BTN-*   live inside each component's contract ("one primary button per action group")
+patterns/     PAT-*   single-page compositions ("price hierarchy beats image dominance in ProductCard")
+journeys/     JRN-*   multi-step flows — generic rules, plus ONE named journey per product:
+              CHK-*   Market checkout    BOOK-*   Move ride booking
+```
+
+- **Stable IDs, never reused.** A retired rule's number is retired forever. Raqib says "CHK-003 violated," not "the checkout doesn't follow the rules" — traceable, versionable, citable.
+- **Every rule carries a `rationale` line** — the *why* ("the final action represents commitment to the purchase"). A rule without rationale is a convention the agent enforces; a rule with rationale is intent the agent can reason with in cases you didn't anticipate. This is the Mizan philosophy in one field.
+- **Severity per rule:** error / warning / info.
+- **Specific beats general:** a named journey's rule (CHK-1) refines and suppresses the generic one (JRN-1) when both apply. Reports show the suppression.
+- **An index file** lets agents load only the rules relevant to the task — never all of them.
+- **The same rules are checked against Figma designs AND coded prototypes**, flagging the same violations in both. The intent lives above the tools.
+- **Humans approve every rule.** AI may help encode; only you enact. (Rules that judge agent output must not be authored by agents — see rule 6.)
+
+---
+
 ## Working solo with Claude Code — the operating discipline
 
 - **`CLAUDE.md` in the repo from day one** — the project, the rules above, where things live. You're building a system that teaches AI rules; start by teaching AI your repo.
@@ -122,6 +144,7 @@ Refusals are gold. Good design system designers are component *refusal* machines
 - **Review outcomes, not code.** Run it, look at it, flip it to RTL, break it on purpose. Judge by behavior; the governance scripts read the code so you don't have to.
 - **Stuck 30 minutes = stop.** Fresh session, describe from zero.
 - **Feed the Decision Log** the moment a decision happens, not at week's end.
+- **New ideas enter Mizan through your own contribution flow.** Every article, video, or AI suggestion you find mid-build gets triaged like a component request: real problem? already covered? what capability does it prove? which stage does it belong to? Approved → one line in this doc + a Decision entry. Rejected → logged too. No idea gets to re-architect the project from a chat window.
 
 ---
 
@@ -182,7 +205,7 @@ Refusals are gold. Good design system designers are component *refusal* machines
 - **The Mizan Sync plugin:** Figma's REST write API for variables is Enterprise-only, but plugins write variables on any plan — yours reads the token JSON and generates the variables. From here, Figma and code update together from one source; nobody hand-edits either. (Tokens Studio is the fallback; the plugin is the better story.)
 - **4-mode matrix:** Light/Dark × LTR/RTL (Professional allows 10 modes; you need 4).
 - **Two products, one core:** Market and Move sharing primitives with different semantic layers. Multi-product architecture — what's shared, what isn't, and *why* (log it). The two hardest cases are the ones to write up. **Status:** both products need the concept, but the vocabularies and behaviours differ entirely — in stock → preparing → shipped → delivered against searching → assigned → arriving → in trip → completed — so does `arriving` belong in core or only in Move's layer? **Pricing:** `AED 19.99` / `20% OFF` / `Save AED 5` against `from AED 18` / `+ AED 5 surcharge` / `Estimated fare` — different semantics, identical currency and numeral problems underneath.
-- **Governance rung 2: the drift detector** — a script that compares Figma's variables to the JSON and shouts on disagreement.
+- **Governance rung 2: the drift detector** — a script that compares Figma's variables to the JSON and shouts on disagreement. Give it a face: a generated **"Mizan Health" HTML dashboard** — every component and token, aligned or drifted, Figma vs code, click into the diff. Governance you can screenshot, not just describe.
 - In-Figma docs (descriptions + do/don'ts at the moment of use), a11y annotations, publish to Figma Community.
 
 **Ship:** the library + a GIF flipping one screen through modes and products. **Post:** "My Figma file is a display, not a source."
@@ -204,7 +227,11 @@ RTL behavior · Code API mapping · How we'd deprecate it
 - Props mirror Figma properties exactly (`state`, `size`, `direction`) — the mirroring is the skill.
 - CSS logical properties only. **Storybook** deployed free, a11y addon running, usage guidance beside each component, plus the **"Start here" page written for designers** — how to find things, when detaching is okay, how to request something new.
 - **Write stories as agent documentation:** JSDoc descriptions on every component and prop, well-named stories covering real usage, and play functions on 2–3 interactive components. Agents read your stories to learn how to use components — the same care that serves humans now trains machines.
-- Begin `machinery/metadata/`: structured JSON per component (purpose, do/don'ts, RTL behavior) — quietly becoming the agents' knowledge.
+- Begin `machinery/metadata/`: structured JSON per component — quietly becoming the agents' knowledge. Together with the API spec above, this is the **component contract**: the contract describes, the checks verify (don't build a generate-everything-from-contract pipeline — that's a platform team's roadmap, not yours). Each contract includes:
+  - purpose, do/don'ts, RTL behavior
+  - **`do_not_use_when` + `alternatives`** — boundaries, not just instructions ("not for rides — use RideCard")
+  - **`aiHints.keywords`** ("card, product, grid, listing") — what lets a future agent *find* the component instead of scaffolding a duplicate. The metadata is not documentation for humans; it is the component's identity for AI.
+  - Generate contracts with a skill you write once — never hand-author per component.
 
 **Ship:** the Storybook URL. **Post:** "A component can be reusable and still be a bad component."
 
@@ -214,10 +241,13 @@ RTL behavior · Code API mapping · How we'd deprecate it
 
 - **The Mizan Prototyping Kit, first:** DESIGN.md + component guides + components, packaged as a skill for any designer's own Claude session. Prompt → on-system, correctly-themed, Arabic-correct running prototype. The system's front door, matching how designers actually work.
 - **The money demo, in two halves:** first, the same feature prompt twice — plain Claude (generic, off-system, broken RTL) vs. the Kit. Then the same system prompted for both products — a Market product page and a Move ride-selection screen — producing two visibly different results that are both unmistakably on-system. Half one proves the system constrains AI; half two pre-empts the objection every design-system demo invites, that constraint means homogenisation. The claim is the pair: *the system constrains AI without making every product look the same.* Record all four. Pin it everywhere.
-- The component map: Figma ↔ code ↔ props ↔ properties, generated from metadata. Official Code Connect is Organization-gated; build the open equivalent and write about the gap.
+- The component map: Figma ↔ code ↔ props ↔ properties, generated from the contracts. Official Code Connect is Organization-gated; build the open equivalent and write about the gap.
 - **Check Storybook MCP first** (early access, launched late 2026): it auto-generates the code-side component manifest — props, types, stories — as structured agent context. If it covers the code side, adopt it (rule 7: don't build what exists off the shelf) and spend your effort where it stops: the RTL rule layer, the Figma side, the judgment.
 - Connect **Figma's MCP server** (remote works on all plans) to Claude Code.
 - **Banna v1:** Figma selection → on-system code. Banna's real question, stated in his instruction file: *how does the system provide enough structured knowledge that AI reliably implements approved design decisions?* Rejection path: lint + your gate.
+- **Encode the six-phase navigation protocol** in every agent's instructions: **Orient** (read the constitution/CLAUDE.md) → **Explore** (read the codebase index in `.ai/`, find components by keywords) → **Study** (read an existing screen to learn conventions and precedent) → **Gather** (confirm the exact tokens exist, semantic tier only) → **Write** (fully constrained; every choice traceable to something read) → **Verify** (self-check against the gathered rules).
+- **Missing-component policy — a deliberate reversal:** when an agent can't find a component, it does NOT scaffold one into the system (that would bypass your contribution flow). It pauses and files a contribution request. Designers consume; the system team curates — agents are consumers too. Log this as a Decision entry.
+- **Build agents as thin personas over shared skills** — small focused skills (`find-component`, `audit-rtl`, `check-parity`), not giant prompts. Rassam, Banna, Raqib, and your CI draw from the same skill pool instead of duplicating logic.
 
 **Ship:** the Kit + before/after video. **Post:** the video + "context, not magic."
 
@@ -230,6 +260,7 @@ RTL behavior · Code API mapping · How we'd deprecate it
   - *Layer 1 — Compliance:* does it follow the system? (mostly deterministic, scripts underneath)
   - *Layer 2 — Consistency:* does it behave like existing patterns behave?
   - *Layer 3 — Design quality:* hierarchy, density, task clarity, component overuse — is it actually a good solution? Raqib flags; you judge. This layer is your designer expertise, encoded as questions rather than rules.
+- **Raqib cites his sources:** violations reference rule IDs ("❌ CHK-003, rationale: the final action represents commitment") and — the part nobody else has — **Decision Log precedent** ("similar variant refused in Decision 12"). Statutes + case law. He runs the same rule book against Figma designs and Storybook prototypes, catching identical violations in both.
 - **The contribution exercise:** a "PromoCard" request enters the flow — is it a real problem? does an existing component solve it? pattern or component? → RFC → decision: *refused; it's a pattern.* Documented end to end. (Decision 15.)
 - **The lifecycle exercise:** Button v1 → v2. Deprecation notice, migration guide, Banna-assisted migration of the legacy screens, adoption tracked, v1 removed. Maintenance demonstrated, not just creation.
 - **The Mizan Assistant** Figma plugin — for designers, not police: one-click RTL preview, flags icons that shouldn't mirror, applies correct Arabic text styles. One repetitive task removed well.
@@ -239,7 +270,7 @@ RTL behavior · Code API mapping · How we'd deprecate it
 ## Stage 7 — Rassam, the round trip, and the extraction (Weeks 26–29)
 
 - **Rassam v1** via Figma's MCP canvas writing (beta, works on your plan): *assembles* screens from the published library — real instances, your variables and modes. His stated question: *how can AI compose interfaces without creating new system entropy?* Rejection path: drift detector + Raqib + your gate.
-- **The capstone video:** one prompt → Rassam builds the screen in Figma (a Market product page, in Arabic) → Banna implements it in code → Raqib audits all three layers → you review at the gate. On-system in both directions, RTL-correct throughout. Nobody has published this loop with RTL in it.
+- **The capstone video:** one prompt → Rassam builds the screen in Figma (a Market product page, in Arabic) → Banna implements it in code → Raqib audits all three layers, citing rule IDs → you review at the gate. On-system in both directions, RTL-correct throughout. Nobody has published this loop with RTL in it. The caption that sells it: *"The design intent survived from human decision → Figma → AI → code → governance."*
 - **The extraction:** strip `content/` out and publish the skeleton — an open-source, headless, bidirectional-by-default design-system starter any team can fork and feed. The seam makes this a weekend.
 - **Prove the fork:** feed the skeleton a different mock brand in one afternoon. Record it. "Same machinery, different brand, two hours."
 
