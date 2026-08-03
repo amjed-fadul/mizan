@@ -10,7 +10,39 @@
 
 ## The one-paragraph vision
 
-Mizan Labs is a small fictional company with two products — commerce and mobility — shipping in English and Arabic. It has a messy, inconsistent legacy design system, and you are its new Design System Designer. Over ~8 months you audit the mess, re-architect the foundation, build a small set of deeply-designed components, put governance and lifecycle into operation, arm designers and agents with machine-readable knowledge, and prove the whole loop in public — ending with an open-source headless skeleton any team can fork. One human sits at the review gate: you.
+Mizan Labs is a small fictional company running two products — **Mizan Market** (grocery and everyday commerce) and **Mizan Move** (ride booking) — shipping in English and Arabic. It has a messy, inconsistent legacy design system, and you are its new Design System Designer. Over ~8 months you audit the mess, re-architect the foundation, build a small set of deeply-designed components, put governance and lifecycle into operation, arm designers and agents with machine-readable knowledge, and prove the whole loop in public — ending with an open-source headless skeleton any team can fork. One human sits at the review gate: you.
+
+---
+
+## The product sandbox
+
+**Mizan Market** — grocery and everyday commerce. The flows:
+
+- Home and discovery
+- Category browsing — filters, sort
+- Product page
+- Cart — substitution preferences, delivery slots
+- Checkout — address, delivery slot, payment, order summary
+- Order tracking — confirmed → preparing → out for delivery → delivered
+
+**Mizan Move** — ride booking. The flows:
+
+- Booking — pickup, destination, map, ride types, price, ETA
+- Ride selection — Economy / Comfort / XL / Electric
+- Active ride — driver, vehicle, ETA, trip status, contact, safety
+- Trip history — previous rides, receipt, route, payment
+
+They diverge on exactly the axes a design system has to answer for:
+
+| | Market | Move |
+|---|---|---|
+| Mood | browsy, image-forward, conversion | glanceable, real-time, high-stakes |
+| Density | comfortable | compact — phone at a curb |
+| Unique semantics | `price`, `discount`, `stock`, `delivery` | `eta`, `fare`, `vehicle`, `safety`, `trip` |
+| Hard surface | image galleries | a map the system does not own |
+| Status vocabulary | in stock → preparing → shipped → delivered | searching → assigned → arriving → in trip → completed |
+
+These two were chosen *because* they force real shared-versus-specific decisions rather than cosmetic theming. Two dashboards would have made Stage 3's argument toothless — same density, same semantics, same status words, and "what's shared?" answers itself. A grocery cart and a moving car don't let you off that lightly: every call has to be argued, and the wrong ones are visible.
 
 ---
 
@@ -74,7 +106,7 @@ Decision · Why · Consequences · What would make us revisit this?
 A hiring manager can learn whether you know tokens in fifteen minutes. What they can't learn anywhere else is whether you can make difficult system decisions. This log is where they learn it. Seed it with the hard cases the mess will force:
 
 - *Decision 01 — Six grays walked in. Four walked out. Here's who survived and why.*
-- *Decision 07 — Two cards look identical. They remain separate components.* (Interaction models and content responsibilities differ; visual similarity is superficial.)
+- *Decision 07 — ProductCard and RideCard look identical. They remain separate components.* (One has a quantity stepper and an add-to-cart action; the other is a radio selection inside a group. Interaction models and content responsibilities differ; visual similarity is superficial.)
 - *Decision 12 — A designer asked for a `compact` variant. The answer was no.* (API complexity vs. one team's convenience.)
 - *Decision 15 — PromoCard request refused: it's a pattern, not a component.*
 
@@ -114,7 +146,7 @@ Refusals are gold. Good design system designers are component *refusal* machines
 ## Stage 0 — The workshop and the brief (Week 0)
 
 - Install VS Code, Node, Git + GitHub, **Claude Code** (~$20/mo). Repo with `machinery/`, `content/`, `CLAUDE.md`, `decisions/`.
-- Write the **one-page Mizan Labs brief**: two products (commerce, mobility), web-first, English + Arabic, small team, real constraints. This is context, not theater — no fictional coworkers, no invented arguments.
+- Write the **one-page Mizan Labs brief**: two products — Mizan Market (grocery and everyday commerce) and Mizan Move (ride booking) — web-first, English + Arabic, small team, real constraints. This is context, not theater — no fictional coworkers, no invented arguments.
 - Warm-up: have Claude build a small page; change your mind twice. Learn the direct–inspect–correct loop.
 - Start the habits: 3 substantive comments/week (additions, not applause) · quietly line up 2–3 designer friends for Stage 8's research sessions — recruiting is the slowest ingredient.
 
@@ -124,11 +156,13 @@ Refusals are gold. Good design system designers are component *refusal* machines
 
 *The stage that makes this feel like the real job — because it is the real job.*
 
-**Build the disease before the cure:** direct Claude Code to generate **Mizan v0**, a believably messy legacy system — six near-identical grays, three button implementations, inconsistent spacing and radii, arbitrary type sizes, English-first assumptions, physical `left/right` CSS, contrast failures, a handful of legacy screens using all of it.
+**Build the disease before the cure:** direct Claude Code to generate **Mizan v0** — not one messy legacy system but two, Market's and Move's, both descended from the same ancestor stylesheet and evolved apart by teams that stopped talking. Six near-identical grays, three button implementations, inconsistent spacing and radii, arbitrary type sizes, English-first assumptions, physical `left/right` CSS, contrast failures, a handful of legacy screens per product using all of it.
+
+**The shared ancestry is the important detail.** Some values still match exactly across the two products, some drifted a few hex values apart, some are unrecognisable. That spread is what makes "which of these should merge?" a genuinely hard question in Stage 2 rather than a cleanup chore — identical values can carry different meanings, near-identical ones can carry the same one, and only the audit tells you which is which.
 
 **Then switch roles: you're the new Design System Designer.** Audit it like you would at a real company — inventory every color/spacing/type value, map duplication, find the a11y and RTL failures, identify what designers would struggle with. Write the audit as you would for stakeholders: findings, severity, priorities, what to unify, what to keep separate, what to deprecate, what not to touch.
 
-**Ship:** the audit document + first Decision Log entries. **Post:** "I built a broken design system on purpose. Then I audited it like my first week on the job."
+**Ship:** the audit document + first Decision Log entries. **Post:** "Two product teams, one ancestor stylesheet. I built the drift on purpose, then audited it like my first week on the job."
 
 ## Stage 2 — Re-architect the foundation (Weeks 4–7)
 
@@ -136,17 +170,18 @@ Refusals are gold. Good design system designers are component *refusal* machines
 
 - DTCG-format JSON (2025.10 Format Module), three layers (primitive → semantic → component), light + dark.
 - The hard calls, logged: which of the six grays merge (value coincidence) and which stay (different semantic intent). This is Decision 01.
+- **The token architecture fork, decided here:** two mechanisms hide inside "product semantic layers," and conflating them is the classic multi-product failure. *Shared concepts* — `action.primary`, `surface.raised`, `text.secondary` — are needed by both products; namespacing them forces every component to know which product it's in and kills cross-product reuse. These want **one semantic name, with Market and Move as modes.** *Product-unique concepts* — `commerce.price.discount`, `mobility.eta`, `mobility.safety` — have no counterpart in the other product, so a mode has nothing to swap to. These want **namespacing.** The rule: *modes for what both products have, namespaces for what only one has.* Namespace everything and you've built two design systems wearing a trench coat; mode everything and `mobility.eta` becomes inexpressible.
 - **Style Dictionary v5** pipeline → CSS variables + a live preview. **Multi-platform maturity, cheaply:** also emit iOS/Android token outputs and write one component spec showing how the same semantics produce platform-appropriate implementations. Demonstrate the architecture; don't build three libraries.
 - **Governance rung 1, day one:** schema checks — semantic must reference primitive, no raw hex in semantic layer, naming pattern, contrast pairs pass WCAG.
 - RTL/Arabic layer: direction-safe semantics (inline-start/end), Arabic type scale, line-height compensation, letter-spacing locked to 0.
 
 **Ship:** pipeline + preview. **Post:** "Two tokens, same hex, different meaning — who survived my gray massacre and why."
 
-## Stage 3 — Figma joins, synced — and the second product appears (Weeks 8–11)
+## Stage 3 — Figma joins, synced — and the second product joins the core (Weeks 8–11)
 
 - **The Mizan Sync plugin:** Figma's REST write API for variables is Enterprise-only, but plugins write variables on any plan — yours reads the token JSON and generates the variables. From here, Figma and code update together from one source; nobody hand-edits either. (Tokens Studio is the fallback; the plugin is the better story.)
 - **4-mode matrix:** Light/Dark × LTR/RTL (Professional allows 10 modes; you need 4).
-- **Two products, one core:** commerce and mobility themes sharing primitives with different semantic layers. Multi-product architecture — what's shared, what isn't, and *why* (log it).
+- **Two products, one core:** Market and Move sharing primitives with different semantic layers. Multi-product architecture — what's shared, what isn't, and *why* (log it). The two hardest cases are the ones to write up. **Status:** both products need the concept, but the vocabularies and behaviours differ entirely — in stock → preparing → shipped → delivered against searching → assigned → arriving → in trip → completed — so does `arriving` belong in core or only in Move's layer? **Pricing:** `AED 19.99` / `20% OFF` / `Save AED 5` against `from AED 18` / `+ AED 5 surcharge` / `Estimated fare` — different semantics, identical currency and numeral problems underneath.
 - **Governance rung 2: the drift detector** — a script that compares Figma's variables to the JSON and shouts on disagreement.
 - In-Figma docs (descriptions + do/don'ts at the moment of use), a11y annotations, publish to Figma Community.
 
@@ -165,7 +200,7 @@ Constraints (what they may NOT customize) · Accessibility guaranteed
 RTL behavior · Code API mapping · How we'd deprecate it
 ```
 
-- The v0 cleanup pays off here: three legacy buttons become one, documented as a consolidation decision. Two similar cards *stay separate* — Decision 07, your flagship judgment entry.
+- The v0 cleanup pays off here: three legacy buttons become one, documented as a consolidation decision. ProductCard and RideCard *stay separate* — Decision 07, your flagship judgment entry. ProductCard carries image, name, price, discount, quantity, availability; RideCard carries vehicle, ride type, ETA, price, capacity. Superficially the same box, but ProductCard has a quantity stepper and an add-to-cart action while RideCard is a radio selection within a group — the interaction models and content responsibilities differ.
 - Props mirror Figma properties exactly (`state`, `size`, `direction`) — the mirroring is the skill.
 - CSS logical properties only. **Storybook** deployed free, a11y addon running, usage guidance beside each component, plus the **"Start here" page written for designers** — how to find things, when detaching is okay, how to request something new.
 - **Write stories as agent documentation:** JSDoc descriptions on every component and prop, well-named stories covering real usage, and play functions on 2–3 interactive components. Agents read your stories to learn how to use components — the same care that serves humans now trains machines.
@@ -178,7 +213,7 @@ RTL behavior · Code API mapping · How we'd deprecate it
 *AI as an evolution of a well-designed system — sitting on top of judgment, never replacing it.*
 
 - **The Mizan Prototyping Kit, first:** DESIGN.md + component guides + components, packaged as a skill for any designer's own Claude session. Prompt → on-system, correctly-themed, Arabic-correct running prototype. The system's front door, matching how designers actually work.
-- **The money demo:** same feature prompt, twice — plain Claude (generic, off-system, broken RTL) vs. the Kit. Record both. Pin it everywhere.
+- **The money demo, in two halves:** first, the same feature prompt twice — plain Claude (generic, off-system, broken RTL) vs. the Kit. Then the same system prompted for both products — a Market product page and a Move ride-selection screen — producing two visibly different results that are both unmistakably on-system. Half one proves the system constrains AI; half two pre-empts the objection every design-system demo invites, that constraint means homogenisation. The claim is the pair: *the system constrains AI without making every product look the same.* Record all four. Pin it everywhere.
 - The component map: Figma ↔ code ↔ props ↔ properties, generated from metadata. Official Code Connect is Organization-gated; build the open equivalent and write about the gap.
 - **Check Storybook MCP first** (early access, launched late 2026): it auto-generates the code-side component manifest — props, types, stories — as structured agent context. If it covers the code side, adopt it (rule 7: don't build what exists off the shelf) and spend your effort where it stops: the RTL rule layer, the Figma side, the judgment.
 - Connect **Figma's MCP server** (remote works on all plans) to Claude Code.
@@ -204,7 +239,7 @@ RTL behavior · Code API mapping · How we'd deprecate it
 ## Stage 7 — Rassam, the round trip, and the extraction (Weeks 26–29)
 
 - **Rassam v1** via Figma's MCP canvas writing (beta, works on your plan): *assembles* screens from the published library — real instances, your variables and modes. His stated question: *how can AI compose interfaces without creating new system entropy?* Rejection path: drift detector + Raqib + your gate.
-- **The capstone video:** one prompt → Rassam builds the screen in Figma (commerce, Arabic) → Banna implements it in code → Raqib audits all three layers → you review at the gate. On-system in both directions, RTL-correct throughout. Nobody has published this loop with RTL in it.
+- **The capstone video:** one prompt → Rassam builds the screen in Figma (a Market product page, in Arabic) → Banna implements it in code → Raqib audits all three layers → you review at the gate. On-system in both directions, RTL-correct throughout. Nobody has published this loop with RTL in it.
 - **The extraction:** strip `content/` out and publish the skeleton — an open-source, headless, bidirectional-by-default design-system starter any team can fork and feed. The seam makes this a weekend.
 - **Prove the fork:** feed the skeleton a different mock brand in one afternoon. Record it. "Same machinery, different brand, two hours."
 
@@ -213,7 +248,7 @@ RTL behavior · Code API mapping · How we'd deprecate it
 ## Stage 8 — Prove it in public (Weeks 30–33)
 
 - **Designer research sessions:** your 2–3 recruits build a checkout screen with Mizan + the Kit while you watch. Where do they look? What do they misunderstand, detach, override, ask? Publish "What I learned watching designers use my design system," ship one prioritized fix, show before/after. Research → insight → system change → measurable improvement. *"I ran user research on my own design system."*
-- **The Arabic UI Eval:** 3–4 popular AI UI tools × 15–20 Arabic/RTL tasks, scored against your published rules, screenshots included. Only a designer who reads Arabic can make this. Evaluate **Storybook Evals** as the harness (benchmark prompts, quality/cost/conformance over time) instead of building one from scratch — and use its framing for your ROI story: *you can now measure how much better agents perform with your system than without it.*
+- **The Arabic UI Eval:** 3–4 popular AI UI tools × 15–20 Arabic/RTL tasks, scored against your published rules, screenshots included. The tasks come out of Market and Move: currency placement (`AED 12.50` vs. `١٢٫٥٠ د.إ`), Arabic-Indic against Western numerals and when each is correct, mixed-direction product titles (`Apple iPhone 17 Pro` / `256GB` / `AED 4,299` sitting inside an Arabic layout). Only a designer who reads Arabic can make this. Evaluate **Storybook Evals** as the harness (benchmark prompts, quality/cost/conformance over time) instead of building one from scratch — and use its framing for your ROI story: *you can now measure how much better agents perform with your system than without it.*
 - **Publish `mizan` to npm** — tokens, components, agent guides, lint rules, docs. The installable source of design knowledge.
 - **The capstone case study**, structured as the loop: product need → design problem → system decision → tokens/components/guidance → designers + AI → production code → adoption → iterate/remove → back to decisions. *That loop is the design system — not the Figma library, not the tokens, not Storybook.*
 - Recorded 30-minute hands-on workshop + offer the talk to a Dubai design meetup.
