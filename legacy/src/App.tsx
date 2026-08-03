@@ -1,9 +1,13 @@
-import { BrowserRouter, Routes, Route, Link } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Link, useNavigate } from 'react-router-dom'
+import Button from './shared/Button'
 
 function Index() {
+  const navigate = useNavigate()
+
   return (
-    <div>
+    <div className="container">
       <h1>Mizan v0</h1>
+      <p className="muted">Internal build. Two products, one stylesheet.</p>
       <ul>
         <li>
           <Link to="/market">Mizan Market</Link>
@@ -12,16 +16,42 @@ function Index() {
           <Link to="/move">Mizan Move</Link>
         </li>
       </ul>
+      <div>
+        <Button onClick={() => navigate('/market')}>Open Market</Button>
+        <Button type="secondary" onClick={() => navigate('/move')}>
+          Open Move
+        </Button>
+      </div>
     </div>
   )
 }
 
 function MarketPlaceholder() {
-  return <div>Mizan Market</div>
+  const navigate = useNavigate()
+
+  return (
+    <div className="container">
+      <h1>Mizan Market</h1>
+      <p className="muted">Screens coming soon.</p>
+      <Button type="secondary" onClick={() => navigate('/')}>
+        Back
+      </Button>
+    </div>
+  )
 }
 
 function MovePlaceholder() {
-  return <div>Mizan Move</div>
+  const navigate = useNavigate()
+
+  return (
+    <div className="container">
+      <h1>Mizan Move</h1>
+      <p className="muted">Screens coming soon.</p>
+      <Button type="secondary" onClick={() => navigate('/')}>
+        Back
+      </Button>
+    </div>
+  )
 }
 
 export default function App() {
