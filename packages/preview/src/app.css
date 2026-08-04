@@ -68,12 +68,26 @@ ol {
 }
 
 :focus-visible {
-  /* Placed on the page ground rather than on the control fill, by the offset, so
-     the ring always sits at text.primary on surface.default — 13.39:1 in light,
-     18.42:1 in dark — whatever it is ringing. */
+  /* The ring is text.primary, and the offset places it on the ground the control
+     sits on rather than on the control's own fill. What that ground is varies,
+     and so does the ratio: surface.default in the bar — 13.39:1 in light,
+     18.42:1 in dark — and surface.sunken inside the exhibit frames, the toolbar
+     and the notes, 11.96:1 and 16.48:1. Both are declared pairs and both are
+     gated.
+
+     One case is neither. The segmented buttons are flush against each other, so
+     the ring of an unpressed button is drawn over its pressed neighbour's
+     action.primary fill: 2.37:1 in light Market, 2.54:1 in light Move. That is
+     under the 3.0 of WCAG 1.4.11 and it is written down here rather than
+     rounded off, because the remedies — a gap between the segments, or a ring
+     that carries its own contrasting halo — are both design decisions this
+     stage has not taken.
+
+     No border-radius here. Rounding the element on focus would change its shape
+     at the moment it is being pointed at, and browsers already follow the
+     element's own corners with the outline. */
   outline: var(--space-25) solid var(--text-primary);
   outline-offset: var(--space-25);
-  border-radius: var(--radius-100);
 }
 
 /* ------------------------------------------------------- the script subtree */
@@ -154,7 +168,27 @@ ol {
   display: inline-flex;
   border: 1px solid var(--border-control);
   border-radius: var(--radius-100);
-  overflow: hidden;
+}
+
+/* The ends are rounded on the end buttons themselves, not by clipping the group.
+   `overflow: hidden` here is what a segmented control usually reaches for, and
+   it erased the focus ring on all eight of these: the offset puts the ring
+   outside the button's border box, and the button's border box and the group's
+   clip box coincide on every side but the group's own 1px border. A control
+   that cannot show focus is a 2.4.7 failure, and these are the only controls
+   the page has.
+
+   Logical corners, so the rounded ends belong to the start and end of the line
+   rather than to the left and right of the screen, and the control mirrors with
+   `dir` like everything else here. */
+.mz-seg > button:first-child {
+  border-start-start-radius: var(--radius-100);
+  border-end-start-radius: var(--radius-100);
+}
+
+.mz-seg > button:last-child {
+  border-start-end-radius: var(--radius-100);
+  border-end-end-radius: var(--radius-100);
 }
 
 .mz-seg > button {
