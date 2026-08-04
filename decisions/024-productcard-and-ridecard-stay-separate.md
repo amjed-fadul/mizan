@@ -54,11 +54,13 @@ Every version of "they are basically the same box" dies on one fact, and it is a
 
 Those two cannot be the same component, and not because it would be inelegant:
 
-> **A radio may not contain a button.** Interactive content nested inside a radio has no defined behaviour a user can reach — either the radio swallows the events and the inner button is dead, or the button takes the click and the radio stops being selectable by the thing that looks like its surface. There is no arrangement in which both work.
+> **A card whose whole surface selects it cannot also contain an independently operable button.** Move's ride card is a `<label>` wrapping a visually-hidden radio, so the entire surface is the radio's activation target. A `<button>` inside it is invalid markup — the `<label>` content model excludes labelable descendants other than its own control, and a button is labelable — and it is unusable even where a browser tolerates it, because a press lands on the button *and* on the label, so acting on the row and choosing the row become the same gesture.
+
+**This blockquote is a correction.** It first read *"A radio may not contain a button"*, which is snappier and does not describe the code this entry produced: the radio is a sibling of the card's content, not its ancestor, so nothing is nested inside it at all. Read literally the old claim was vacuous — `<input>` is a void element and can contain nothing — and read as ARIA it was true but about a construction nobody built. The narrower sentence above is what the refusal actually rests on, and it is the one to attack. The old wording also carried *"there is no arrangement in which both work"*, which is false: a plain container holding a radio and a button as siblings, with the radio named by `aria-labelledby`, works fine. What does not work is that arrangement being **this** component, whose whole surface is the target.
 
 So option 2 is not a component with two variants. It is a component that is a **container** in one variant and a **control** in the other — a different element, a different role, a different tab-stop model, a different keyboard contract, and a different answer to "what happens when I press it". `variant` would be selecting between two components that share a border-radius.
 
-Option 1 fails the same way one level down: slots do not change what the outer element is. A `Card` whose outer element is a `<div>` cannot be Move's radio; a `Card` whose outer element is a radio cannot hold Market's button.
+Option 1 fails the same way one level down: slots do not change what the outer element is, or what that element does with a press. A shared `Card` would have to render a `<label>` for Move — so that the surface selects — and a plain container for Market, so that the surface does nothing and the link and button inside it are reachable on their own. That is two elements with two activation models behind one name, which is what "slots" would be hiding rather than solving.
 
 ### Content responsibility differs, and it differs in a way modes cannot express
 

@@ -148,7 +148,8 @@ export interface RideCardProps {
  * ## Why it is not `ProductCard` with a variant
  *
  * [Decision 024](../../../../decisions/024-productcard-and-ridecard-stay-separate.md).
- * A radio may not contain a button, and Market's product card contains one. The
+ * A card whose whole surface selects it cannot also contain an independently
+ * operable button, and Market's product card contains one. The
  * two are a control and a container, and no prop bridges that.
  *
  * @example The group, which is how this is always used

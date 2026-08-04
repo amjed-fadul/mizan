@@ -4,7 +4,7 @@ Move's ride option. **One radio in a group**, not a card that happens to be clic
 
 It is half of [decision 024](../../../../decisions/024-productcard-and-ridecard-stay-separate.md), which refused to merge it with Market's [`ProductCard`](../ProductCard/README.md). The argument is structural rather than aesthetic and it is worth stating first, because everything else in this file follows from it:
 
-> **A radio may not contain a button.** This card is the label of a real radio — its whole surface is the target, and it has exactly one tab stop. A product card contains a link *and* an action, which are two. No prop bridges a control and a container.
+> **A card whose whole surface selects it cannot also contain an independently operable button.** This card is the label of a real radio, so the whole surface is the target and it has exactly one tab stop — and a `<button>` inside a `<label>` is invalid markup, because the label content model excludes labelable descendants other than its own control. A product card contains a link *and* an action, which are two. No prop bridges a control and a container.
 
 ## What it replaces, and what that was costing
 

@@ -4,7 +4,7 @@ Market's product tile. **A container, not a control.**
 
 It is the other half of [decision 024](../../../../decisions/024-productcard-and-ridecard-stay-separate.md), which refused to merge it with Move's [`RideCard`](../RideCard/README.md):
 
-> This card holds a **link** to the product and a **button** that adds it to the cart — two tab stops, independently reachable. A ride card is one option in an exclusive choice: a radio, one tab stop, whose whole surface is the target. **A radio may not contain a button**, so a `variant` prop would be selecting between a container and a control that happen to share a border radius.
+> This card holds a **link** to the product and a **button** that adds it to the cart — two tab stops, independently reachable. A ride card is one option in an exclusive choice: a radio, one tab stop, whose whole surface is the target. **a card whose whole surface selects it cannot also contain an independently operable button**, so a `variant` prop would be selecting between a container and a control that happen to share a border radius.
 
 The `TwoTabStops` story is that refusal as a test: it asserts a link, a button, and that the card itself is an `<article>` with no `role` and no `tabindex`.
 

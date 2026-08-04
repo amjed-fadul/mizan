@@ -135,7 +135,7 @@
     ],
     "not_a": [
       "A product tile. That is ProductCard and it is a container, not a control.",
-      "A container for other controls. A radio may not contain a button.",
+      "A container for other controls. A card whose whole surface selects it cannot also contain an independently operable button.",
       "A display of a ride nobody is choosing.",
       "A multi-select."
     ]

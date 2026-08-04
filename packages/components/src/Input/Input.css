@@ -97,13 +97,15 @@
   font-weight: var(--font-weight-medium);
 
   /*
-    The label sets one step below the field's own type at every step. It is not
-    given a size of its own from the ramp, because a label that stayed 14px
-    while its field grew to Move's 16 would drift from the control it names.
-    `em` here is a ratio against the step the field resolved to, which is the
-    same trick decision 022 settled for the busy indicator's diameter: a value
-    measured against the type beside it scales with the type beside it, in any
-    product and at any step this system gains later.
+    The label sets one step below the control's own type at every step. It is
+    not given a size of its own from the ramp, because a label that stayed 14px
+    while its field grew to Move's 16 would drift from the control it names —
+    and that is not hypothetical, it is what this file shipped until the step
+    size moved to the wrapper. `em` here resolves against the WRAPPER, which is
+    where the step is set; it did not work when the step was on the field,
+    because the label is the field's sibling rather than its child.
+
+    Measured after the fix: 0.875 exactly, at every step in both products.
   */
   font-size: calc(1em * var(--mz-input-supporting-scale));
 
@@ -159,6 +161,12 @@
   border-color: var(--border-control);
 
   font-family: inherit;
+  /*
+    A form control does not inherit type size from its ancestor — the UA
+    stylesheet sets its own — so `inherit` has to be written. This is what
+    carries the step down from the wrapper above.
+  */
+  font-size: inherit;
   font-weight: var(--font-weight-regular);
 
   /*
@@ -319,24 +327,50 @@
   extent is a layout question rather than a label-length one. The BLOCK floor
   is what the tap target needs and it is applied at every step.
 */
+/*
+  THE STEP'S TYPE SIZE GOES ON THE WRAPPER, not on the field, and this is a
+  correction rather than a preference.
+
+  It was on the field, and the supporting text below it was set in `em` with a
+  comment claiming that made the label track the control. It did not, and could
+  not: the label, hint and error are SIBLINGS of the field, so their `em`
+  resolved against the inherited page size and never moved. Measured across
+  both products before the fix — the label was 14px at every step, which made
+  it LARGER than the 13px field at `sm`, and in Move at `md` the field grew to
+  16px while the label stayed at 14. That is the exact failure the comment said
+  the `em` prevented.
+
+  With the size on the wrapper, the field inherits it and so does everything
+  beside it, so one declaration per step drives the whole control and the
+  ratio below finally means what it says.
+*/
+.mz-input--sm {
+  font-size: var(--control-sm-font-size);
+}
+
+.mz-input--md {
+  font-size: var(--control-md-font-size);
+}
+
+.mz-input--lg {
+  font-size: var(--control-lg-font-size);
+}
+
 .mz-input--sm .mz-input__field {
   padding-inline: var(--control-sm-padding-inline);
   padding-block: var(--control-sm-padding-block);
-  font-size: var(--control-sm-font-size);
   min-block-size: var(--control-sm-min-block);
 }
 
 .mz-input--md .mz-input__field {
   padding-inline: var(--control-md-padding-inline);
   padding-block: var(--control-md-padding-block);
-  font-size: var(--control-md-font-size);
   min-block-size: var(--control-md-min-block);
 }
 
 .mz-input--lg .mz-input__field {
   padding-inline: var(--control-lg-padding-inline);
   padding-block: var(--control-lg-padding-block);
-  font-size: var(--control-lg-font-size);
   min-block-size: var(--control-lg-min-block);
 }
 

@@ -10,8 +10,22 @@
   description: "anything that needs to feel further away than this needs a
   scrim behind it, which is a separate mechanism and not a fourth shadow."
 
-  One written number, the 1px edge, for the fifth time. Still no border-width
-  scale, and this is now the strongest evidence that one is owed.
+  THREE written numbers, and an earlier version of this header said one. They
+  are counted here because the house rule is to name each and say what the
+  token layer owes:
+
+  - `1px`, the control edge, for the fifth time. Still no border-width scale,
+    and this is now the strongest evidence that one is owed.
+  - `28rem`, the readable ceiling on the dialog's width. A maximum measure is
+    one of the few things that legitimately belongs to a dialog rather than to
+    a token, because it is about how far an eye tracks a line of text; it is
+    argued under Constraints in ./README.md.
+  - `26rem`, the width below which the actions stretch instead of huddling at
+    one end. The least defensible of the three, flagged rather than smoothed:
+    it is the library's FIRST viewport-dimension media query — every other
+    @media in these components is a capability or preference query — so it puts
+    a breakpoint into a system with no breakpoint scale. A second component
+    needing one is the trigger for deciding that scale.
 */
 
 /* ---------------------------------------------------------------- the dialog */
