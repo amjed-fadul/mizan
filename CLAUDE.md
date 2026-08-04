@@ -37,7 +37,7 @@ They share one core and diverge deliberately. Working out what is shared and wha
 - fix or consolidate a hex value
 - convert a physical CSS property (`margin-left`, `text-align: left`, `float`) to a logical one
 - add an `aria-label`, alt text, focus state, or any other accessibility improvement
-- deduplicate the near-identical grays, the three button implementations, or anything else
+- deduplicate the near-identical grays, the four button implementations, or anything else
 - correct the spacing scale, the type sizes, or the letter-spacing
 - add i18n plumbing or `<bdi>` wrappers
 - "tidy up while you're in there"
