@@ -100,4 +100,6 @@ This project's product is the honesty of its prose. Each of these is contradicte
 ## D. Needs a person at a Figma desktop — cannot be done in the cloud
 
 - **The read bridge has never completed a round trip against real Figma.** The server accepts only `Origin: null` or absent. Figma's plugin iframe is sandboxed and *should* send `null`, but that is unverified. If it refuses, the run prints `bridge: Refused a connection from Origin ...` naming what Figma actually sent, and the fix is one entry in `LOCAL_ORIGINS` in `machinery/scripts/lib/ws-server.mjs`.
-- **The proof sheet ran and found a real bug** — `font-family.sans` narrows to `system-ui`, a CSS generic Figma cannot resolve, so `setBoundVariable` threw on one variable out of 74. A fix turning that into a planned, previewable skip was in progress; check whether it landed and finish it if not.
+- ~~The proof sheet's `system-ui` binding failure.~~ **Done** in `0c2e699` — it is now a planned skip carrying its reason, visible in the preview rather than in a failure list. `dry-run` 159 → 178. Nothing to do here.
+
+- **The proof sheet's Arabic font specimen is worth one look.** The `font-family.arabic` variable binds the Arabic face to a text node, but if that node's characters are Latin it proves the *binding* while rendering Latin glyphs in an Arabic face — which is the sheet's third job only half done. Unverified; check what `SPECIMEN_NODE` actually sets as `characters` for a `fontFamily` specimen, and whether an Arabic sample would serve better.
