@@ -6,6 +6,12 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev", "--workspace", "legacy"],
       "port": 5173
+    },
+    {
+      "name": "mizan-preview",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--workspace", "@mizan/preview", "--", "--port", "5174", "--strictPort"],
+      "port": 5174
     }
   ]
 }

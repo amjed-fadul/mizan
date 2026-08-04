@@ -6,7 +6,7 @@
     "$description": "The grounds. Two of them, which is the minimum that lets a panel sit inside a page and still be seen as a separate plane.",
     "default": {
       "$value": "{neutral.0}",
-      "$description": "The page ground. Base is light, where it is pure white; the dark theme swaps it to neutral.1000. It is the background in eight of the eleven declared pairs, which makes it the single value most of the system's legibility hangs off."
+      "$description": "The page ground. Base is light, where it is pure white; the dark theme swaps it to neutral.1000. It is the background in eight of the twelve declared pairs, which makes it the single value most of the system's legibility hangs off."
     },
     "sunken": {
       "$value": "{neutral.100}",

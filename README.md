@@ -21,6 +21,7 @@ The load-bearing rule is the seam between `machinery/` and `content/`. Machinery
 | `brief/` | The Mizan Labs product brief — what Market and Move are and which surfaces exist. |
 | `decisions/` | The Decision Log: the significant calls, with reasoning and consequences. |
 | `audit/` | Assessments written before an intervention. What is true and what it costs — not what we chose. |
+| `packages/` | Build output and the artifacts that consume it: the generated token files, and the preview that reads them. No token value is authored here — `packages/tokens/` is regenerated on every build, and the preview reads it rather than restating it. |
 | `legacy/` | Mizan v0, a deliberately broken legacy system. A fixed artifact. Do not repair it. |
 
 Tokens are the only editing surface. CSS variables and Figma variables are generated displays, never sources, and the sync runs one way — outward.
@@ -36,9 +37,9 @@ Tokens are the only editing surface. CSS variables and Figma variables are gener
 
 **Stage 3 — Figma joins, synced.** The tooling is built; the component library is not.
 
-- **Stage 1** audited Mizan v0 — 33 colours, four spacing rhythms, four button implementations, and an accessibility floor that is mostly a token problem. `audit/`.
-- **Stage 2** built the token architecture: spec-strict DTCG source in `content/tokens/`, two blocking gates with a self-test that proves they reject things, and generated CSS, iOS and Android output for four mode combinations.
-- **Stage 3** built Mizan Sync, the Figma plugin that writes the variables; the drift detector with eight drift classes; the health dashboard; a generated proof sheet that binds every projected variable to a real node rather than asserting it reached Figma; and a read-only localhost bridge, because Figma gates the variables REST API for reading as well as writing.
-- **Published:** the Figma **variable library** — 74 variables in three collections. **Not published, because it does not exist yet:** the component library. Components are Stage 4.
+- **Stage 1** audited Mizan v0 — 33 distinct colour values, four spacing rhythms, four button implementations behind three contradictory APIs, 72 physical direction properties and not one logical, and an accessibility floor that is mostly a token problem. [`audit/`](./audit/).
+- **Stage 2** rebuilt the foundation: spec-strict DTCG source in [`content/tokens/`](./content/tokens/) as the only editing surface, two blocking gates with a self-test that proves they reject a broken token set rather than merely accepting a good one, generated CSS, iOS and Android output for four mode combinations, and a preview in `packages/preview/` that reads that output rather than restating it.
+- **Stage 3** built Mizan Sync, the Figma plugin that writes the variables; the drift detector with nine drift classes; the health dashboard; a generated proof sheet that binds every projected variable to a real node rather than asserting it reached Figma; and a read-only localhost bridge, because Figma gates the variables REST API for reading as well as writing.
+- **Published:** the Figma **variable library** — 74 variables in three collections, of which the semantic layer is what consumers see. **Not published, because it does not exist yet:** the component library. Components are Stage 4.
 
-Sixteen Decision Log entries so far, and the refusals are the useful ones. Implementation continues stage by stage per the roadmap.
+Eighteen Decision Log entries so far, and the refusals are the useful ones. Implementation continues stage by stage per the roadmap.

@@ -1,0 +1,321 @@
+/*
+  The same screen, rebuilt.
+
+  Every colour is a var() from packages/tokens/css/tokens.css, so every pairing
+  drawn here is one of the twelve declared in content/tokens/pairs.json and
+  gated by the build. Every inline-axis property is logical, so the layout
+  mirrors when `dir` changes and nothing needs a second stylesheet.
+
+  Two choices worth pointing at:
+
+  - The disabled button is not `opacity: 0.5`. Halving the opacity of a pairing
+    that passes at 5.64:1 produces one that does not, and a disabled control
+    still has to be readable. It is built instead from text.secondary on
+    surface.sunken, which is itself a declared pair.
+  - A block that contains an Arabic run takes Arabic leading, selected with
+    :has(). That is the leading following the script rather than the page, which
+    is the scoping decision 013 argues for. The script mode itself is decided
+    and not yet built — src/lib/script.ts states what stands in for it.
+*/
+
+.rb {
+  font-family: var(--font-family-sans);
+  font-size: var(--font-size-300);
+  line-height: var(--line-height-normal);
+  letter-spacing: var(--letter-spacing-none);
+  color: var(--text-primary);
+  background-color: var(--surface-default);
+  padding: var(--space-200);
+  border-radius: var(--radius-200);
+  text-align: start;
+}
+
+.rb-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-150);
+  font-size: var(--font-size-200);
+  margin-block-end: var(--space-200);
+}
+
+.rb-nav a {
+  color: var(--text-secondary);
+  text-decoration: none;
+}
+
+.rb-nav a:hover {
+  color: var(--text-primary);
+  text-decoration: underline;
+  text-underline-offset: var(--space-25);
+}
+
+.rb-header {
+  display: grid;
+  gap: var(--space-50);
+  margin-block-end: var(--space-250);
+}
+
+/* Named for what it is — the screen's heading — rather than for the level it
+   happens to render at. It was .rb-h1 while the element was an <h1>, and the
+   element is now an <h4> because this pane is an exhibit nested under the
+   comparison's <h3>. A class named after a level goes stale the moment the
+   document outline moves; this one does not. */
+.rb-heading {
+  font-size: var(--font-size-700);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+  color: var(--text-primary);
+}
+
+.rb-heading:has(.mz-run:lang(ar)) {
+  line-height: var(--line-height-arabic-tight);
+}
+
+.rb-sub {
+  font-size: var(--font-size-200);
+  color: var(--text-secondary);
+}
+
+.rb-sub:has(.mz-run:lang(ar)) {
+  line-height: var(--line-height-arabic-normal);
+}
+
+.rb-toolbar {
+  display: grid;
+  gap: var(--space-200);
+  padding: var(--space-200);
+  background-color: var(--surface-sunken);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-200);
+  margin-block-end: var(--space-250);
+}
+
+.rb-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-100);
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-inline-size: 0;
+}
+
+.rb-chips legend {
+  font-size: var(--font-size-100);
+  color: var(--text-secondary);
+  padding: 0;
+  margin-block-end: var(--space-100);
+}
+
+.rb-chip {
+  appearance: none;
+  font-family: inherit;
+  font-size: var(--font-size-200);
+  line-height: var(--line-height-normal);
+  letter-spacing: var(--letter-spacing-none);
+  padding-block: var(--space-50);
+  padding-inline: var(--space-150);
+  border: 1px solid var(--border-control);
+  border-radius: var(--radius-full);
+  background-color: var(--surface-default);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.rb-chip:hover {
+  color: var(--text-primary);
+}
+
+.rb-chip[aria-pressed='true'] {
+  background-color: var(--action-primary);
+  border-color: var(--action-primary);
+  color: var(--text-on-action);
+}
+
+.rb-chip[aria-pressed='true']:hover {
+  background-color: var(--action-primary-hover);
+  border-color: var(--action-primary-hover);
+}
+
+.rb-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-100);
+}
+
+.rb-btn {
+  appearance: none;
+  font-family: inherit;
+  font-size: var(--font-size-200);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-normal);
+  letter-spacing: var(--letter-spacing-none);
+  padding-block: var(--space-100);
+  padding-inline: var(--space-200);
+  border: 1px solid transparent;
+  border-radius: var(--radius-100);
+  background-color: var(--action-primary);
+  color: var(--text-on-action);
+  cursor: pointer;
+}
+
+.rb-btn:hover:enabled {
+  background-color: var(--action-primary-hover);
+}
+
+.rb-btn--secondary {
+  background-color: var(--surface-default);
+  border-color: var(--border-control);
+  color: var(--text-primary);
+}
+
+.rb-btn--secondary:hover:enabled {
+  background-color: var(--surface-sunken);
+}
+
+.rb-btn:disabled {
+  background-color: var(--surface-sunken);
+  border-color: var(--border-default);
+  color: var(--text-secondary);
+  cursor: not-allowed;
+}
+
+.rb-btn--block {
+  inline-size: 100%;
+}
+
+.rb-grid {
+  display: grid;
+  /* Three across at the width the comparison gives each pane, which is the
+     column count v0's 33.33% flex item produces beside it. */
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--space-200);
+  padding: 0;
+  margin: 0;
+}
+
+.rb-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-100);
+  background-color: var(--surface-default);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-200);
+  padding: var(--space-150);
+  box-shadow: var(--shadow-100);
+}
+
+.rb-card:hover {
+  box-shadow: var(--shadow-200);
+}
+
+.rb-media {
+  display: block;
+  inline-size: 100%;
+  block-size: 96px;
+  object-fit: cover;
+  background-color: var(--surface-sunken);
+  border-radius: var(--radius-100);
+  border: 1px solid var(--border-default);
+  color: var(--text-secondary);
+  font-size: var(--font-size-100);
+}
+
+.rb-discount {
+  font-size: var(--font-size-200);
+  font-weight: var(--font-weight-bold);
+  font-variant-numeric: tabular-nums;
+  color: var(--commerce-discount);
+}
+
+.rb-title {
+  font-size: var(--font-size-300);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+  margin: 0;
+}
+
+.rb-title:has(.mz-run:lang(ar)) {
+  line-height: var(--line-height-arabic-tight);
+}
+
+.rb-title a {
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+.rb-title a:hover {
+  text-decoration: underline;
+  text-underline-offset: var(--space-25);
+}
+
+/* The name and the size are separate elements. Nothing concatenates them, so
+   the direction-neutral characters between them have no sentence to be
+   reordered inside. The separator is markup, not a hyphen in a string. */
+.rb-title__size {
+  display: block;
+  font-size: var(--font-size-200);
+  font-weight: var(--font-weight-regular);
+  color: var(--text-secondary);
+  margin-block-start: var(--space-25);
+}
+
+.rb-prices {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-100);
+}
+
+.rb-price {
+  font-size: var(--font-size-400);
+  font-weight: var(--font-weight-bold);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+
+.rb-price-was {
+  font-size: var(--font-size-200);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+  text-decoration: line-through;
+}
+
+.rb-unit,
+.rb-delivery {
+  font-size: var(--font-size-100);
+  color: var(--text-secondary);
+}
+
+.rb-stock {
+  display: flex;
+  align-items: center;
+  gap: var(--space-50);
+  font-size: var(--font-size-200);
+  color: var(--text-primary);
+}
+
+/* commerce.stock.low is the dot and only the dot. The words next to it are
+   text.primary, which is where their legibility comes from. */
+.rb-stock__dot {
+  inline-size: var(--space-100);
+  block-size: var(--space-100);
+  border-radius: var(--radius-full);
+  background-color: var(--commerce-stock-low);
+  flex: none;
+}
+
+.rb-stock--muted {
+  color: var(--text-secondary);
+}
+
+/* The action sits on the card's bottom edge whatever the title above it did,
+   so a row of cards has one action line rather than eight. */
+.rb-card__foot {
+  margin-block-start: auto;
+  padding-block-start: var(--space-100);
+}
+
+.rb-foot {
+  margin-block-start: var(--space-250);
+}

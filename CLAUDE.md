@@ -63,7 +63,10 @@ The only legitimate reasons to edit `legacy/` are: adding *more* period-appropri
 | `content/rules/` | the RTL/Arabic rule layer every agent reads | product-specific exceptions |
 | `decisions/` | the Decision Log — one entry per significant call | status updates, meeting notes |
 | `brief/` | the Mizan Labs brief: company, products, constraints | fictional coworkers or invented arguments |
+| `packages/` | build output and the artifacts that consume it — generated token files, the preview app | a token value, a hex, or any fact not derived from `content/` at build time |
 | `legacy/` | Mizan v0, quarantined | anything correct |
+
+`packages/` is the one directory nothing is authored into. `packages/tokens/` is build output — editing it is editing a display, and the next build overwrites the edit. `packages/preview/` is hand-written, but its rule is that it may read the build output and may not restate it: the first hardcoded token value there is the same defect as an edited generated file, arriving by hand. Mizan's own content still belongs in `content/`; where the preview currently breaks that, [decision 018](./decisions/018-the-preview-reads-the-build-output.md) says so and states the trigger for moving it.
 
 ---
 

@@ -1,0 +1,23 @@
+<!doctype html>
+<!--
+  The two mode attributes are set here, in the served HTML, rather than by the
+  application after it mounts. packages/tokens/css/tokens.css keys every mode
+  block off [data-theme][data-product]; if the attributes arrived a frame later
+  the first paint would have no semantic values at all. This is what "no flash"
+  costs: two attributes in the markup.
+-->
+<html lang="en" dir="ltr" data-theme="light" data-product="market">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Mizan Stage 2 — the token system rendered in every mode combination, with live contrast, and the Market category screen before and after."
+    />
+    <title>Mizan — the token system, visible</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
