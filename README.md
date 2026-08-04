@@ -18,6 +18,7 @@ The load-bearing rule is the seam between `machinery/` and `content/`. Machinery
 | `brief/` | The Mizan Labs product brief — what Market and Move are and which surfaces exist. |
 | `decisions/` | The Decision Log: the significant calls, with reasoning and consequences. |
 | `audit/` | Assessments written before an intervention. What is true and what it costs — not what we chose. |
+| `packages/` | Build output and the artifacts that consume it: the generated token files, and the preview that reads them. No token value is authored here — `packages/tokens/` is regenerated on every build, and the preview reads it rather than restating it. |
 | `legacy/` | Mizan v0, a deliberately broken legacy system. A fixed artifact. Do not repair it. |
 
 Tokens are the only editing surface. CSS variables and Figma variables are generated displays, never sources, and the sync runs one way — outward.
