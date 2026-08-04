@@ -20,3 +20,31 @@ for the arithmetic they produce, not for how they look.
 them both discovery paths are exercised.
 
 Do not fix `broken/`. Its defects are the test.
+
+## `figma/` — the display side
+
+Two Figma variable snapshots of the **same** `valid/` token set, for
+`check-drift.mjs`. Rung 1 checks the source against itself, so its fixtures are
+two token sets; rung 2 checks the display against the source, so its fixtures
+are two displays of one correct source.
+
+- `aligned.json` — what the sync plugin would have written. Zero drift, no
+  warnings, and every token in the table reads `aligned`. This is the fixture
+  that proves the detector does not cry wolf, which matters exactly as much as
+  the other one.
+- `drifted.json` — the same file after somebody has been in it by hand, carrying
+  one instance of every drift class the detector claims to catch. Each planted
+  edit carries a `_defect` key saying what it is and why it matters; the key is
+  not part of Figma's payload and the loader ignores it.
+
+Both are the payload of Figma's read endpoint for local variables,
+`GET /v1/files/<key>/variables/local`, verbatim — so a real file can be curled
+straight into this shape and compared with no credentials in CI.
+
+They are a faithful projection of what `machinery/figma-plugin/` writes: one
+collection per mode dimension, one per invariant token layer, and the single
+mode of an invariant collection named `Default`. That fidelity is the point.
+A snapshot shaped the way the syncer does *not* write would prove nothing about
+a real file, and two structures that disagree by design cannot be compared.
+
+Do not fix `drifted.json` either.

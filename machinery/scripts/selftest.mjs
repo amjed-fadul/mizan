@@ -2,16 +2,18 @@
 /**
  * selftest.mjs — proves the gates actually reject things.
  *
- * Runs check-schema and check-contrast against both fixture sets and asserts
- * not only the exit codes but the specific defects that come back. A gate that
- * has never rejected anything is an untested claim, and a gate asserted only on
- * its exit code can pass for the wrong reason.
+ * Runs check-schema, check-contrast and check-drift against the fixture sets
+ * and asserts not only the exit codes but the specific defects that come back.
+ * A gate that has never rejected anything is an untested claim, and a gate
+ * asserted only on its exit code can pass for the wrong reason.
  *
  * Usage: node machinery/scripts/selftest.mjs [--verbose]
  * Exits 1 if any assertion fails.
  */
 
 import { spawnSync } from 'node:child_process';
+import { readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -21,6 +23,8 @@ const SCRIPTS_DIR = dirname(fileURLToPath(import.meta.url));
 const FIXTURES = join(SCRIPTS_DIR, '__fixtures__');
 const VALID = join(FIXTURES, 'valid');
 const BROKEN = join(FIXTURES, 'broken');
+const FIGMA_ALIGNED = join(FIXTURES, 'figma', 'aligned.json');
+const FIGMA_DRIFTED = join(FIXTURES, 'figma', 'drifted.json');
 
 const args = parseArgs(process.argv.slice(2), { flags: ['verbose'] });
 
@@ -189,12 +193,190 @@ assert(
 );
 
 /* ------------------------------------------------------------------ *
+ * Rung 2: the drift detector, against the same valid token set.
+ *
+ * Rung 1 checks the source against itself. This checks the display against the
+ * source, so both fixtures here are Figma snapshots of the *same* correct token
+ * set: one that agrees with it, and one that has been hand-edited in each of the
+ * ways the detector claims to catch. Every class is asserted by name, and the
+ * flattened-alias case is asserted twice over — because its Figma value is
+ * *correct*, and a detector that only compared values would call it aligned.
+ * ------------------------------------------------------------------ */
+
+process.stdout.write('\nFixture: figma/aligned — the display agrees with the source\n');
+
+const aligned = run('check-drift.mjs', ['--root', VALID, '--snapshot', FIGMA_ALIGNED]);
+assert(aligned.status === 0, 'aligned snapshot: drift gate exits 0',
+  `exit ${aligned.status}; ${JSON.stringify(aligned.payload?.findings ?? aligned.stderr)}`);
+assert((aligned.payload?.findings ?? []).length === 0, 'aligned snapshot: no drift at all',
+  JSON.stringify(aligned.payload?.findings));
+assert((aligned.payload?.errors ?? []).length === 0 && (aligned.payload?.warnings ?? []).length === 0,
+  'aligned snapshot: no errors and no warnings either',
+  JSON.stringify([aligned.payload?.errors, aligned.payload?.warnings]));
+assert(aligned.payload?.counts?.aligned === 18 && aligned.payload?.counts?.checks === 72,
+  'aligned snapshot: all eighteen tokens compared, in every mode combination',
+  JSON.stringify(aligned.payload?.counts));
+assert((aligned.payload?.tokens ?? []).every((token) => token.status === 'aligned'),
+  'aligned snapshot: every row of the dashboard table says aligned',
+  JSON.stringify((aligned.payload?.tokens ?? []).filter((t) => t.status !== 'aligned')));
+
+// Mode mapping is discovered, not configured: the collection named after a
+// dimension maps onto that dimension's modes, and a single-mode collection is
+// taken as invariant rather than guessed at.
+const collections = aligned.payload?.collections ?? [];
+const themeCollection = collections.find((c) => c.mappedTo.includes('theme.light'));
+assert(themeCollection !== undefined && themeCollection.mappedTo.includes('theme.dark'),
+  'aligned snapshot: a Figma collection\'s modes are mapped onto the token set\'s mode ids',
+  JSON.stringify(collections));
+assert(collections.some((c) => c.modes.length === 1 && c.mappedTo[0] === null),
+  'aligned snapshot: a single-mode collection maps to nothing and is compared as invariant',
+  JSON.stringify(collections));
+
+// The snapshots are the shape machinery/figma-plugin actually writes — one
+// collection per mode dimension, one per invariant layer, whose single mode
+// carries the plugin's SINGLE_MODE_NAME. Comparing against a projection the
+// syncer does not produce would prove nothing about the real file.
+assert(collections.filter((c) => c.modes.length === 1).every((c) => c.modes[0] === 'Default'),
+  'aligned snapshot: an invariant collection\'s single mode is named as the sync plugin names it',
+  JSON.stringify(collections.map((c) => c.modes)));
+
+process.stdout.write('\nFixture: figma/drifted — one hand-edit of every kind\n');
+
+const drifted = run('check-drift.mjs', ['--root', VALID, '--snapshot', FIGMA_DRIFTED]);
+assert(drifted.status === 1, 'drifted snapshot: drift gate exits 1', `exit ${drifted.status}`);
+
+const driftCodes = codes(drifted.payload?.findings);
+const expectedDriftCodes = [
+  ['missing-in-figma', 'a token the Figma file has no variable for'],
+  ['orphan-in-figma', 'a variable no token declares'],
+  ['value-mismatch', 'a variable holding a different value'],
+  ['alias-flattened', 'a reference replaced by a raw value'],
+  ['alias-unexpected', 'a reference invented where the source states a literal'],
+  ['alias-target-mismatch', 'a reference pointing at the wrong primitive'],
+  ['type-mismatch', 'a variable whose resolved type is not the token\'s'],
+  ['description-drift', 'a description edited in the file'],
+];
+for (const [code, description] of expectedDriftCodes) {
+  assert(driftCodes.has(code), `drifted snapshot: drift gate reports ${code} — ${description}`,
+    `codes seen: ${[...driftCodes].join(', ')}`);
+}
+
+/* The flattened alias, asserted properly. ------------------------------- */
+
+const flattened = (drifted.payload?.findings ?? []).find((f) => f.code === 'alias-flattened');
+assert(flattened !== undefined && flattened.expected?.resolves === flattened.actual?.display,
+  'alias-flattened: the flattened value is *correct* — a value-only comparison would call this aligned',
+  JSON.stringify(flattened));
+assert(flattened?.mode === 'dark' && !(flattened?.tokenModes ?? []).some((label) => label.includes('theme.light')),
+  'alias-flattened: it is caught in the one Figma mode it was planted in, and not in the other',
+  JSON.stringify(flattened));
+assert((drifted.payload?.findings ?? []).filter((f) => f.token === 'text.primary').length === 1,
+  'alias-flattened: the untouched mode of the same variable reports nothing',
+  JSON.stringify((drifted.payload?.findings ?? []).filter((f) => f.token === 'text.primary')));
+
+/* Everything else that has to be true of the report. -------------------- */
+
+const targetMismatch = (drifted.payload?.findings ?? []).find((f) => f.code === 'alias-target-mismatch');
+assert(/\{color\.neutral\.500\}/.test(targetMismatch?.expected?.display ?? '')
+  && /\{color\.neutral\.600\}/.test(targetMismatch?.actual?.display ?? ''),
+  'drifted snapshot: an alias mismatch names both targets, source side first',
+  JSON.stringify(targetMismatch));
+
+const valueMismatch = (drifted.payload?.findings ?? []).find((f) => f.code === 'value-mismatch');
+assert(valueMismatch?.expected?.display === '#2e2e2e' && valueMismatch?.actual?.display === '#333333',
+  'drifted snapshot: a value mismatch shows both values',
+  JSON.stringify(valueMismatch));
+
+assert((drifted.payload?.findings ?? []).every((f) => typeof f.remedy === 'string' && f.remedy.length > 0),
+  'drifted snapshot: every finding carries a remedy');
+assert((drifted.payload?.findings ?? []).every((f) => !/copy|import|pull/i.test(f.remedy)
+  || /outward|delete/i.test(f.remedy)),
+  'drifted snapshot: no remedy tells anybody to take a Figma value back into the source',
+  JSON.stringify((drifted.payload?.findings ?? []).map((f) => f.remedy)));
+
+const driftWarnings = codes(drifted.payload?.warnings);
+assert(driftWarnings.has('figma-mode-unknown'),
+  'drifted snapshot: a Figma mode the token source has never heard of is warned about, not silently compared',
+  `warning codes seen: ${[...driftWarnings].join(', ')}`);
+
+const driftedRows = drifted.payload?.tokens ?? [];
+assert(driftedRows.some((row) => row.status === 'orphan')
+  && driftedRows.some((row) => row.status === 'missing')
+  && driftedRows.some((row) => row.status === 'drifted')
+  && driftedRows.some((row) => row.status === 'aligned'),
+  'drifted snapshot: the dashboard table carries all four statuses, aligned rows included',
+  JSON.stringify([...new Set(driftedRows.map((row) => row.status))]));
+
+const driftHuman = spawnSync(process.execPath,
+  [join(SCRIPTS_DIR, 'check-drift.mjs'), '--root', VALID, '--snapshot', FIGMA_DRIFTED], { encoding: 'utf8' });
+assert(driftHuman.stdout.includes('Figma is a display, never a source')
+  && driftHuman.stdout.includes('runs outward'),
+  'drifted snapshot: the human-readable output states the direction of the fix, not just the disagreement',
+  driftHuman.stdout);
+
+/* No snapshot and no credentials is a failure, not a quiet pass. -------- */
+
+const noSource = run('check-drift.mjs', ['--root', VALID]);
+assert(noSource.status === 1 && codes(noSource.payload?.errors).has('no-source'),
+  'drift gate: with nothing to compare against it fails loudly rather than reporting zero drift',
+  JSON.stringify(noSource.payload?.errors ?? noSource.stderr));
+
+/* ------------------------------------------------------------------ *
+ * The dashboard is generated from the gates, and only from the gates.
+ * ------------------------------------------------------------------ */
+
+process.stdout.write('\nDashboard: generated from the same JSON the gates emit\n');
+
+const dashboardOut = join(tmpdir(), `health-selftest-${process.pid}.html`);
+const dashboard = spawnSync(process.execPath, [
+  join(SCRIPTS_DIR, 'health-dashboard.mjs'),
+  '--root', VALID, '--snapshot', FIGMA_DRIFTED, '--out', dashboardOut, '--quiet',
+], { encoding: 'utf8' });
+assert(dashboard.status === 0, 'dashboard: generating a page succeeds even when the news is bad',
+  `exit ${dashboard.status}; ${dashboard.stderr}`);
+
+let page = '';
+try { page = readFileSync(dashboardOut, 'utf8'); } catch { page = ''; }
+assert(page.startsWith('<!doctype html>') && page.includes('</html>'), 'dashboard: writes a complete HTML document');
+assert(!/<(script|link|img)[^>]+(src|href)=["']?(https?:)?\/\//i.test(page),
+  'dashboard: self-contained — nothing is fetched from anywhere');
+assert(page.includes('DRIFTED') && page.includes('never a source') && page.includes('no arrow back'),
+  'dashboard: the verdict and the direction of the fix are both on the page');
+for (const [code] of expectedDriftCodes) {
+  const label = drifted.payload?.classes?.[code]?.label;
+  assert(label !== undefined && page.includes(label),
+    `dashboard: shows the ${code} finding`, `label: ${label}`);
+}
+assert(page.includes('#2e2e2e') && page.includes('#333333'),
+  'dashboard: both sides of a value mismatch appear, side by side');
+assert(/--mz-page: #0f0f0f/.test(page),
+  'dashboard: its own palette is resolved from the token set it reports on, not hardcoded',
+  (page.match(/--mz-page: #[0-9a-f]{6}/) ?? []).join());
+
+const strict = spawnSync(process.execPath, [
+  join(SCRIPTS_DIR, 'health-dashboard.mjs'),
+  '--root', VALID, '--snapshot', FIGMA_DRIFTED, '--out', dashboardOut, '--quiet', '--strict',
+], { encoding: 'utf8' });
+assert(strict.status === 1, 'dashboard: --strict adopts the gates\' verdict for CI', `exit ${strict.status}`);
+
+const alignedDashboard = spawnSync(process.execPath, [
+  join(SCRIPTS_DIR, 'health-dashboard.mjs'),
+  '--root', VALID, '--snapshot', FIGMA_ALIGNED, '--out', dashboardOut, '--quiet', '--strict',
+], { encoding: 'utf8' });
+assert(alignedDashboard.status === 0, 'dashboard: --strict passes when every gate passes',
+  `exit ${alignedDashboard.status}; ${alignedDashboard.stdout}${alignedDashboard.stderr}`);
+try { rmSync(dashboardOut, { force: true }); } catch { /* nothing to clean up */ }
+
+/* ------------------------------------------------------------------ *
  * Summary
  * ------------------------------------------------------------------ */
 
 process.stdout.write(`\nFixtures: ${displayPath(FIXTURES)}\n`);
 if (failures.length === 0) {
-  process.stdout.write(`Result: pass. ${passes.length} assertion(s), both gates proven to accept the valid set and reject the broken one.\n`);
+  process.stdout.write(
+    `Result: pass. ${passes.length} assertion(s). Rung 1 proven to accept the valid token set and reject the broken one; `
+    + 'rung 2 proven to accept a Figma snapshot that agrees and to catch each way one can disagree.\n',
+  );
   process.exitCode = 0;
 } else {
   process.stdout.write(`Result: fail. ${failures.length} of ${passes.length + failures.length} assertion(s) failed.\n`);
