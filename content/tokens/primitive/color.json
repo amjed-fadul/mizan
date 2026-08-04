@@ -3,116 +3,336 @@
     "$type": "color",
     "$description": "The backbone ramp. Every surface, every line, every neutral text tier and every disabled state is drawn from here, so the steps are spaced by the contrast ratios the system has to hit rather than by an even perceptual interval. Steps run light to dark: 0 is white, 1000 is the darkest. A step exists only where a declared pairing needs one, which is why the spacing is uneven and why there is a 650 between 600 and 700. Established by decision 008.",
     "0": {
-      "$value": { "colorSpace": "srgb", "components": [1, 1, 1], "alpha": 1, "hex": "#ffffff" },
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          1,
+          1,
+          1
+        ],
+        "alpha": 1,
+        "hex": "#ffffff"
+      },
       "$description": "Pure white. The light-mode page ground, and the value that light-mode text and border contrast is calculated against."
     },
     "100": {
-      "$value": { "colorSpace": "srgb", "components": [0.9490196078431372, 0.9490196078431372, 0.9490196078431372], "alpha": 1, "hex": "#f2f2f2" },
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.9490196078431372,
+          0.9490196078431372,
+          0.9490196078431372
+        ],
+        "alpha": 1,
+        "hex": "#f2f2f2"
+      },
       "$description": "A tint just off white — the lightest step that is still visibly a different plane from 0. Sized to be seen: decision 008 deleted v0's #fafafa for being a rounding error away from white."
     },
     "200": {
-      "$value": { "colorSpace": "srgb", "components": [0.8941176470588236, 0.8941176470588236, 0.8941176470588236], "alpha": 1, "hex": "#e4e4e4" },
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.8941176470588236,
+          0.8941176470588236,
+          0.8941176470588236
+        ],
+        "alpha": 1,
+        "hex": "#e4e4e4"
+      },
       "$description": "The hairline step. Light enough to divide without ruling the layout into boxes, dark enough to be a line rather than a suggestion."
     },
     "300": {
-      "$value": { "colorSpace": "srgb", "components": [0.8313725490196079, 0.8313725490196079, 0.8313725490196079], "alpha": 1, "hex": "#d4d4d4" },
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.8313725490196079,
+          0.8313725490196079,
+          0.8313725490196079
+        ],
+        "alpha": 1,
+        "hex": "#d4d4d4"
+      },
       "$description": "A heavier line, and the ground for inert filled shapes — track backgrounds, skeleton blocks, disabled fills."
     },
     "400": {
-      "$value": { "colorSpace": "srgb", "components": [0.7215686274509804, 0.7215686274509804, 0.7215686274509804], "alpha": 1, "hex": "#b8b8b8" },
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.7215686274509804,
+          0.7215686274509804,
+          0.7215686274509804
+        ],
+        "alpha": 1,
+        "hex": "#b8b8b8"
+      },
       "$description": "The lightest step that reads as a mark rather than a background. Intended for lines and shapes on dark grounds, where the polarity is reversed."
     },
     "500": {
-      "$value": { "colorSpace": "srgb", "components": [0.5803921568627451, 0.5803921568627451, 0.5803921568627451], "alpha": 1, "hex": "#949494" },
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.5803921568627451,
+          0.5803921568627451,
+          0.5803921568627451
+        ],
+        "alpha": 1,
+        "hex": "#949494"
+      },
       "$description": "The lightest step that clears 3:1 on white (3.03:1), so it is the floor for anything that has to be seen but is not text — a control edge, an icon carrying meaning, a focus ring on a light ground."
     },
     "600": {
-      "$value": { "colorSpace": "srgb", "components": [0.47843137254901963, 0.47843137254901963, 0.47843137254901963], "alpha": 1, "hex": "#7a7a7a" },
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.47843137254901963,
+          0.47843137254901963,
+          0.47843137254901963
+        ],
+        "alpha": 1,
+        "hex": "#7a7a7a"
+      },
       "$description": "A neutral with headroom over the 3:1 floor, for non-text marks that need to survive a tinted ground rather than only pure white."
     },
     "650": {
-      "$value": { "colorSpace": "srgb", "components": [0.4196078431372549, 0.4196078431372549, 0.4196078431372549], "alpha": 1, "hex": "#6b6b6b" },
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.4196078431372549,
+          0.4196078431372549,
+          0.4196078431372549
+        ],
+        "alpha": 1,
+        "hex": "#6b6b6b"
+      },
       "$description": "The lightest step that still clears 4.5:1 on white (5.33:1). It exists between 600 and 700 because decision 008 refused to merge the two products' secondary text, and this is the lighter of the two survivors — the value that has to hold when a reader gets one glance."
     },
     "700": {
-      "$value": { "colorSpace": "srgb", "components": [0.35294117647058826, 0.35294117647058826, 0.35294117647058826], "alpha": 1, "hex": "#5a5a5a" },
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.35294117647058826,
+          0.35294117647058826,
+          0.35294117647058826
+        ],
+        "alpha": 1,
+        "hex": "#5a5a5a"
+      },
       "$description": "A second text-safe neutral (6.90:1 on white) with enough margin to survive a tinted ground. The other survivor of the secondary-text refusal in decision 008."
     },
     "800": {
-      "$value": { "colorSpace": "srgb", "components": [0.23921568627450981, 0.23921568627450981, 0.23921568627450981], "alpha": 1, "hex": "#3d3d3d" },
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.23921568627450981,
+          0.23921568627450981,
+          0.23921568627450981
+        ],
+        "alpha": 1,
+        "hex": "#3d3d3d"
+      },
       "$description": "A dark neutral for filled shapes and grounds that are not the page itself — a tooltip body, an inverted chip, a pressed dark control."
     },
     "900": {
-      "$value": { "colorSpace": "srgb", "components": [0.1843137254901961, 0.1843137254901961, 0.1843137254901961], "alpha": 1, "hex": "#2f2f2f" },
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.1843137254901961,
+          0.1843137254901961,
+          0.1843137254901961
+        ],
+        "alpha": 1,
+        "hex": "#2f2f2f"
+      },
       "$description": "The darkest text step (13.39:1 on white). Deliberately not black: it carries the full text ratio with room to spare while staying softer than #000000 on a bright screen. Decision 008 merged four v0 near-blacks into this one value."
     },
     "950": {
-      "$value": { "colorSpace": "srgb", "components": [0.12156862745098039, 0.12156862745098039, 0.12156862745098039], "alpha": 1, "hex": "#1f1f1f" },
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.12156862745098039,
+          0.12156862745098039,
+          0.12156862745098039
+        ],
+        "alpha": 1,
+        "hex": "#1f1f1f"
+      },
       "$description": "The step immediately above 1000, so that dark mode can have two distinguishable grounds — a page and a panel set into it — without either of them going to black."
     },
     "1000": {
-      "$value": { "colorSpace": "srgb", "components": [0.0784313725490196, 0.0784313725490196, 0.0784313725490196], "alpha": 1, "hex": "#141414" },
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.0784313725490196,
+          0.0784313725490196,
+          0.0784313725490196
+        ],
+        "alpha": 1,
+        "hex": "#141414"
+      },
       "$description": "The darkest step, and the dark-mode page ground. Not black, for the same reason 900 is not black, and because a true-black ground leaves nothing below it to sink a panel into."
     }
   },
-
   "green": {
     "$type": "color",
     "$description": "The brand hue. Two steps, because an action needs a resting value and a value for hover and pressed — and decision 008 found that v0's two greens were 2.90 apart while the gap a hover is meant to signal is 9.23, so the interval here is set by that gap rather than by how far apart the old values happened to sit.",
     "600": {
-      "$value": { "colorSpace": "srgb", "components": [0.16470588235294117, 0.4549019607843137, 0.32941176470588235], "alpha": 1, "hex": "#2a7454" },
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.16470588235294117,
+          0.4549019607843137,
+          0.32941176470588235
+        ],
+        "alpha": 1,
+        "hex": "#2a7454"
+      },
       "$description": "The resting brand green. Dark enough to carry white text at the full 4.5:1 text ratio (5.64:1), which is the constraint that fixes its lightness — a lighter, more saturated green cannot hold a label."
     },
     "700": {
-      "$value": { "colorSpace": "srgb", "components": [0.12156862745098039, 0.35294117647058826, 0.2549019607843137], "alpha": 1, "hex": "#1f5a41" },
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.12156862745098039,
+          0.35294117647058826,
+          0.2549019607843137
+        ],
+        "alpha": 1,
+        "hex": "#1f5a41"
+      },
       "$description": "The darker green, for hover and pressed. Far enough from 600 to read as a state change, and still carrying white text with more margin than 600 rather than less."
     }
   },
-
   "blue": {
     "$type": "color",
     "$description": "The second brand hue, held to exactly the same two-step structure as green so that a product swapping one for the other changes a value and not a shape. Kept as its own ramp rather than merged into green: the audit was explicit that the two lineages stay independent.",
     "600": {
-      "$value": { "colorSpace": "srgb", "components": [0.10196078431372549, 0.43529411764705883, 0.7098039215686275], "alpha": 1, "hex": "#1a6fb5" },
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.10196078431372549,
+          0.43529411764705883,
+          0.7098039215686275
+        ],
+        "alpha": 1,
+        "hex": "#1a6fb5"
+      },
       "$description": "The resting blue, set to the same constraint as green.600 — it has to carry white text at 4.5:1 (5.27:1), which is what stops it drifting brighter."
     },
     "700": {
-      "$value": { "colorSpace": "srgb", "components": [0.0784313725490196, 0.33725490196078434, 0.5490196078431373], "alpha": 1, "hex": "#14568c" },
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.0784313725490196,
+          0.33725490196078434,
+          0.5490196078431373
+        ],
+        "alpha": 1,
+        "hex": "#14568c"
+      },
       "$description": "The darker blue, for hover and pressed, matched to the interval green uses so a state change feels the same size in either hue."
     }
   },
-
   "red": {
     "$type": "color",
     "$description": "The hue for loss and irreversibility — errors, destructive confirmations, cancellations. Decision 008 deleted two of v0's four reds and left two steps on the same resting/darker structure as the other hues; 300 and 400 were added afterwards, when the dark mode matrix was authored, because a saturated hue tuned to carry text on white cannot carry text on #141414. Four steps now, and the ramp is polarity-split rather than continuous: 600 and 700 are the light-ground steps, 300 and 400 the dark-ground ones, and neither pair works where the other belongs. Red is the only hue that gets this treatment — green and blue are fills with white text on top, and both ambers are indicator-only at 3:1, which they already clear on either ground.",
     "300": {
-      "$value": { "colorSpace": "srgb", "components": [0.9372549019607843, 0.3254901960784314, 0.3137254901960784], "alpha": 1, "hex": "#ef5350" },
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.9372549019607843,
+          0.3254901960784314,
+          0.3137254901960784
+        ],
+        "alpha": 1,
+        "hex": "#ef5350"
+      },
       "$description": "DARK GROUNDS ONLY. The lighter red, for text on the dark-mode page (5.28:1 on neutral.1000) and inside a dark sunken panel (4.73:1 on neutral.950). It exists because red is the one saturated hue in this system that has to carry words: green and blue are fills with white text sitting on them, and amber is indicator-only, so only red needed a second polarity. It must never be used on a light ground, where it fails outright — 3.49:1 on neutral.0 and 3.11:1 on neutral.100, both short of the 4.5:1 its role demands. The light-ground equivalent is red.600."
     },
     "400": {
-      "$value": { "colorSpace": "srgb", "components": [0.8980392156862745, 0.45098039215686275, 0.45098039215686275], "alpha": 1, "hex": "#e57373" },
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.8980392156862745,
+          0.45098039215686275,
+          0.45098039215686275
+        ],
+        "alpha": 1,
+        "hex": "#e57373"
+      },
       "$description": "DARK GROUNDS ONLY, on the same terms as red.300 — 6.17:1 on neutral.1000 and 5.52:1 on neutral.950, and 2.99:1 on neutral.0, which is a failure and not a near miss. It is the second dark-mode red rather than a hover step, and the reason it exists is decision 008's refusal: commerce.discount and mobility.safety are separately tunable in light mode, and one dark red would have quietly merged them in two of the four mode combinations. A refusal that survives in light and collapses in dark was never a refusal. red.300 carries the discount, red.400 the cancellation, and the distinction holds in all four."
     },
     "600": {
-      "$value": { "colorSpace": "srgb", "components": [0.7764705882352941, 0.1568627450980392, 0.1568627450980392], "alpha": 1, "hex": "#c62828" },
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.7764705882352941,
+          0.1568627450980392,
+          0.1568627450980392
+        ],
+        "alpha": 1,
+        "hex": "#c62828"
+      },
       "$description": "LIGHT GROUNDS ONLY. The resting red. Dark enough to be read as text on white at 4.5:1 (5.62:1), which matters because unlike the ambers this hue does have to carry words. On the dark-mode ground it is far too dark to read, so the same role is carried there by red.300."
     },
     "700": {
-      "$value": { "colorSpace": "srgb", "components": [0.7019607843137254, 0.14901960784313725, 0.11764705882352941], "alpha": 1, "hex": "#b3261e" },
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.7019607843137254,
+          0.14901960784313725,
+          0.11764705882352941
+        ],
+        "alpha": 1,
+        "hex": "#b3261e"
+      },
       "$description": "LIGHT GROUNDS ONLY. The darker red, for hover and pressed on a destructive control, and for the times a red mark has to sit on a tinted rather than a white ground. It also carries mobility.safety in light mode (6.54:1 on white), which is what keeps that token distinct from commerce.discount at red.600. Its dark-ground counterpart is red.400."
     }
   },
-
   "amber": {
     "$type": "color",
     "$description": "The hue for 'attend to this, nothing is broken yet' — running low, costing more right now. Both steps are INDICATOR-ONLY and neither may be used for text; see the individual descriptions, and decision 008 for why the role narrowed instead of the colour darkening.",
     "600": {
-      "$value": { "colorSpace": "srgb", "components": [0.7607843137254902, 0.3686274509803922, 0], "alpha": 1, "hex": "#c25e00" },
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.7607843137254902,
+          0.3686274509803922,
+          0
+        ],
+        "alpha": 1,
+        "hex": "#c25e00"
+      },
       "$description": "INDICATOR ONLY. The resting amber, for a dot, a bar, a badge fill or an icon — never for text. It clears 3:1 on white comfortably as a graphic (4.29:1) and falls short of the 4.5:1 a text colour needs, and any words beside it take the neutral text ramp. Amber cannot reach 4.5:1 without turning brown and leaving the warning register entirely, so decision 008 narrowed the role rather than darkening the value past recognition. The obvious use is the forbidden one, which is why it is stated here."
     },
     "700": {
-      "$value": { "colorSpace": "srgb", "components": [0.6588235294117647, 0.3843137254901961, 0.0392156862745098], "alpha": 1, "hex": "#a8620a" },
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.6588235294117647,
+          0.3843137254901961,
+          0.0392156862745098
+        ],
+        "alpha": 1,
+        "hex": "#a8620a"
+      },
       "$description": "INDICATOR ONLY, on exactly the same terms as amber.600 — a graphic or a mark, never text. The darker step, for hover and pressed on an amber mark and for amber sitting on a tinted rather than a white ground. It is closer to 600 than the other ramps' pairs are, because there is very little room left below amber before it stops being amber. Worth stating plainly: this value does clear 4.5:1 on white (4.75:1). That is arithmetic, not permission. It is the pressed state of an indicator, and decision 008 narrowed the amber role rather than the amber value — status colour and status text are two jobs, and a hover step is not where the text one gets smuggled back in."
+    }
+  },
+  "scrim": {
+    "$type": "color",
+    "$description": "The one translucent colour in the system, and deliberately not a step on the neutral ramp. A scrim is not a surface — it is the interface being pushed back so that something in front of it is unambiguously the subject, and the thing behind it is meant to remain partly visible so a user keeps their place. shadow.300's own description named this mechanism and declined to be it: \"anything that needs to feel further away than this needs a scrim behind it, which is a separate mechanism and not a fourth shadow\". This is that mechanism, arriving when decision 025 gave it a consumer. It sits outside the ramp because ramp position means contrast rank, and a translucent value has no fixed contrast to rank — what it resolves to depends on what is behind it, which is exactly why check-contrast.mjs refuses a translucent background rather than measuring one.",
+    "black": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0,
+          0,
+          0
+        ],
+        "alpha": 0.5,
+        "hex": "#000000"
+      },
+      "$description": "Pure black at half opacity, and the only colour token in the system whose alpha is not 1. Black rather than neutral.1000 because a scrim darkens whatever is behind it rather than tinting it toward a chosen grey, and 0.5 because it has to do two jobs at once in opposite themes: over the light page it must dim white enough that the page reads as inactive, and over the dark page it must still separate #141414 into a visibly darker #0a0a0a. A lighter value fails the first and a heavier one closes the second to nothing. This is the value to revisit if either page ground moves."
     }
   }
 }

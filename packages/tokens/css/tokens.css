@@ -77,6 +77,7 @@
   --red-400: #e57373;
   --red-600: #c62828;
   --red-700: #b3261e;
+  --scrim-black: rgba(0, 0, 0, 0.5);
   --shadow-100: 0px 1px 2px 0px #0000000f;
   --shadow-200: 0px 2px 8px 0px #0000001a;
   --shadow-300: 0px 8px 24px 0px #00000029;
@@ -103,6 +104,7 @@
   --control-sm-padding-block: var(--space-100);
   --control-sm-padding-inline: var(--space-150);
   --mobility-surge: var(--amber-700);
+  --surface-scrim: var(--scrim-black);
   --text-on-action: var(--neutral-0);
   --focus-ring: var(--text-primary);
   --focus-ring-contrast: var(--surface-default);

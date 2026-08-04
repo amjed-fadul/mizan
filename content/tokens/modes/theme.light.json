@@ -3,6 +3,7 @@
 
   "surface": {
     "default": { "$value": "{neutral.0}" },
+    "scrim": { "$value": "{scrim.black}" },
     "sunken": { "$value": "{neutral.100}" }
   },
 
