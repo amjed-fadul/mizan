@@ -32,7 +32,7 @@ What form should the Stage 2 artifact take, given that the one thing it must nev
 
 Option 1 is the default answer and will probably be the right one at Stage 4, when there are components to put in stories. At Stage 2 it is a poor fit: there are no components, and Storybook's token story is an addon that reads a config someone maintains alongside the tokens. That is the second source rule 1 exists to prevent, arriving through a tool rather than through carelessness.
 
-Options 2 and 3 fail the same way and more obviously. A screenshot of dark mode is a claim about dark mode; it is true on the day it is taken. The specific thing Stage 2 needs to demonstrate is that eleven declared pairings hold in **all four combinations**, which is exactly the class of fact a static artifact records once and then quietly stops being true about.
+Options 2 and 3 fail the same way and more obviously. A screenshot of dark mode is a claim about dark mode; it is true on the day it is taken. The specific thing Stage 2 needs to demonstrate is that twelve declared pairings hold in **all four combinations**, which is exactly the class of fact a static artifact records once and then quietly stops being true about.
 
 Option 4 costs the most to build and carries its own risk: an application is code, and code in a package that also contains the design system's public output can drift into being part of it. It also has to be maintained across every later stage or removed.
 
@@ -46,7 +46,7 @@ The capability this proves, stated as rule 7 demands:
 
 **A design system's documentation can be incapable of describing a system other than itself.** Because the same file both styles the page and supplies the gallery's contents, a token that changes value changes the page and the description of the page in the same build. There is no step where someone updates the documentation, and therefore no state where they have not.
 
-The contrast matrix is the sharper half. It recomputes the ratios in the browser from resolved values, and the arithmetic is aligned with `machinery/scripts/check-contrast.mjs` so a number read on screen and a number printed by the gate are the same number. That makes the gate's guarantee inspectable rather than merely asserted — a reader can see the eleven pairings in four combinations at once and check the two that are close.
+The contrast matrix is the sharper half. It recomputes the ratios in the browser from resolved values, and the arithmetic is aligned with `machinery/scripts/check-contrast.mjs` so a number read on screen and a number printed by the gate are the same number. That makes the gate's guarantee inspectable rather than merely asserted — a reader can see the twelve pairings in four combinations at once and check the two that are close.
 
 The rest follows from what the mode flip makes visible. v0's category title is built by concatenation; flip to Arabic RTL and the `100` migrates to sit against `Lipton` while `كيس` is stranded. The rebuilt pane keeps them together because the name and the size are separate `bdi` runs and the separator is markup rather than a character inside a sentence. That is a two-second demonstration of why the bidi rules are rules, and it does not survive being a screenshot.
 
