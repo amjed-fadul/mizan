@@ -1,0 +1,31 @@
+{
+  "color": {
+    "$type": "color",
+    "neutral": {
+      "0": {
+        "$value": { "colorSpace": "srgb", "components": [1, 1, 1], "alpha": 1, "hex": "#ffffff" }
+      },
+      "500": {
+        "$description": "DEFECT: hex disagrees with components. 0.5 computes to #808080.",
+        "$value": { "colorSpace": "srgb", "components": [0.5, 0.5, 0.5], "alpha": 1, "hex": "#cccccc" }
+      },
+      "600": {
+        "$value": { "colorSpace": "srgb", "components": [0.4, 0.4, 0.4], "alpha": 1, "hex": "#666666" }
+      },
+      "900": {
+        "$value": { "colorSpace": "srgb", "components": [0.18, 0.18, 0.18], "alpha": 1, "hex": "#2e2e2e" }
+      },
+      "1000": {
+        "$value": { "colorSpace": "srgb", "components": [0.06, 0.06, 0.06], "alpha": 1, "hex": "#0f0f0f" }
+      },
+      "Muted": {
+        "$description": "DEFECT: path segment is not lowercase kebab-case.",
+        "$value": { "colorSpace": "srgb", "components": [0.7, 0.7, 0.7], "alpha": 1 }
+      }
+    },
+    "orphan": {
+      "$description": "DEFECT (warning): no semantic, component or mode token references this.",
+      "$value": { "colorSpace": "srgb", "components": [0.9, 0.2, 0.2], "alpha": 1 }
+    }
+  }
+}

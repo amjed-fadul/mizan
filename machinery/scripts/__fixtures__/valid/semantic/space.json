@@ -1,0 +1,6 @@
+{
+  "spacing": {
+    "$type": "dimension",
+    "inset": { "$value": "{space.200}" }
+  }
+}

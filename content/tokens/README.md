@@ -10,4 +10,6 @@ Mizan's design tokens in DTCG format, in three layers: primitive → semantic �
 
 Two tokens sharing a value are not the same token. Value coincidence is not semantic identity, and merging on that basis is the mistake this layering exists to prevent.
 
+`pairs.json` declares every foreground/background combination the system intends to render, and the context each is used in. It is content, not machinery: the pairings are Mizan's knowledge of what sits on what. `machinery/scripts/check-contrast.mjs` reads it and fails the build when a declared pair drops below its WCAG threshold in any mode. An undeclared pairing is an unchecked pairing — see [decision 010](../../decisions/010-contrast-is-a-token-layer-guarantee.md).
+
 **Arrives Stage 2**, written as an intervention on the Mizan v0 audit rather than as a greenfield exercise. Every choice here should be traceable to something the audit found.

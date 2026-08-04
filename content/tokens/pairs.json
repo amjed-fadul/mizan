@@ -1,0 +1,72 @@
+{
+  "$description": "Every foreground/background combination Mizan intends to render, with the WCAG context each is used in. machinery/scripts/check-contrast.mjs resolves both tokens in every mode combination and fails the build when a declared pair falls below its threshold. An undeclared pairing is an unchecked pairing: nothing here means nothing verified, so coverage matters as much as strictness. The escape hatch is an explicit exception with a stated reason, never a lowered threshold — and an exception is reported in the build output whether it passes or fails, because a silent exception defeats the point of having a list. See decisions/010-contrast-is-a-token-layer-guarantee.md.",
+  "pairs": [
+    {
+      "foreground": "text.primary",
+      "background": "surface.default",
+      "context": "text",
+      "$description": "Body and heading text on the default surface. The most-used pairing in both products."
+    },
+    {
+      "foreground": "text.primary",
+      "background": "surface.sunken",
+      "context": "text",
+      "$description": "Body text inside a tinted panel. Sunken is lighter than the AA floor allows to be assumed, so it is checked separately from surface.default."
+    },
+    {
+      "foreground": "text.secondary",
+      "background": "surface.default",
+      "context": "text",
+      "$description": "The second and last neutral text tier (decision 009). It resolves to a different value per product mode, so this pair is the one that proves the mode matrix rather than the base values."
+    },
+    {
+      "foreground": "text.secondary",
+      "background": "surface.sunken",
+      "context": "text",
+      "$description": "Secondary text inside a tinted panel — the tightest neutral-on-neutral pairing in the system, and the first to break if either value drifts."
+    },
+    {
+      "foreground": "text.on-action",
+      "background": "action.primary",
+      "context": "text",
+      "$description": "Label text on the primary action. action.primary is one value in both products (decision 008), so this pair must hold in every mode."
+    },
+    {
+      "foreground": "border.default",
+      "background": "surface.default",
+      "context": "ui",
+      "$description": "The 1px neutral hairline. A border is a non-text boundary, so the threshold is 3.0 — but it is a boundary a user has to be able to see, not decoration."
+    },
+    {
+      "foreground": "border.control",
+      "background": "surface.default",
+      "context": "ui",
+      "$description": "The boundary of an interactive control. Checked separately from border.default because a control edge carries more meaning than a divider and may not inherit the same value."
+    },
+    {
+      "foreground": "commerce.discount",
+      "background": "surface.default",
+      "context": "text",
+      "$description": "Discount pricing is read as text and priced as a promise, so it carries the full 4.5 text threshold rather than the indicator threshold."
+    },
+    {
+      "foreground": "mobility.safety",
+      "background": "surface.default",
+      "context": "text",
+      "$description": "Trip cancellation and other destructive mobility messaging. Text, so 4.5. Kept distinct from commerce.discount by decision 008 — value coincidence is not semantic identity."
+    },
+    {
+      "foreground": "commerce.stock.low",
+      "background": "surface.default",
+      "context": "ui",
+      "$description": "INDICATOR ONLY. Amber cannot reach 4.5 without becoming brown, so this token is a dot, bar or badge fill and must never carry text (decision 008). Any text beside the indicator uses text.primary. Checked at the 3.0 non-text threshold precisely because the text use is forbidden — if this pair is ever declared as context text, the token is being misused."
+    },
+    {
+      "foreground": "mobility.surge",
+      "background": "surface.default",
+      "context": "ui",
+      "$description": "INDICATOR ONLY, on the same terms as commerce.stock.low. Surge pricing is signalled by a graphic element; the price itself is text.primary. Never text (decision 008)."
+    }
+  ],
+  "exceptions": []
+}

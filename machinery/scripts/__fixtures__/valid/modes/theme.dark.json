@@ -1,0 +1,9 @@
+{
+  "surface": {
+    "default": { "$value": "{color.neutral.1000}" }
+  },
+  "text": {
+    "primary": { "$value": "{color.neutral.100}" },
+    "secondary": { "$value": "{color.neutral.400}" }
+  }
+}

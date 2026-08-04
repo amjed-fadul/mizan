@@ -8,6 +8,12 @@
     "legacy",
     "packages/*"
   ],
+  "scripts": {
+    "check": "npm run check:schema && npm run check:contrast",
+    "check:schema": "node machinery/scripts/check-schema.mjs",
+    "check:contrast": "node machinery/scripts/check-contrast.mjs",
+    "selftest": "node machinery/scripts/selftest.mjs"
+  },
   "engines": {
     "node": ">=22"
   }

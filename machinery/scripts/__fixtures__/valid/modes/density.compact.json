@@ -1,0 +1,5 @@
+{
+  "spacing": {
+    "inset": { "$value": "{space.100}" }
+  }
+}

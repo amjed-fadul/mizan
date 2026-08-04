@@ -1,0 +1,16 @@
+{
+  "$description": "Declared pairings for the valid fixture. Every pair passes in all four mode combinations. The single exception is on a passing pair, so the selftest can assert that exceptions are reported even when nothing is wrong.",
+  "pairs": [
+    { "foreground": "text.primary", "background": "surface.default", "context": "text" },
+    { "foreground": "text.secondary", "background": "surface.default", "context": "text" },
+    { "foreground": "text.on-action", "background": "action.primary", "context": "text" },
+    { "foreground": "border.default", "background": "surface.default", "context": "ui" }
+  ],
+  "exceptions": [
+    {
+      "foreground": "border.default",
+      "background": "surface.default",
+      "reason": "Fixture only. This pair passes; the entry exists to prove that an exception is reported prominently even when it is not currently rescuing anything."
+    }
+  ]
+}

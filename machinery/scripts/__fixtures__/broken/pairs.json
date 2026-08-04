@@ -1,0 +1,14 @@
+{
+  "$description": "Declared pairings for the broken fixture. text.secondary on surface.default passes in light and fails in dark — the case a base-values-only check would miss entirely.",
+  "pairs": [
+    { "foreground": "text.primary", "background": "surface.default", "context": "text" },
+    { "foreground": "text.secondary", "background": "surface.default", "context": "text" },
+    {
+      "foreground": "text.primary",
+      "background": "surface.raised",
+      "context": "text",
+      "$description": "DEFECT: surface.raised is declared as a pairing but no token file defines it."
+    }
+  ],
+  "exceptions": []
+}

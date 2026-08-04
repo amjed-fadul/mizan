@@ -1,0 +1,14 @@
+{
+  "surface": {
+    "default": { "$value": "{color.neutral.1000}" }
+  },
+  "text": {
+    "primary": { "$value": "{color.neutral.0}" }
+  },
+  "shadow": {
+    "raised": {
+      "$description": "DEFECT: this path does not exist in the base tokens, so it exists in dark and nowhere else.",
+      "$value": "{color.neutral.900}"
+    }
+  }
+}

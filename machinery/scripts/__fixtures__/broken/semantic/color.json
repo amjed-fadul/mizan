@@ -1,0 +1,32 @@
+{
+  "surface": {
+    "$type": "color",
+    "default": { "$value": "{color.neutral.0}" }
+  },
+  "text": {
+    "$type": "color",
+    "primary": { "$value": "{color.neutral.900}" },
+    "secondary": {
+      "$description": "DEFECT (contrast): passes on the light surface, and the dark mode file forgets to override it.",
+      "$value": "{color.neutral.600}"
+    },
+    "literal": {
+      "$description": "DEFECT: a semantic token restating a value instead of referencing a primitive.",
+      "$value": { "colorSpace": "srgb", "components": [0, 0, 0], "alpha": 1, "hex": "#000000" }
+    },
+    "ghost": {
+      "$description": "DEFECT: alias to a token that does not exist.",
+      "$value": "{color.neutral.750}"
+    }
+  },
+  "border": {
+    "$type": "color",
+    "default": { "$value": "{color.neutral.500}" }
+  },
+  "loop": {
+    "$type": "color",
+    "$description": "DEFECT: an alias cycle.",
+    "a": { "$value": "{loop.b}" },
+    "b": { "$value": "{loop.a}" }
+  }
+}

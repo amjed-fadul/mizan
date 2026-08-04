@@ -1,0 +1,9 @@
+{
+  "stray": {
+    "$description": "DEFECT: no $type on the token and no ancestor group declares one.",
+    "$value": "12px"
+  },
+  "hollow": {
+    "$description": "DEFECT: neither a token nor a group. No $value, no members."
+  }
+}

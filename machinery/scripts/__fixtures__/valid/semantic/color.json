@@ -1,0 +1,20 @@
+{
+  "surface": {
+    "$type": "color",
+    "default": { "$value": "{color.neutral.0}" }
+  },
+  "text": {
+    "$type": "color",
+    "primary": { "$value": "{color.neutral.900}" },
+    "secondary": { "$value": "{color.neutral.600}" },
+    "on-action": { "$value": "{color.neutral.0}" }
+  },
+  "action": {
+    "$type": "color",
+    "primary": { "$value": "{color.accent.500}" }
+  },
+  "border": {
+    "$type": "color",
+    "default": { "$value": "{color.neutral.500}" }
+  }
+}

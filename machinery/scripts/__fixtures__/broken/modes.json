@@ -1,0 +1,6 @@
+{
+  "$description": "One dimension, two modes. Declared explicitly so the manifest discovery path is exercised alongside the filename convention used by the valid fixture.",
+  "dimensions": [
+    { "name": "theme", "modes": ["light", "dark"] }
+  ]
+}
