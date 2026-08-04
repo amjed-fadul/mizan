@@ -1,0 +1,56 @@
+{
+  "duration": {
+    "$type": "duration",
+    "$description": "The transition ramp: four tiers, one for each size of change a user can be shown, plus a named zero. Numbered on the same convention space and radius use — the step number is the value as a proportion of the base step, ×100, so 100 is the base and 200 is twice it. Here the base step is 100ms, which makes the number and the millisecond value coincide; that coincidence belongs to the base and not to the numbering, and a system that moved the base would keep the ratios and lose the coincidence. The tiers are chosen by how much of the screen is changing rather than by which component is changing it, because 'how long should a dropdown take' has one answer in a system and four in a codebase — and the Stage 1 audit found the four. Nothing here is above 500ms and there is no fifth tier; decision 021 argues the ceiling. A continuous rotation is not a slow member of this ramp and is not in it — see cycle.",
+    "0": {
+      "$value": { "value": 0, "unit": "ms" },
+      "$description": "No motion. A named zero on exactly the terms space.0 is one: a component that removes a transition states it as a token rather than dropping out of the system, and the reduced-motion rule reaches for this when it removes a movement animation. It is deliberately NOT what a reduced-motion mode would resolve the rest of this ramp to — decision 021 refuses that dimension, and the difference is the whole of the refusal. Selecting this value is a component deciding, one property at a time, that the thing being removed is movement. A global substitution decides nothing and cannot tell a slide from a spinner."
+    },
+    "100": {
+      "$value": { "value": 100, "unit": "ms" },
+      "$description": "Instant. Hover, press and focus — the states that answer the hand rather than the screen. The tier that must not be felt as a duration at all: the change has to read as a consequence of the input, and somewhere past 160ms it starts reading as a response to it instead. Most of the motion in a working interface lives here, because most of it is a control acknowledging a pointer twenty times a minute, and a tier used that often is the one where an extra 100ms is paid over and over."
+    },
+    "200": {
+      "$value": { "value": 200, "unit": "ms" },
+      "$description": "Micro. A toggle, a checkbox, a disclosure — a state change small enough that only the control redraws. Twice instant rather than half again, because the doubling is what makes the two distinguishable: a ramp stepping 100, 130, 170 is a ramp nobody can choose within, and a scale whose steps cannot be told apart is a longer list of the same decision."
+    },
+    "300": {
+      "$value": { "value": 300, "unit": "ms" },
+      "$description": "Standard. Cards, modals, dropdowns — a panel arriving or leaving, where enough of the screen changes that the eye needs the path and not only the endpoints. This is the top of the range for anything a user triggers repeatedly, and the strongest motion reference consulted for this scale argues it is the top of the range full stop. It is kept as the default for a panel rather than demoted to a maximum, but it is a default and not a target: a dropdown at 300ms and one at 200ms are both correct, and only one of them is ever noticed."
+    },
+    "500": {
+      "$value": { "value": 500, "unit": "ms" },
+      "$description": "Large. Full-screen changes and the one or two moments in a flow allowed to be deliberate — a page transition, an onboarding beat, a confirmation that is the point of the screen rather than a step in it. The largest tier and the one that has to be justified rather than selected: it is five times instant, it is felt as a duration by design, and a control reaching for it has almost certainly mistaken 'important' for 'slow'. The scale stops here because past roughly 600ms a transition stops reading as the interface responding and starts reading as the interface making somebody wait, and there is no sixth tier for that, because the honest answer at that length is a progress indicator and not a longer curve."
+    }
+  },
+
+  "cycle": {
+    "$type": "duration",
+    "$description": "Cycle lengths — how long one revolution of a continuous, endless animation takes. Its own group rather than a fifth rung of duration, for a category reason and not a cosmetic one. Every value in duration is the length of a change that has a start and an end; a cycle has neither, and the two are also chosen against different questions — a transition tier is picked against how much of the screen is changing, a cycle against how fast the loop reads. The same number means nothing in common in the two groups. Kept separate so that a spinner cannot be tuned by reaching for a transition tier and a transition cannot be tuned by reaching for a cycle, which is precisely the substitution the first component to want motion made before this file existed. See decision 021.",
+    "spin": {
+      "$value": { "value": 800, "unit": "ms" },
+      "$description": "One full revolution of an indeterminate busy indicator. 800ms rather than the 1s most spinner examples default to, because a faster rotation makes an identical wait feel shorter and there is nothing to be won by a stately one; and not faster than that, because below roughly 600ms a 2px ring stops reading as something rotating and starts reading as something flickering. Note where the number lands: 800ms is above the 600ms ceiling duration sets for itself, so if this were a fifth tier it would be an illegal one. That is the clearest evidence available that it is not a tier. Paired with easing.continuous and with nothing else — a rotation on any other curve in this file speeds up and slows down once per revolution."
+    }
+  },
+
+  "easing": {
+    "$type": "cubicBezier",
+    "$description": "Four curves, each named for the motion it describes rather than for the shape it draws. A curve is a token even though Figma cannot hold one: cubicBezier is a composite DTCG type, so machinery/scripts/check-drift.mjs skips it with a stated reason exactly as it skips shadow, and the skip list is a record of what the display cannot show rather than a list of things not worth deciding. The alternative fails in the ordinary way — four components each picking a curve by eye is how v0 arrived at four spacing rhythms — and easing drifts more quietly than spacing does, because nobody can measure a curve by looking at two screenshots. The generated CSS is a complete function — `--easing-entrance: cubic-bezier(0.16, 1, 0.3, 1)` — so a consumer writes `var(--easing-entrance)` and never wraps it. Worth stating because the DTCG source is four bare numbers and the obvious guess about what comes out of the build is the wrong one.",
+    "entrance": {
+      "$value": [0.16, 1, 0.3, 1],
+      "$description": "Something arriving: a menu opening, a sheet coming up, a toast appearing. Fast out of the gate and a long gentle settle, so the element is already most of the way there by the time the eye finds it and the last few pixels do the work of looking placed rather than dropped. This is a strong ease-out and it is not the only defensible one — 0.23, 1, 0.32, 1 is the same idea with a slightly softer entry, and a system that had picked it instead would not be wrong. What would be wrong is a system carrying both."
+    },
+    "exit": {
+      "$value": [0.7, 0, 0.84, 0],
+      "$description": "Something leaving. The mirror of entrance, and deliberately not entrance run backwards: a thing going away has no destination the eye needs to watch it reach, so it accelerates out instead of settling in. An exit is also where a duration tier should be chosen down rather than up — a dismissal that takes as long as the arrival did reads as the interface being reluctant to do what it was asked."
+    },
+    "move": {
+      "$value": [0.65, 0, 0.35, 1],
+      "$description": "Something moving within the screen, present at both ends of the journey: a card reordering, a thumb crossing a switch, a panel resizing. Eased at both ends because the element is visible for the whole distance and an unweighted start reads as a jump cut. This is the curve for when nothing is arriving and nothing is leaving, which is more often than it feels — most motion inside a screen is neither an entrance nor an exit, and reaching for one of those is how a reorder ends up looking like an insertion."
+    },
+    "continuous": {
+      "$value": [0, 0, 1, 1],
+      "$description": "Constant speed, for motion with no start and no end: an indeterminate spinner, a marquee, an indeterminate progress bar. This is exactly the CSS `linear` keyword — cubic-bezier(0, 0, 1, 1) is its definition rather than an approximation of it — and it is a token for two reasons. Without it, the one correct answer for a spinner is the single thing the token layer cannot express, and the component writes a bare keyword by hand; that is a value decided inside a component, however small the value. And a named curve is reviewable, where a keyword is not: easing.continuous on a transition reads as a wrong choice, and a bare `linear` reads as no choice having been made. It is named for the motion and not for the curve on purpose. The standing advice about easing is 'never linear', and that advice is right about transitions and wrong about rotation — a spinner on an eased curve visibly speeds up and slows down once per revolution and reads as struggling rather than working. Requiring the word `continuous` means using this on a transition means writing a word that is false about a transition, which is the cheapest guard the naming layer can offer."
+    }
+  }
+}
