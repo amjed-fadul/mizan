@@ -8,7 +8,8 @@
   "documentAccess": "dynamic-page",
   "networkAccess": {
     "allowedDomains": ["none"],
-    "reasoning": "The plugin reads token JSON handed to it through its own UI and writes variables in the open file. It never contacts a server, and it never sends the document anywhere."
+    "devAllowedDomains": ["ws://localhost:8791", "ws://127.0.0.1:8791"],
+    "reasoning": "Published, this plugin has no network access at all: allowedDomains stays \"none\". Run as a development plugin — which is the only way it is run — it can open one WebSocket to port 8791 on the loopback interface, and to nothing else. That socket answers one question, the file's current local variables in the shape Figma's own read endpoint returns them, so that machinery/scripts/check-drift.mjs can compare the Figma file against the token source on a plan where the variables REST API is closed. It carries no command that changes anything. The whole vocabulary is hello, snapshot-request, snapshot and error, and there is no word in it for create, update, rename or delete. It sends the variable table, plus the document's name and key so that a drift report can say which file it read — never the canvas and never the document itself. Where it sends them is one port on the loopback interface, on this machine. Whatever holds that port is what answers: the plugin cannot tell who started it, so this field does not claim that anybody in particular did."
   },
   "capabilities": [],
   "enableProposedApi": false,

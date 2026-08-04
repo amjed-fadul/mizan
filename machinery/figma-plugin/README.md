@@ -101,6 +101,78 @@ The page name is the one string on the sheet that is not discovered from the tok
 
 ---
 
+## The read bridge
+
+The proof sheet makes the variables readable by a person holding a selection. The bridge makes them readable by a script.
+
+Figma's variables REST API is Enterprise-only in **both** directions — reading is gated exactly as writing is ([015](../../decisions/015-rung-2-has-a-plan-floor.md)). Below Enterprise no script can fetch the live variable table at all. A plugin can read it on any plan. The bridge is the short piece of wire between those two facts: a localhost WebSocket, served by this plugin, that answers one question. With it, `machinery/scripts/check-drift.mjs` has a live source below Enterprise instead of a payload somebody exported and saved by hand.
+
+### Why it is ours and not a dependency
+
+`figma-console-mcp` already does this, and does it the same way — Plugin API over a localhost WebSocket, which is the only mechanism there is below Enterprise. It was refused on shape rather than on quality: it exposes create, update, rename and delete on variables, so adopting it would have put a second **write** path to Figma variables within reach of every assistant that can see the server. That does not merely risk unwanted edits. It destroys the *attribution* of every finding the detector produces — drift caused by an assistant becomes indistinguishable from drift caused by a person, and the remedies differ: one is a conversation with a designer, the other is a broken rule in the automation. The whole argument, including the 113 tools it gives up, is [016](../../decisions/016-build-the-read-bridge-rather-than-adopt-figma-console-mcp.md).
+
+### Running it
+
+1. Open the file in **Figma Desktop**.
+2. Run **Plugins → Development → Mizan Sync**.
+3. Press **Start read bridge**.
+4. From the repository root:
+
+```
+node machinery/scripts/check-drift.mjs --bridge
+```
+
+`--save-snapshot <file>` writes the payload it read to disk, whichever source it came from. That is how a live read becomes an offline fixture, which the `--snapshot` path then reads with no bridge, no plugin and no desktop app at all. It **refuses a destination inside the token root**, because everything under that root is loaded as tokens on the next run — a Figma payload saved there becomes a source, which is the one thing rule 1 forbids, and it would happen silently. `--bridge-port` and `--bridge-timeout` exist for the runs where 8791 and sixty seconds do not fit.
+
+### What it does not do
+
+**It does not move the floor.** Figma Desktop must still be open, with the file open, with the plugin running, with the bridge switched on. It removes a copy-and-paste, not a person. There is still no unattended drift detection below Enterprise: [015](../../decisions/015-rung-2-has-a-plan-floor.md)'s finding stands, and so does the health dashboard's tier label. Anything reading this as CI has misread it.
+
+### Which end listens
+
+A browser cannot listen, and a Figma plugin's UI is a browser — so the plugin is the client and the detector is the server. That is the better way round anyway: **the socket exists only while a read is in progress.** No daemon, no port held between runs, nothing to remember to stop. The detector opens the door, asks its one question and shuts it; the plugin sits there retrying while its bridge is on, so it does not matter which end starts first.
+
+The socket is opened in `ui.html` because that is the only place it can be. A plugin's main thread has no network; only its UI iframe does.
+
+### Read-only by construction
+
+The whole vocabulary is four message types, and three of them are answers.
+
+| message | direction | what it means |
+|---|---|---|
+| `hello` | plugin → detector | I am a Mizan Sync plugin, and this is what I can answer. |
+| `snapshot-request` | detector → plugin | Send the current variable table. |
+| `snapshot` | plugin → detector | Here it is, in the shape the REST read returns. |
+| `error` | plugin → detector | I could not. |
+
+There is no create, no update, no rename and no delete — in the same sense that the plugin has no delete operation at all. The list lives in `src/core/bridge.ts`, and a message whose type is not one of the four parses to `null`: an unrecognised instruction is not an instruction. `ui.html` composes no message of its own — `hello` and `snapshot` arrive from the main thread as finished objects and are stringified unread — so the guarantee is a property of the pure core rather than of the one file that cannot be driven from the command line. Two harnesses read that list out of the source and assert it — `dry-run.mjs` from inside the plugin, `machinery/scripts/selftest.mjs` from the end that holds the socket — so adding a verb fails the build rather than passing quietly. `selftest.mjs` also asserts what `ui.html` cannot say: exactly one call to `socket.send`, its argument the object handed over by the main thread, and exactly one wire type the block compares against.
+
+### Who can connect
+
+A read-only vocabulary says what can be asked on the socket. It says nothing about who is holding the other end. So the server refuses any handshake carrying an `Origin` header that is not absent or exactly `null`. A Figma plugin's UI is a sandboxed iframe with an opaque origin, so it sends `Origin: null`; an ordinary web page sends its real origin and is refused.
+
+That check carries more weight than its size suggests. **WebSocket connections are not subject to CORS**, and `127.0.0.1` is treated as a trustworthy origin — so without it, any page the user happened to have open could have connected during a read and handed the detector a fabricated variable table: planting findings, suppressing real ones, or, with `--save-snapshot`, writing its own bytes into a committed fixture. For a governance tool whose entire product is a finding, a fabricated finding is the whole attack.
+
+The limit is worth stating as plainly as the check. **An `Origin` check stops a web page, not a local process.** Any program already running on the machine can bind the port first, or connect to it. That is a smaller threat — it needs local code execution — but it is real, and this socket is not authenticated. Nothing here should be read as saying it is.
+
+Three narrower limits stand beside it: the server binds the loopback interface only, never `0.0.0.0`; it accepts a small number of concurrent connections and refuses beyond that; and the socket exists only for the seconds a read is running.
+
+### The port is a constant in four places
+
+`manifest.json` names it twice in `devAllowedDomains`, `src/core/bridge.ts` exports it, `ui.html` dials it, and `machinery/scripts/lib/bridge.mjs` listens on it. A manifest cannot take a variable and `ui.html` is loaded by Figma rather than bundled, so there is no single definition the others could point at, and generating the manifest from a build step is more machinery than one number is worth. Changing the port means changing all four.
+
+What keeps them equal is not discipline. `machinery/scripts/selftest.mjs` parses the number out of each of the four files and asserts they agree — against the manifest's value rather than against a number written in the test, since a test that states the port would be edited alongside the files it checks and agree with whatever it was last told. **This is duplication a script watches**, which is the only kind worth keeping: the failure it prevents is the worst shape available, because a port changed in three places out of four produces a bridge that silently never connects, and a bridge that never connects looks exactly like a bridge nobody switched on.
+
+### What comes back
+
+The payload is the shape of `GET /v1/files/<key>/variables/local`, which is what the detector already reads — **so the bridge adds a source, not a format.** A snapshot off the wire and a snapshot off disk are the same thing to the gate, which is why the offline route stays the primary one. Every payload carries `generatedBy` beside `meta`, so a saved snapshot says on its face that it did not come from the REST API.
+
+The `snapshot` message also carries the document's name and file key, and `check-drift.mjs` prints both on its `figma:` line and in its JSON. `--snapshot` records a path and `--file-key` records a key, so the bridge was the one source that could not say what it had read — and with the wrong file open, the gate would report every token as missing in Figma with the remedy "re-sync outward", which a reader could follow into the wrong document. **A report that cannot say which document it read is a report whose remedy cannot be checked.**
+
+It is the *subset* of that response the detector reads, not the whole of it. `key`, `remote`, `hiddenFromPublishing`, `scopes`, `codeSyntax` and the rest are absent, because inventing them would be inventing facts. One pure function produces it — `toRestPayload` in `src/core/rest.ts` — and the dry run drives that same function with the in-memory model in place of Figma, which is how the exported shape is proven without a desktop app.
+
+---
+
 ## The mapping
 
 ### The problem it has to solve
@@ -202,7 +274,7 @@ The general rule: **a projection that discards information is shared code; a pro
 - **It will not write a partial projection.** Any error blocks the whole run. Half a projection is drift, and drift that the tool itself introduced is the worst kind.
 - **It does not set scopes, code syntax, or publishing visibility.** Those are decisions about a Figma library, and the plugin has no opinion it could honestly base on the token JSON. They survive a re-sync untouched.
 - **The sync does not touch styles, components, or any node on the canvas.** Variables only. The proof sheet is the one thing in this plugin that draws, it is a separate action, and it draws on one page of its own — see below.
-- **It does not use the network.** `manifest.json` declares `"allowedDomains": ["none"]`.
+- **Published, it has no network access at all; run as a development plugin, it can open one socket to one port on the loopback interface.** `manifest.json` declares `"allowedDomains": ["none"]` beside `"devAllowedDomains": ["ws://localhost:8791", "ws://127.0.0.1:8791"]`, and Figma applies the second list only to a plugin imported from a manifest — which is the only way this one is ever run. That socket is off until somebody switches it on in the UI, and it carries the variable table and nothing else: never the canvas, never the document. **Publishing this plugin would stop the bridge working**, by construction rather than by policy. See below.
 
 ---
 
@@ -242,17 +314,29 @@ And for the proof sheet, against the same in-memory model plus an in-memory scen
 17. Every word in every frame title comes from the token root; no generated layer name contains a character outside plain ASCII.
 18. Eight combinations on the three-dimension fixture, with no code change.
 
-Those are checked by mutation as well as by construction: breaking the sheet on purpose — describing a variable in text instead of binding it, dropping one collection's explicit mode from a frame, writing a plain value for a property that is also bound, collapsing two swatches onto one name — makes the harness fail. An assertion nothing can break is not an assertion.
+And for the two files that carry this plugin's state back out — the REST projection in `src/core/rest.ts` and the read bridge's vocabulary in `src/core/bridge.ts`:
+
+19. Every collection and every variable arrives in the payload under its own id, `variableIds` on a collection is *derived* from the variables that name it rather than trusted, and every alias lands on a variable in the same payload — including one that crosses a collection boundary.
+20. A colour's four channels come through exactly as the plan set them — compared with `===`, not within a tolerance, because a projection that rounds produces drift below the gate's own resolution. `resolvedType` and `description` survive verbatim, and the payload carries `generatedBy` beside `meta`, so a saved snapshot says on its face that it did not come from the REST API.
+21. The plan for the real token root, applied and exported, is reported as aligned by the **real** drift detector, run as a separate process. See below.
+22. The bridge knows four message types — `hello`, `snapshot-request`, `snapshot`, `error` — and neither those nor any name it exports contains a word for writing. A well-formed message asking to delete a variable parses to `null`: an unrecognised instruction is not an instruction.
+23. A snapshot survives the round trip through the wire unchanged, payload and all.
+
+Those are checked by mutation as well as by construction. Breaking the sheet on purpose — describing a variable in text instead of binding it, dropping one collection's explicit mode from a frame, writing a plain value for a property that is also bound, collapsing two swatches onto one name — makes the harness fail. So does breaking the projection: the harness builds corrupted payloads in memory and asserts they are **caught** — one missing a variable, one whose alias points at an id nothing holds, one whose collection claims a variable it does not hold, and one whose colour moved by 1e-9, which a 1e-6 tolerance would have waved through. An assertion nothing can break is not an assertion.
 
 `npm run typecheck` runs `tsc --noEmit` over the same sources.
 
 ### Against the drift detector
 
-The other half of the claim is that what this plugin writes is what `machinery/scripts/check-drift.mjs` expects to find. That was checked end to end: the plan for the real token root was applied to the in-memory model, its state exported in the shape of Figma's `GET /v1/files/<key>/variables/local` response, and the drift detector pointed at it.
+The other half of the claim is that what this plugin writes is what `machinery/scripts/check-drift.mjs` expects to find. **That is an assertion in the harness, not something checked once by hand.** Every `npm run dry-run` plans the real token root, applies it to the in-memory model, exports that state through `src/core/rest.ts` in the shape of Figma's `GET /v1/files/<key>/variables/local` response, writes it to a temporary file outside the repository, and runs the real detector over it as a separate process. It is the only assertion here that runs both sides of the projection against each other.
+
+It asserts the detector exits 0, reports `ok`, finds nothing, errors on neither side, and calls aligned **every** variable the plan projects — a count derived from the plan rather than typed in, because a number written down here would rot the first time a token was added. On the token root in `content/` today that run reads:
 
 ```
 74 token(s) aligned across 296 comparison(s), 0 drifted, 0 missing, 0 orphaned
 ```
+
+And it asserts the run can go red: a snapshot with one colour visibly wrong exits 1, reports `ok: false`, and names the token whose value changed. A gate that cannot fail has not passed.
 
 The two files were written independently and agree on all four conventions that matter — `/` for `.` in names, `<collection>.<mode>` for mode ids, a single-mode collection meaning invariant, and which DTCG types have no variable form. They also have to agree on one thing that is a *convention* rather than a fact: a `fontFamily` stack narrows to its first family on both sides. That one is worth a Decision Log entry, because nothing enforces it and a change on one side alone produces drift no sync can ever clear.
 
@@ -262,7 +346,7 @@ The two files were written independently and agree on all four conventions that 
 
 | File | |
 |---|---|
-| `manifest.json` | Figma plugin manifest. `documentAccess: dynamic-page`, no network. |
+| `manifest.json` | Figma plugin manifest. `documentAccess: dynamic-page`; `allowedDomains: ["none"]`, so published there is no network at all, and `devAllowedDomains` permits one loopback WebSocket port for the bridge, for a development plugin only. |
 | `src/core/` | The pure core. No Figma, no Node — this is what the dry run drives. |
 | `src/core/token-model.ts` | The fs-free port of `machinery/scripts/lib/tokens.mjs`: flatten, `$type` inheritance, mode discovery, composition. |
 | `src/core/map.ts` | DTCG values to Figma values, and every refusal to translate one. Owns all of it except the font-stack narrowing, which it imports. |
@@ -273,6 +357,10 @@ The two files were written independently and agree on all four conventions that 
 | `src/core/sheet.ts` | The proof sheet: what is bound to what, and why. The argument lives in its header. |
 | `src/core/sheet-apply.ts` | Drawing a sheet plan, through an adapter. No delete path here either. |
 | `src/core/memory-nodes.ts` | Figma's scene graph in memory, for the dry run. |
+| `src/core/rest.ts` | The variable state in the shape Figma's read endpoint returns it. The one place that produces it. |
+| `src/core/bridge.ts` | The read bridge's vocabulary and the whole of it: four message types, none of them a write. |
+| `../scripts/lib/bridge.mjs` | Not in this directory on purpose either: the detector's end of the bridge — the server, and the one question it asks. |
+| `../scripts/lib/ws-server.mjs` | Nor this: an RFC 6455 server for localhost, with no dependencies, because a fork inherits every dependency. |
 | `src/figma-adapter.ts` | The only file that knows Figma exists — both adapters. |
 | `src/code.ts` | The plugin main thread: message plumbing and the two confirmation gates. |
 | `ui.html` | The source picker and the two diffs. Plain HTML, CSS and JS. |

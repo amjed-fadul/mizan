@@ -12,6 +12,8 @@
  */
 
 import type { ResolvedValue, VariablesAdapter } from './core/apply';
+import type { BridgeDocument } from './core/bridge';
+import type { RestSource } from './core/rest';
 import type { NodesAdapter } from './core/sheet-apply';
 import type {
   FigmaType,
@@ -61,6 +63,110 @@ export async function captureSnapshot(): Promise<Snapshot> {
     })),
     variables: snapshotVariables,
   };
+}
+
+/**
+ * The same read, ids intact, for the bridge.
+ *
+ * `captureSnapshot` above is what the *planner* needs, and it carries an alias
+ * by collection-and-name because the planner runs before the target
+ * necessarily exists. The drift detector reads Figma's REST shape, where an
+ * alias is an id — so this is a second read rather than a conversion of the
+ * first, and nothing has to be re-derived from a name.
+ *
+ * It refuses rather than guesses. A value shape this plugin does not recognise
+ * throws, naming the variable and the mode, because the alternative is a
+ * payload with a mode value quietly missing — which the detector would report
+ * as drift that nobody caused, against a variable nobody touched.
+ */
+export async function captureRestSource(): Promise<RestSource> {
+  const collections = await figma.variables.getLocalVariableCollectionsAsync();
+  const variables = await figma.variables.getLocalVariablesAsync();
+
+  return {
+    collections: collections.map((collection) => ({
+      id: collection.id,
+      name: collection.name,
+      defaultModeId: collection.defaultModeId,
+      modes: collection.modes.map((mode) => ({ id: mode.modeId, name: mode.name })),
+    })),
+    variables: variables.map((variable) => {
+      const valuesByMode: Record<string, ResolvedValue> = {};
+      for (const modeId of Object.keys(variable.valuesByMode)) {
+        valuesByMode[modeId] = toResolvedValue(variable.valuesByMode[modeId], variable.name, modeId);
+      }
+      return {
+        id: variable.id,
+        name: variable.name,
+        collectionId: variable.variableCollectionId,
+        resolvedType: variable.resolvedType as FigmaType,
+        description: variable.description || '',
+        valuesByMode,
+      };
+    }),
+  };
+}
+
+/**
+ * Which document the read above came out of.
+ *
+ * The bridge sends this beside the variable table so the drift report can name
+ * what it read, because a report that cannot name its document is a report whose
+ * remedy cannot be checked. Open a different file and every token comes back
+ * missing, with "re-sync outward" printed underneath — a remedy that would write
+ * the whole token set into the wrong document. Reading the wrong file and being
+ * behind have to look different in the report, and the name is what makes them
+ * look different.
+ *
+ * Two things this refuses to do.
+ *
+ * It does not guess at `figma.fileKey`. That property is not always there — it
+ * depends on the permissions the plugin is running under and is `undefined` in
+ * contexts that do not grant it — so it is read inside a try/catch and falls
+ * back to `null`. A key we do not hold is reported as one we do not hold; a
+ * fabricated one would name a document the read did not come from, which is the
+ * exact failure this function exists to prevent.
+ *
+ * It does not throw. Identity is a label on a successful read, not a
+ * precondition for one: failing a read of 74 variables because the document's
+ * name could not be fetched trades a complete answer for a tidy one. An
+ * unavailable name is reported as unknown and the snapshot goes out regardless.
+ */
+export function captureDocument(): BridgeDocument {
+  let name = '';
+  let fileKey: string | null = null;
+  try {
+    name = figma.root.name;
+  } catch {
+    name = '';
+  }
+  try {
+    const key = figma.fileKey;
+    fileKey = typeof key === 'string' && key.length > 0 ? key : null;
+  } catch {
+    fileKey = null;
+  }
+  // Named rather than blank: an empty string in a report reads as a bug in the
+  // report, and "(unknown)" reads as the fact it is.
+  return { name: typeof name === 'string' && name.length > 0 ? name : '(unknown)', fileKey };
+}
+
+function toResolvedValue(value: VariableValue, name: string, modeId: string): ResolvedValue {
+  if (typeof value === 'number') return { kind: 'FLOAT', value };
+  if (typeof value === 'string') return { kind: 'STRING', value };
+  if (typeof value === 'boolean') return { kind: 'BOOLEAN', value };
+  if (value && typeof value === 'object') {
+    const asAlias = value as VariableAlias;
+    if (asAlias.type === 'VARIABLE_ALIAS') return { kind: 'ALIAS', id: asAlias.id };
+    const rgba = value as RGBA;
+    if (typeof rgba.r === 'number') {
+      return {
+        kind: 'COLOR',
+        value: { r: rgba.r, g: rgba.g, b: rgba.b, a: typeof (rgba as RGBA).a === 'number' ? (rgba as RGBA).a : 1 },
+      };
+    }
+  }
+  throw new Error(`variable "${name}" holds a value in mode ${modeId} that this plugin cannot read`);
 }
 
 function fromFigmaValue(

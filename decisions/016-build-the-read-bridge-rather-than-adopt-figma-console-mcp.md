@@ -78,6 +78,44 @@ This is [006](./006-agents-are-consumers-of-the-contribution-flow.md) applied on
 - Until the bridge exists, 015's manual step is what runs. This decision does not make the manual route obsolete; it makes it the fallback.
 - **We give up 113 other tools we might have found uses for** — console output, canvas inspection, screenshots — and will have to solve any of those separately if they turn out to matter. That is a real cost and the argument above does not erase it.
 
+### Amendment — the widening that shipped is narrower than the one accepted here
+
+*Added while building the bridge, because the first consequence above claims a permission the plugin does not actually hold.*
+
+That consequence states flatly that **the plugin's `networkAccess` widens from `["none"]` to localhost**. What shipped is `"allowedDomains": ["none"]` beside `"devAllowedDomains": ["ws://localhost:8791", "ws://127.0.0.1:8791"]`.
+
+Figma's manifest has two domain lists, not one. `allowedDomains` governs the plugin as published. `devAllowedDomains` takes the same pattern rules but applies only when the plugin runs as a development plugin — imported from a manifest, which is the only way this plugin is ever run and the way its README already describes it. So production network access stays at `["none"]`, and the socket exists for a development plugin, to one port on the loopback interface, and nowhere else. If this plugin were ever published to the Community the bridge would stop working — by construction rather than by policy, which is the only way a constraint holds. Localhost in `allowedDomains` is permitted with a `reasoning` field; the point is that it was not needed.
+
+This entry did not know that field existed. It treated `networkAccess` as a single list and accepted the wider permission on the assumption that there was no narrower one available. There was.
+
+**This strengthens the argument above rather than softening it.** The case rested on one claim: the write vocabulary does not exist, so it cannot be called. The dev-only form adds a second limit of a different kind — the *transport* does not exist outside development either. One constraint governs what can be said on the socket and is enforced in the message list; the other governs whether the socket can be opened at all and is enforced by the manifest. Two constraints of different kinds are worth more than one constraint stated twice.
+
+The cost is a constant in four places: `manifest.json`, the plugin's `BRIDGE_PORT`, the socket in `ui.html`, and the detector's own `BRIDGE_PORT`. A manifest cannot take a variable, and `ui.html` is loaded by Figma rather than bundled, so neither can import the number from anywhere. Changing the port means changing all four.
+
+What keeps them equal is not discipline. `machinery/scripts/selftest.mjs` parses the number out of each of the four files and asserts they agree, so a port changed in three places fails the build rather than producing a bridge that silently never connects — which is the failure this would otherwise have, and the worst shape a failure can take, because a bridge that cannot connect looks exactly like a bridge nobody has switched on. That is rule 4 applied to a number: anything checkable gets a deterministic check, and duplication a script watches is cheaper here than the build step that would remove it.
+
+**The floor does not move, and nothing here should be read as moving it.** Figma Desktop must still be open with the plugin running. This removes a copy-and-paste, not a person. [015](./015-rung-2-has-a-plan-floor.md)'s finding stands and the health dashboard's tier label is unchanged. A narrower permission is not a step towards unattended detection; it is the same capability held on tighter terms.
+
+The README correction the first consequence called for is still required, and for a sharper reason than "false as written". The sentence there — that the plugin does not use the network, evidenced by `"allowedDomains": ["none"]` — is now *half* true, and a half-true claim is worse than a plainly false one because the half that holds invites a reader to accept the rest. It has been replaced with the narrower true statement at the point of use.
+
+One revisit trigger below gets easier. *The bridge going unused* anticipated removing the transport and restoring `allowedDomains: ["none"]` rather than leaving a widened permission standing for a path nobody takes. There is no widened permission standing: `allowedDomains` never left `["none"]`. Removal is deleting one manifest field and the socket that reads it — a smaller act than the trigger was written to describe, and one with no permission story to walk back.
+
+### Amendment 2 — the threat this entry reasoned about was only half of it
+
+*Added after an adversarial review of the built bridge, which found the missing half and demonstrated it.*
+
+Everything above reasons about **what our end can say**. The vocabulary has no write verb, so nothing on this side can change a Figma file — and that argument is sound and survives. What it never asks is **who else can speak**.
+
+A WebSocket connection is not subject to CORS, and browsers treat `127.0.0.1` as a trustworthy origin. So while a read is open, any page the maintainer happens to have in a browser tab could connect to the port, greet first, and hand the detector a variable table it made up. It cannot *read* anything — the plugin's snapshot travels on the plugin's own socket — but it can plant findings, suppress real ones, or return a table so empty that every token is reported missing with the remedy "re-sync outward". With `--save-snapshot`, those bytes become a committed offline fixture that every later run trusts. This was reproduced, not theorised.
+
+That is the same injury this entry was written to prevent, arriving from the other direction. 016 spent a day of work to protect the *attribution* of a finding, and an unauthenticated socket gives it away — a fabricated finding is worse than an unattributed one, because it is actionable.
+
+The fix is the standard one for a localhost bridge: the server refuses any handshake carrying an `Origin` header that is not absent or exactly `null`. A plugin's UI is a sandboxed iframe with an opaque origin and sends `null`; an ordinary page sends its real origin and is refused. It costs two lines.
+
+**It is a control against a page, not against a program.** Any process already running on the machine can still bind the port first or connect to it. That needs local code execution and is a materially smaller threat, but it is real, and neither this entry nor the README may imply the socket is authenticated. It is not. If that ever needs closing, the answer is a per-run secret the person pastes into the plugin, and the honest reason it is not here yet is that the threat did not seem worth the friction — which is a judgement, and is recorded as one so that it can be revisited rather than rediscovered.
+
+**The general lesson, which is why this is an amendment and not a commit message.** This entry evaluated a dependency's *tool surface* and concluded that building the smaller thing was safer. That reasoning was about capability we would be granting ourselves. Building it introduced a listening socket — a capability we grant *anyone who can reach it* — and the original analysis had no category for that. **Refusing a dependency does not inherit its threat model; it replaces it with your own, which nobody has reviewed.** Adopting `figma-console-mcp` would have come with whatever hardening its author had already done and its users had already found. That is a real cost of building, it belongs beside the 113 tools given up, and this entry did not count it.
+
 ## What would make us revisit this?
 
 **The write surface becoming removable at the source rather than at the caller.** If `figma-console-mcp` ships a variables-read distribution — a build or flag whose `tools/list` genuinely does not contain the variable mutation tools, so that a fork inherits the constraint along with the dependency — then the entire argument here evaporates and our bridge is redundant maintenance that should be deleted in its favour. The check is mechanical: read the advertised tool list of a release and look for the create, update, rename and delete entries. That is worth re-checking once a year, not once a week.

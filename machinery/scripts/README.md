@@ -18,6 +18,8 @@ Also not here: Mizan's values. A script may enforce that no raw hex appears in t
 |---|---|
 | `lib/tokens.mjs` | Shared library: load DTCG documents, resolve `$type` inheritance and aliases, compose modes, and do WCAG colour maths. No CLI. |
 | `lib/projection.mjs` | The one projection rule the drift detector and the Figma sync plugin cannot state separately. Imported by both. No CLI. |
+| `lib/ws-server.mjs` | A minimal WebSocket server, loopback only. Written rather than depended on: Node ships a client and no server, and a dependency here travels into every Stage 7 fork. No CLI. |
+| `lib/bridge.mjs` | The read bridge's protocol, server side. Asks a running plugin one question and has no vocabulary for a second. No CLI. |
 | `check-schema.mjs` | Structural gate over a token set. |
 | `check-contrast.mjs` | WCAG gate over the declared foreground/background pairs, in every mode combination. |
 | `check-drift.mjs` | Governance rung 2: compares a Figma variables snapshot against the token source. |
@@ -36,13 +38,14 @@ npm run check           # schema, then contrast
 npm run check:schema
 npm run check:contrast
 npm run check:drift -- --snapshot <file>    # rung 2: Figma against the source
+npm run check:drift -- --bridge             # the same, read live from the plugin
 npm run health -- --snapshot <file>         # the same three gates, as a page
 npm run selftest        # proves the gates reject things
 npm run adapt:tokens    # the adapter alone, for inspecting what SD is handed
 npm run build:tokens    # gates, then adapt, then build every mode combination
 ```
 
-Every gate takes `--root <dir>` (defaulting to `$TOKENS_ROOT`, then to the repository's token directory), `--json` for machine-readable output, and `--quiet` to suppress the passing summary. `check-contrast.mjs` additionally takes `--pairs <file>` and a repeatable `--mode <id>`; `check-drift.mjs` takes `--snapshot <file>` or `--file-key <key>`.
+Every gate takes `--root <dir>` (defaulting to `$TOKENS_ROOT`, then to the repository's token directory), `--json` for machine-readable output, and `--quiet` to suppress the passing summary. `check-contrast.mjs` additionally takes `--pairs <file>` and a repeatable `--mode <id>`; `check-drift.mjs` takes `--snapshot <file>`, `--bridge`, or `--file-key <key>`.
 
 An empty token root is reported as such and exits 0. There is nothing to reject, and that is stated in the output rather than implied by a green tick.
 
@@ -146,30 +149,62 @@ Figma, not imported.
 
 ```
 node machinery/scripts/check-drift.mjs [--root <dir>] [--snapshot <file>]
-                                       [--file-key <key>] [--save-snapshot <file>]
+                                       [--file-key <key>] [--bridge]
+                                       [--bridge-port <n>] [--bridge-timeout <s>]
+                                       [--save-snapshot <file>]
                                        [--json] [--quiet]
 ```
 
 ### Where the display comes from
 
-Two sources, and the offline one is first on purpose.
+Three sources, and the offline one is first on purpose.
 
 **`--snapshot <file>`** — a saved Figma variables payload. This is what makes
 the detector testable with no credentials, in CI, and in `selftest.mjs`. A gate
 that only runs when somebody has a Figma token in their environment is a gate
 that does not run.
 
+**`--bridge`** — the live variables, read out of a running `machinery/figma-plugin/`
+over a WebSocket on the loopback interface. This is the route on every plan
+below Enterprise, because a plugin can read variables where the REST API cannot.
+The detector is the server and the plugin is the client, so the socket exists
+only while a read is running: there is no daemon and no port held between runs.
+`--bridge-port` and `--bridge-timeout` adjust it; the port defaults to 8791,
+which the plugin manifest also names.
+
+**It removes a copy-and-paste, not a person.** Figma Desktop still has to be
+open on the file, with the plugin running and its bridge switched on. Nothing
+here is unattended, and a run with nobody there fails on a timeout that says so
+rather than reporting a clean file. [Decision 016](../../decisions/016-build-the-read-bridge-rather-than-adopt-figma-console-mcp.md)
+is why this is ours rather than a dependency: the vocabulary on that socket is
+four words, none of which writes.
+
 **`--file-key <key>`** (or `$FIGMA_FILE_KEY`, with `$FIGMA_TOKEN`) — a live read
-of `GET /v1/files/<key>/variables/local`. `--save-snapshot <file>` writes what
-came back, so a live run becomes tomorrow's offline fixture. Figma's variables
-**write** API is Enterprise-gated, which is why `machinery/figma-plugin/` exists.
+of `GET /v1/files/<key>/variables/local`. Enterprise only, in practice — see the
+correction below. Figma's variables **write** API is Enterprise-gated too, which
+is why `machinery/figma-plugin/` exists.
+
+`--save-snapshot <file>` writes what came back, whichever of the three produced
+it, so a live run becomes tomorrow's offline fixture.
+
+**It refuses to write inside `--root`.** `lib/tokens.mjs` loads every `.json`
+under every subdirectory of the token root, so a snapshot saved there would be
+read back as *tokens* on the next run — rule 1 breached by a path nobody chose,
+and silently. The containment test resolves both paths rather than comparing
+strings, so a sibling directory whose name merely starts the same way is not
+caught by it.
 
 **Correction.** This section previously said reading was "the half this gate
 needs" and that an unavailable read endpoint would change nothing here. Both are
 wrong. Figma gates the variables REST API **in both directions** — `GET
 /v1/files/:key/variables/local` needs the `file_variables:read` scope *and* a
-Full seat in an Enterprise org. So below Enterprise the live path is not merely
-inconvenient, it is unavailable, and the snapshot path is the only one.
+Full seat in an Enterprise org. So below Enterprise the REST path is not merely
+inconvenient, it is unavailable.
+
+`--bridge` is the answer to that, and it is a narrow one. It restores a *live
+read* below Enterprise, so the photograph below can at least be taken on demand
+rather than remembered — but it does not restore an unattended one, because it
+runs through a plugin a person has to be sitting in front of.
 
 That is not a like-for-like substitute and this file should not imply it is. A
 snapshot is a photograph, not a window: it shows that the display agreed when it

@@ -119,6 +119,20 @@
     return error instanceof Error ? error.message : String(error);
   }
 
+  // src/core/bridge.ts
+  var BRIDGE_PROTOCOL = "mizan-bridge@1";
+  function helloMessage() {
+    return { protocol: BRIDGE_PROTOCOL, type: "hello", plugin: "mizan-sync", answers: ["snapshot"] };
+  }
+  function snapshotMessage(id, payload, document) {
+    const message = { protocol: BRIDGE_PROTOCOL, type: "snapshot", id, payload };
+    if (document) message.document = document;
+    return message;
+  }
+  function errorMessage(id, message) {
+    return { protocol: BRIDGE_PROTOCOL, type: "error", id, message };
+  }
+
   // src/core/token-model.ts
   var MODES_DIR = "modes";
   var MODES_MANIFEST = "modes.json";
@@ -952,6 +966,49 @@
     return plan.errors.length === 0;
   }
 
+  // src/core/rest.ts
+  var REST_PAYLOAD_ORIGIN = "mizan-sync: local variables read through the plugin, not the REST API";
+  function restValue(value) {
+    if (value.kind === "ALIAS") return { type: "VARIABLE_ALIAS", id: value.id };
+    if (value.kind === "COLOR") {
+      return { r: value.value.r, g: value.value.g, b: value.value.b, a: value.value.a };
+    }
+    return value.value;
+  }
+  function toRestPayload(source) {
+    const variableIdsByCollection = {};
+    for (const collection of source.collections) variableIdsByCollection[collection.id] = [];
+    const variables = {};
+    for (const variable of source.variables) {
+      const valuesByMode = {};
+      for (const modeId of Object.keys(variable.valuesByMode)) {
+        valuesByMode[modeId] = restValue(variable.valuesByMode[modeId]);
+      }
+      variables[variable.id] = {
+        id: variable.id,
+        name: variable.name,
+        variableCollectionId: variable.collectionId,
+        resolvedType: variable.resolvedType,
+        description: variable.description,
+        valuesByMode
+      };
+      if (variableIdsByCollection[variable.collectionId]) {
+        variableIdsByCollection[variable.collectionId].push(variable.id);
+      }
+    }
+    const variableCollections = {};
+    for (const collection of source.collections) {
+      variableCollections[collection.id] = {
+        id: collection.id,
+        name: collection.name,
+        modes: collection.modes.map((mode) => ({ modeId: mode.id, name: mode.name })),
+        defaultModeId: collection.defaultModeId,
+        variableIds: variableIdsByCollection[collection.id]
+      };
+    }
+    return { generatedBy: REST_PAYLOAD_ORIGIN, meta: { variableCollections, variables } };
+  }
+
   // src/core/sheet.ts
   var SHEET_PAGE_NAME = "Token proof sheet";
   var UNGROUPED = "ungrouped";
@@ -1430,6 +1487,65 @@
       variables: snapshotVariables
     };
   }
+  async function captureRestSource() {
+    const collections = await figma.variables.getLocalVariableCollectionsAsync();
+    const variables = await figma.variables.getLocalVariablesAsync();
+    return {
+      collections: collections.map((collection) => ({
+        id: collection.id,
+        name: collection.name,
+        defaultModeId: collection.defaultModeId,
+        modes: collection.modes.map((mode) => ({ id: mode.modeId, name: mode.name }))
+      })),
+      variables: variables.map((variable) => {
+        const valuesByMode = {};
+        for (const modeId of Object.keys(variable.valuesByMode)) {
+          valuesByMode[modeId] = toResolvedValue(variable.valuesByMode[modeId], variable.name, modeId);
+        }
+        return {
+          id: variable.id,
+          name: variable.name,
+          collectionId: variable.variableCollectionId,
+          resolvedType: variable.resolvedType,
+          description: variable.description || "",
+          valuesByMode
+        };
+      })
+    };
+  }
+  function captureDocument() {
+    let name = "";
+    let fileKey = null;
+    try {
+      name = figma.root.name;
+    } catch (e) {
+      name = "";
+    }
+    try {
+      const key2 = figma.fileKey;
+      fileKey = typeof key2 === "string" && key2.length > 0 ? key2 : null;
+    } catch (e) {
+      fileKey = null;
+    }
+    return { name: typeof name === "string" && name.length > 0 ? name : "(unknown)", fileKey };
+  }
+  function toResolvedValue(value, name, modeId) {
+    if (typeof value === "number") return { kind: "FLOAT", value };
+    if (typeof value === "string") return { kind: "STRING", value };
+    if (typeof value === "boolean") return { kind: "BOOLEAN", value };
+    if (value && typeof value === "object") {
+      const asAlias = value;
+      if (asAlias.type === "VARIABLE_ALIAS") return { kind: "ALIAS", id: asAlias.id };
+      const rgba = value;
+      if (typeof rgba.r === "number") {
+        return {
+          kind: "COLOR",
+          value: { r: rgba.r, g: rgba.g, b: rgba.b, a: typeof rgba.a === "number" ? rgba.a : 1 }
+        };
+      }
+    }
+    throw new Error(`variable "${name}" holds a value in mode ${modeId} that this plugin cannot read`);
+  }
   function fromFigmaValue(value, nameById, collectionNameById) {
     if (typeof value === "number") return { kind: "FLOAT", value };
     if (typeof value === "string") return { kind: "STRING", value };
@@ -1873,6 +1989,25 @@
         figma.notify(
           result.failures.length === 0 ? `Proof sheet built \u2014 ${result.applied} change${result.applied === 1 ? "" : "s"} written.` : `Proof sheet finished with ${result.failures.length} failure${result.failures.length === 1 ? "" : "s"}.`
         );
+        return;
+      }
+      if (message.type === "bridge-hello") {
+        figma.ui.postMessage({ type: "bridge-reply", message: helloMessage() });
+        return;
+      }
+      if (message.type === "bridge-read") {
+        try {
+          const payload = toRestPayload(await captureRestSource());
+          figma.ui.postMessage({
+            type: "bridge-reply",
+            message: snapshotMessage(message.id, payload, captureDocument())
+          });
+        } catch (error) {
+          figma.ui.postMessage({
+            type: "bridge-reply",
+            message: errorMessage(message.id, error instanceof Error ? error.message : String(error))
+          });
+        }
         return;
       }
     } catch (error) {

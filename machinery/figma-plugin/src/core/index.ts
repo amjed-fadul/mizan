@@ -13,5 +13,7 @@ export * from './plan';
 export * from './apply';
 export * from './sheet';
 export * from './sheet-apply';
+export * from './rest';
+export * from './bridge';
 export { MemoryVariables } from './memory-adapter';
 export { MemoryNodes } from './memory-nodes';

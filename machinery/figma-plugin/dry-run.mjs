@@ -37,6 +37,20 @@
  *  12. Every combination frame carries an explicit mode for every collection.
  *  13. Drawing the sheet twice changes nothing the second time, and nothing in
  *      its vocabulary removes anything either.
+ *  14. The REST projection is faithful and lossless: every collection and every
+ *      variable arrives under its own id, `variableIds` is derived rather than
+ *      trusted, every alias lands on a variable in the same payload, and a
+ *      colour's four channels come through with no rounding at all.
+ *  15. The real plan, applied, exported in the REST read shape and handed to the
+ *      real `machinery/scripts/check-drift.mjs`, is reported as aligned with no
+ *      drift. The plugin and the detector agree on every convention, and they
+ *      say so to each other rather than in two comments.
+ *  16. Both of those can fail: a payload missing a variable, one whose alias
+ *      points nowhere, and one whose colour moved by a billionth are each
+ *      caught, and a corrupted snapshot fails the detector.
+ *  17. The bridge has four message types, none of them a word for writing, and
+ *      an unrecognised instruction parses to nothing rather than to something
+ *      to interpret.
  *
  *   node dry-run.mjs [--root <dir>] [--verbose]
  *
@@ -44,7 +58,9 @@
  * built core on purpose, so that what is proved is what ships.
  */
 
-import { existsSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -65,11 +81,19 @@ if (!existsSync(CORE)) {
   process.exit(1);
 }
 
+/* The whole namespace as well as the names, because 18 checks the bridge's
+ * exported names against what the built core actually carries. */
+const core = await import(`file://${CORE}`);
+
 const {
+  BRIDGE_MESSAGE_TYPES,
+  BRIDGE_PROTOCOL,
+  BRIDGE_REQUEST_TYPES,
   HEADING_NODE,
   LABEL_NODE,
   MemoryNodes,
   MemoryVariables,
+  REST_PAYLOAD_ORIGIN,
   SHEET_PAGE_NAME,
   SINGLE_MODE_NAME,
   SPECIMEN_NODE,
@@ -77,15 +101,22 @@ const {
   applySheet,
   describeAction,
   describeSheetAction,
+  errorMessage,
+  helloMessage,
   isApplicable,
   isSheetApplicable,
+  isSnapshotRequest,
   figmaName,
   loadBundle,
+  parseBridgeMessage,
   planSheet,
   planSync,
+  snapshotMessage,
+  snapshotRequest,
+  toRestPayload,
   varyingDimensions,
   effectiveType,
-} = await import(`file://${CORE}`);
+} = core;
 
 const args = parseArgs(process.argv.slice(2), { flags: ['verbose'], values: ['root'] });
 const ROOT = args.root ? args.root : defaultTokensRoot();
@@ -116,6 +147,15 @@ const SHEET_OPS = ['create-page', 'create-node', 'set-prop', 'set-text', 'bind',
 
 /** Every field the sheet is allowed to bind. All of them are real Figma fields. */
 const BINDABLE = ['fill', 'width', 'height', 'cornerRadius', 'characters', 'fontFamily', 'fontWeight', 'visible'];
+
+/** The gate on the other side of the projection. This harness runs the real one. */
+const DRIFT_DETECTOR = join(HERE, '..', 'scripts', 'check-drift.mjs');
+
+/** The four message types the bridge is allowed to know, and no others. */
+const BRIDGE_VOCABULARY = ['hello', 'snapshot-request', 'snapshot', 'error'];
+
+/** Every word that would mean writing. No name in the bridge may match it. */
+const WRITE_WORDS = /create|update|write|set|delete|remove|rename|apply|move|insert/i;
 
 /* ================================================================== *
  * 1. The port agrees with the shared library
@@ -753,6 +793,304 @@ assert(!threeSheet.specimens.some((s) => s.token === 'shadow.raised'),
   'a composite type is absent from the sheet, exactly as it is absent from the sync');
 
 /* ================================================================== *
+ * 15. The REST projection
+ *
+ * `toRestPayload` is the one place that turns a variable backend's state into
+ * the shape `GET /v1/files/<key>/variables/local` returns, and the drift
+ * detector reads nothing else. So the projection has to be *lossless*: a
+ * variable that does not arrive is a variable the detector calls missing, and a
+ * colour channel that arrives rounded is drift nobody caused.
+ * ================================================================== */
+
+process.stdout.write('\n13. The REST projection: everything arrives, nothing is tidied\n');
+
+const restSource = figma.readRestSource();
+const payload = toRestPayload(restSource);
+
+assert(Object.keys(payload).sort().join(',') === 'generatedBy,meta',
+  'the payload is exactly `meta` and the stamp beside it — nothing else is invented',
+  JSON.stringify(Object.keys(payload)));
+assert(same(Object.keys(payload.meta).sort(), ['variableCollections', 'variables']),
+  'and `meta` holds exactly the two maps the detector documents',
+  JSON.stringify(Object.keys(payload.meta)));
+assert(payload.generatedBy === REST_PAYLOAD_ORIGIN && /not the REST API/i.test(payload.generatedBy),
+  'a saved snapshot says on its face that it did not come from the REST API',
+  payload.generatedBy);
+
+assert(Object.keys(payload.meta.variableCollections).length === restSource.collections.length
+  && restSource.collections.every((c) => Boolean(payload.meta.variableCollections[c.id])
+    && payload.meta.variableCollections[c.id].id === c.id),
+  'every collection in the model appears in the payload, keyed by its own id',
+  `${Object.keys(payload.meta.variableCollections).length} of ${restSource.collections.length}`);
+
+const missingVariables = missingFromPayload(restSource, payload);
+assert(missingVariables.length === 0 && Object.keys(payload.meta.variables).length === restSource.variables.length,
+  'every variable in the model appears in the payload, keyed by its own id, and the payload holds no others',
+  missingVariables.slice(0, 5).join(', '));
+assert(Object.keys(payload.meta.variables).length === plan.projected.length,
+  'and the count is the number of variables the plan projects — the export is the projection, not a subset',
+  `${Object.keys(payload.meta.variables).length} exported, ${plan.projected.length} projected`);
+
+const disagreeing = collectionsDisagreeing(payload);
+assert(disagreeing.length === 0,
+  '`variableIds` on every collection is exactly the variables that name it — derived, never a claim',
+  disagreeing.join(', '));
+
+/* Modes: a value filed under a mode its own collection does not have would be
+ * unreadable to the detector and invisible to a designer. */
+let strayMode = null;
+for (const id of Object.keys(payload.meta.variables)) {
+  const variable = payload.meta.variables[id];
+  const collection = payload.meta.variableCollections[variable.variableCollectionId];
+  const modeIds = collection ? collection.modes.map((mode) => mode.modeId) : [];
+  const stray = Object.keys(variable.valuesByMode).filter((modeId) => !modeIds.includes(modeId));
+  if (stray.length > 0) { strayMode = `${variable.name}: ${stray.join(', ')}`; break; }
+}
+assert(strayMode === null,
+  'no value is filed under a mode its own collection does not declare', strayMode);
+
+/* Aliases carry ids here, not names — so the only way to be wrong is to point
+ * at nothing, and that is exactly what is asserted. */
+const aliasEdges = collectAliasEdges(payload);
+const dangling = danglingAliases(payload);
+assert(aliasEdges.length > 0, 'an ALIAS value becomes a VARIABLE_ALIAS carrying the target\'s id');
+assert(dangling.length === 0,
+  'and every one of them points at a variable that exists in the same payload',
+  dangling.slice(0, 3).join(', '));
+assert(aliasEdges.some((edge) => edge.crosses),
+  'at least one alias crosses a collection boundary — the two-dimension mechanism, in the exported shape',
+  `${aliasEdges.length} aliases, none crossing`);
+
+/* Colours are compared against the plan's own numbers with ===, not within a
+ * tolerance. The detector compares at 1e-6; if this projection were allowed to
+ * round at all, the difference would live below the gate forever. */
+const colourExpected = colourExpectations(plan, restSource);
+const plannedColours = plan.actions.filter((a) => a.op === 'set-value' && a.to.kind === 'COLOR').length;
+assert(colourExpected.length === plannedColours && plannedColours > 0,
+  'every colour the plan sets was located in the payload by id — none was skipped by a failed lookup',
+  `${colourExpected.length} located of ${plannedColours} planned`);
+assert(colourDifferences(colourExpected, payload).length === 0,
+  'a colour\'s four channels come through exactly as the plan set them — compared with ===, not a tolerance',
+  colourDifferences(colourExpected, payload).slice(0, 3).join(', '));
+
+let wrongCarried = null;
+for (const variable of restSource.variables) {
+  const exported = payload.meta.variables[variable.id];
+  if (!exported) continue;
+  if (exported.resolvedType !== variable.resolvedType || exported.description !== variable.description
+    || exported.name !== variable.name || exported.variableCollectionId !== variable.collectionId) {
+    wrongCarried = variable.name;
+    break;
+  }
+}
+assert(wrongCarried === null,
+  'name, collection, `resolvedType` and `description` survive the projection verbatim', wrongCarried);
+assert(restSource.variables.some((v) => v.description.length > 0)
+  && Object.keys(payload.meta.variables).some((id) => payload.meta.variables[id].description.length > 0),
+  'and at least one description actually made the trip, so that check is looking at something');
+
+/* ================================================================== *
+ * 16. The plugin and the drift detector, run against each other
+ *
+ * This is the only assertion in the repo that runs both sides of the
+ * projection at once, and it is the reason `rest.ts` exists.
+ *
+ * `machinery/scripts/check-drift.mjs` decides what a token *should* look like
+ * once it is in Figma. `src/core/map.ts` decides what it *becomes* when it is
+ * written there. Those are the same question answered in two files, in two
+ * languages, kept in step by hand — and a detector more lenient than the syncer
+ * passes a file the syncer would rewrite, while a stricter one reports drift
+ * nobody can fix. Four conventions have to match exactly: "/" for "." in names,
+ * "<collection>.<mode>" for mode ids, a single-mode collection meaning
+ * invariant, and which DTCG types have no variable form at all.
+ *
+ * So: plan the real token root, apply it to the in-memory model, export that
+ * model in the REST read shape, and hand the file to the real detector as a
+ * separate process. Nothing is stubbed and nothing is shared between the two
+ * except the token root they are both pointed at. If the two ever disagree
+ * about anything, this fails — which is the whole point of writing it down as
+ * an assertion instead of as a paragraph somebody ran once.
+ * ================================================================== */
+
+process.stdout.write('\n14. Against the real drift detector, end to end\n');
+
+const scratch = mkdtempSync(join(tmpdir(), 'mizan-dry-run-'));
+const snapshotFile = join(scratch, 'variables-local.json');
+writeFileSync(snapshotFile, `${JSON.stringify(payload, null, 2)}\n`);
+
+const drift = runDriftDetector(snapshotFile);
+
+assert(drift.status === 0, 'the drift detector exits 0 on a file this plugin projected',
+  `status ${drift.status}${drift.stderr ? `: ${drift.stderr.split('\n')[0]}` : ''}`);
+assert(Boolean(drift.report), 'and it produced a machine-readable report to assert against',
+  drift.stdout.slice(0, 200));
+
+if (drift.report) {
+  assert(drift.report.ok === true, 'the detector reports the display as aligned with the source',
+    JSON.stringify(drift.report.counts));
+  assert(drift.report.findings.length === 0, 'with no findings at all',
+    JSON.stringify(drift.report.findings.slice(0, 3)));
+  assert(drift.report.errors.length === 0, 'and no errors reading either side',
+    JSON.stringify(drift.report.errors.slice(0, 3)));
+  assert(drift.report.source.kind === 'snapshot' && drift.report.source.path === snapshotFile,
+    'the detector read the file this harness wrote, not a live Figma file',
+    JSON.stringify(drift.report.source));
+
+  /* The count is derived, never typed in: a number written here would rot the
+   * first time a token was added, and a rotting number is worse than none. */
+  assert(drift.report.counts.aligned === plan.projected.length && plan.projected.length > 0,
+    'every variable the plan projects is one the detector calls aligned — the count is derived from the plan, not written down',
+    `${drift.report.counts.aligned} aligned, ${plan.projected.length} projected`);
+  assert(drift.report.counts.checks > drift.report.counts.aligned,
+    'and each was compared in every mode it has, so the comparisons outnumber the variables',
+    `${drift.report.counts.checks} comparison(s) over ${drift.report.counts.aligned} token(s)`);
+  assert(drift.report.counts.drifted === 0 && drift.report.counts.missing === 0 && drift.report.counts.orphan === 0,
+    'nothing drifted, nothing missing in Figma, nothing orphaned there',
+    JSON.stringify(drift.report.counts));
+
+  if (args.verbose) {
+    process.stdout.write(`        ${drift.report.counts.aligned} token(s) aligned across `
+      + `${drift.report.counts.checks} comparison(s)\n`);
+  }
+}
+
+/* ================================================================== *
+ * 17. Breaking both on purpose
+ *
+ * An assertion nothing can break is not an assertion. Everything above passes
+ * on a good payload; below, a deliberately corrupted one is built in memory and
+ * the same checks are asserted to *catch* it. No source file is edited to do
+ * this — a check that only ever sees correct input proves nothing about what it
+ * would do with incorrect input.
+ * ================================================================== */
+
+process.stdout.write('\n15. Breaking the projection on purpose\n');
+
+/* One variable dropped before the projection: the payload is short by one, and
+ * the check that counts them says which. */
+const droppedId = restSource.variables[0].id;
+const withoutOne = toRestPayload({
+  collections: restSource.collections,
+  variables: restSource.variables.filter((v) => v.id !== droppedId),
+});
+assert(missingFromPayload(restSource, withoutOne).length === 1
+  && missingFromPayload(restSource, withoutOne)[0] === droppedId,
+  'a payload missing one variable is caught, and the missing one is named',
+  JSON.stringify(missingFromPayload(restSource, withoutOne).slice(0, 3)));
+
+/* A colour moved by a billionth — far below the detector's 1e-6 tolerance, and
+ * exactly the kind of tidying a projection is tempted to do. === catches it. */
+const nudged = corruptColour(restSource, colourExpected[0], 1e-9);
+assert(colourDifferences(colourExpected, nudged).length === 1,
+  'a colour channel moved by 1e-9 is caught, because the comparison is === and not a tolerance',
+  JSON.stringify(colourDifferences(colourExpected, nudged)));
+assert(colourDifferences(colourExpected, nudged, 1e-6).length === 0,
+  'and a 1e-6 tolerance would have missed exactly that difference — which is why the check does not have one');
+
+/* An alias pointing at an id nothing holds. The projection carries ids through
+ * verbatim by design, so this is the one alias mistake it can transmit. */
+const brokenAlias = corruptAlias(restSource, aliasEdges[0], 'variable:does-not-exist');
+assert(danglingAliases(brokenAlias).length === 1,
+  'an alias pointing at an id that is not in the payload is caught',
+  JSON.stringify(danglingAliases(brokenAlias)));
+assert(danglingAliases(payload).length === 0,
+  'and the same check says nothing about the real payload — it is not simply always failing');
+
+/* A collection claiming a variable it does not hold. `toRestPayload` derives
+ * `variableIds` and so cannot produce this, which is precisely why the check has
+ * to be shown catching one that was produced by hand. */
+const claiming = JSON.parse(JSON.stringify(payload));
+claiming.meta.variableCollections[restSource.collections[0].id].variableIds.push('variable:not-in-here');
+assert(collectionsDisagreeing(claiming).length === 1,
+  'a collection claiming a variable it does not hold is caught',
+  JSON.stringify(collectionsDisagreeing(claiming)));
+
+/* And the end-to-end run itself: a snapshot with one colour visibly wrong has
+ * to fail the detector, or the passing run above would mean nothing. */
+const visiblyWrong = corruptColour(restSource, colourExpected[0], 0.5);
+const wrongFile = join(scratch, 'variables-local-corrupted.json');
+writeFileSync(wrongFile, `${JSON.stringify(visiblyWrong, null, 2)}\n`);
+const wrongDrift = runDriftDetector(wrongFile);
+
+assert(wrongDrift.status === 1, 'a snapshot with one wrong colour fails the drift detector',
+  `status ${wrongDrift.status}`);
+assert(Boolean(wrongDrift.report) && wrongDrift.report.ok === false && wrongDrift.report.findings.length > 0,
+  'and the report says so, with at least one finding',
+  wrongDrift.report ? JSON.stringify(wrongDrift.report.counts) : wrongDrift.stdout.slice(0, 200));
+assert(Boolean(wrongDrift.report)
+  && wrongDrift.report.findings.some((finding) => finding.token === colourExpected[0].token),
+  'naming the token whose value was changed, so the passing run above is a real result and not an empty one',
+  wrongDrift.report ? JSON.stringify(wrongDrift.report.findings.slice(0, 2)) : undefined);
+
+rmSync(scratch, { recursive: true, force: true });
+assert(!existsSync(scratch), 'the harness leaves no snapshot behind — the temporary directory is removed');
+
+/* ================================================================== *
+ * 18. The bridge vocabulary
+ *
+ * [016] chose a bridge of this plugin's own over a general Figma-over-MCP
+ * dependency, and the argument was attribution: a second write path into Figma
+ * makes drift caused by an assistant indistinguishable from drift caused by a
+ * person, and those two have different remedies. The guarantee that argument
+ * needs is not "we promise not to write". It is that there is no word for
+ * writing — which is a thing a harness can check rather than a thing a comment
+ * can claim.
+ * ================================================================== */
+
+process.stdout.write('\n16. The bridge: four words, none of them a write\n');
+
+assert(same([...BRIDGE_MESSAGE_TYPES], BRIDGE_VOCABULARY),
+  'the bridge knows exactly four message types: hello, snapshot-request, snapshot, error',
+  JSON.stringify(BRIDGE_MESSAGE_TYPES));
+assert(same([...BRIDGE_REQUEST_TYPES], ['snapshot-request']),
+  'and only one of the four is a request — the other three are answers',
+  JSON.stringify(BRIDGE_REQUEST_TYPES));
+
+/* The names are read out of the source and checked against the built core, so
+ * this cannot pass by testing a stale list of its own. */
+const bridgeNames = exportedNames(join(HERE, 'src', 'core', 'bridge.ts'));
+const bridgeRuntimeNames = bridgeNames.filter((entry) => entry.runtime).map((entry) => entry.name);
+assert(bridgeRuntimeNames.length > 0 && bridgeRuntimeNames.every((name) => core[name] !== undefined),
+  'every runtime name bridge.ts exports really is in the built core — this list is not a copy of one',
+  bridgeRuntimeNames.filter((name) => core[name] === undefined).join(', '));
+
+const writeWords = bridgeNames.map((entry) => entry.name).concat([...BRIDGE_MESSAGE_TYPES])
+  .filter((name) => WRITE_WORDS.test(name));
+assert(writeWords.length === 0,
+  'no message type and no name the bridge exports contains a word for writing — there is nothing on this wire that could ask for one',
+  writeWords.join(', '));
+assert(WRITE_WORDS.test('delete-variable') && WRITE_WORDS.test('setValue'),
+  'and the check would notice one: the words it looks for match the names a write verb would have');
+
+/* An unrecognised instruction is not an instruction. */
+assert(parseBridgeMessage('{not json') === null, 'malformed JSON on the wire parses to nothing');
+assert(parseBridgeMessage(JSON.stringify({ protocol: 'mizan-bridge@0', type: 'snapshot-request', id: '1' })) === null,
+  'a message from another protocol version parses to nothing');
+assert(parseBridgeMessage(JSON.stringify({ protocol: BRIDGE_PROTOCOL, type: 'delete-variable', id: '1' })) === null,
+  'a well-formed message asking to delete a variable parses to nothing — an unrecognised instruction is not an instruction');
+assert(parseBridgeMessage('null') === null && parseBridgeMessage('"snapshot-request"') === null,
+  'and neither is a bare value that happens to be valid JSON');
+assert(BRIDGE_VOCABULARY.every((type) =>
+  parseBridgeMessage(JSON.stringify({ protocol: BRIDGE_PROTOCOL, type, id: '1' })) !== null),
+  'while every one of the four known types parses',
+  JSON.stringify(BRIDGE_VOCABULARY.filter((type) =>
+    parseBridgeMessage(JSON.stringify({ protocol: BRIDGE_PROTOCOL, type, id: '1' })) === null)));
+
+assert(isSnapshotRequest(snapshotRequest('1')), 'a snapshot request is recognised as the one thing this end answers');
+assert(!isSnapshotRequest(helloMessage()) && !isSnapshotRequest(errorMessage('1', 'no'))
+  && !isSnapshotRequest(snapshotMessage('1', payload)) && !isSnapshotRequest(null),
+  'and nothing else is — not a greeting, not an error, not an answer, not nothing');
+assert(!isSnapshotRequest(parseBridgeMessage(JSON.stringify({ protocol: BRIDGE_PROTOCOL, type: 'snapshot-request', id: 7 }))),
+  'a snapshot request whose id is not a string is not answered either');
+
+const roundTripped = parseBridgeMessage(JSON.stringify(snapshotMessage('req-1', payload)));
+assert(same(roundTripped, snapshotMessage('req-1', payload)),
+  'a snapshot survives the round trip through the wire unchanged, payload included',
+  roundTripped ? `${Object.keys(roundTripped).join(', ')}` : 'parsed to null');
+assert(Boolean(roundTripped) && Object.keys(roundTripped.payload.meta.variables).length === plan.projected.length,
+  'and what arrives on the other end is the whole projection, not a summary of it');
+
+/* ================================================================== *
  * Summary
  * ================================================================== */
 
@@ -792,6 +1130,153 @@ process.exit(failures.length === 0 ? 0 : 1);
 /* ------------------------------------------------------------------ *
  * Helpers
  * ------------------------------------------------------------------ */
+
+/**
+ * The four projection checks, as functions.
+ *
+ * They are not inline loops because section 17 runs the same four over payloads
+ * corrupted on purpose. A check only ever shown correct input has never been
+ * shown to do anything.
+ */
+
+/** Variables the model holds that the payload does not, or filed under another id. */
+function missingFromPayload(source, payload) {
+  return source.variables
+    .filter((variable) => {
+      const exported = payload.meta.variables[variable.id];
+      return !exported || exported.id !== variable.id;
+    })
+    .map((variable) => variable.id);
+}
+
+/** Collections whose `variableIds` is not the set of variables naming them. */
+function collectionsDisagreeing(payload) {
+  const out = [];
+  for (const id of Object.keys(payload.meta.variableCollections)) {
+    const collection = payload.meta.variableCollections[id];
+    const derived = Object.keys(payload.meta.variables)
+      .filter((variableId) => payload.meta.variables[variableId].variableCollectionId === id)
+      .sort();
+    if (!same(derived, [...collection.variableIds].sort())) out.push(collection.name);
+  }
+  return out;
+}
+
+/** Every alias in a payload, and whether it leaves its own collection. */
+function collectAliasEdges(payload) {
+  const out = [];
+  for (const id of Object.keys(payload.meta.variables)) {
+    const variable = payload.meta.variables[id];
+    for (const modeId of Object.keys(variable.valuesByMode)) {
+      const value = variable.valuesByMode[modeId];
+      if (!value || typeof value !== 'object' || value.type !== 'VARIABLE_ALIAS') continue;
+      const target = payload.meta.variables[value.id];
+      out.push({
+        id,
+        modeId,
+        to: value.id,
+        crosses: Boolean(target) && target.variableCollectionId !== variable.variableCollectionId,
+      });
+    }
+  }
+  return out;
+}
+
+/** Aliases pointing at an id the same payload does not carry. */
+function danglingAliases(payload) {
+  return collectAliasEdges(payload)
+    .filter((edge) => !payload.meta.variables[edge.to])
+    .map((edge) => `${payload.meta.variables[edge.id].name} -> ${edge.to}`);
+}
+
+/**
+ * Every colour the plan sets, located by the ids it ended up under.
+ *
+ * The plan names a collection, a variable and a mode; the payload keys all three
+ * by id. Resolving the one to the other here is what lets the comparison below
+ * be against the *plan's* number rather than against the payload's own.
+ */
+function colourExpectations(sourcePlan, source) {
+  const collectionByName = new Map(source.collections.map((collection) => [collection.name, collection]));
+  const variableByKey = new Map(source.variables.map((variable) => [`${variable.collectionId}/${variable.name}`, variable]));
+  const out = [];
+  for (const action of sourcePlan.actions) {
+    if (action.op !== 'set-value' || action.to.kind !== 'COLOR') continue;
+    const collection = collectionByName.get(action.collection);
+    if (!collection) continue;
+    const mode = collection.modes.filter((entry) => entry.name === action.mode)[0];
+    const variable = variableByKey.get(`${collection.id}/${action.name}`);
+    if (!mode || !variable) continue;
+    out.push({ token: action.token, variableId: variable.id, modeId: mode.id, value: action.to.value });
+  }
+  return out;
+}
+
+/**
+ * Colours in a payload that are not the ones the plan set.
+ *
+ * With no tolerance argument the comparison is `===`, which is the real check:
+ * the projection is a restatement, so anything but an identical number is a bug
+ * in it. The tolerance argument exists only so the harness can show what a
+ * tolerant comparison would have failed to notice.
+ */
+function colourDifferences(expectations, payload, tolerance) {
+  const differs = tolerance === undefined
+    ? (a, b) => a !== b
+    : (a, b) => Math.abs(a - b) > tolerance;
+  const out = [];
+  for (const expectation of expectations) {
+    const variable = payload.meta.variables[expectation.variableId];
+    const value = variable ? variable.valuesByMode[expectation.modeId] : undefined;
+    if (!value || typeof value !== 'object') { out.push(`${expectation.token}: no colour`); continue; }
+    const wrong = ['r', 'g', 'b', 'a'].filter((channel) => differs(value[channel], expectation.value[channel]));
+    if (wrong.length > 0) out.push(`${expectation.token}: ${wrong.join('')}`);
+  }
+  return out;
+}
+
+/** The same model with one colour channel moved, projected again. */
+function corruptColour(source, expectation, by) {
+  const corrupted = JSON.parse(JSON.stringify(source));
+  const variable = corrupted.variables.filter((entry) => entry.id === expectation.variableId)[0];
+  variable.valuesByMode[expectation.modeId].value.r += by;
+  return toRestPayload(corrupted);
+}
+
+/** The same model with one alias re-pointed at an id nothing holds. */
+function corruptAlias(source, edge, target) {
+  const corrupted = JSON.parse(JSON.stringify(source));
+  const variable = corrupted.variables.filter((entry) => entry.id === edge.id)[0];
+  variable.valuesByMode[edge.modeId].id = target;
+  return toRestPayload(corrupted);
+}
+
+/** Run the real drift detector over a snapshot file, as a separate process. */
+function runDriftDetector(snapshot) {
+  const run = spawnSync(process.execPath, [DRIFT_DETECTOR, '--root', ROOT, '--snapshot', snapshot, '--json'], {
+    encoding: 'utf8',
+  });
+  let report = null;
+  try {
+    report = JSON.parse(run.stdout);
+  } catch (error) {
+    report = null;
+  }
+  return { status: run.status, stdout: run.stdout || '', stderr: run.stderr || '', report };
+}
+
+/** Every name a TypeScript module exports, and whether it survives to runtime. */
+function exportedNames(file) {
+  const source = readFileSync(file, 'utf8');
+  const out = [];
+  const pattern = /export\s+(const|function|interface|type|class)\s+([A-Za-z0-9_$]+)/g;
+  let match = pattern.exec(source);
+  while (match) {
+    out.push({ name: match[2], runtime: match[1] === 'const' || match[1] === 'function' || match[1] === 'class' });
+    match = pattern.exec(source);
+  }
+  return out;
+}
 
 /** Remove one token from a bundle, pruning any group it leaves empty. */
 function removeToken(target, path) {

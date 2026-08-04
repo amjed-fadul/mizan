@@ -19,6 +19,7 @@
  */
 
 import type { ResolvedValue, VariablesAdapter } from './apply';
+import type { RestSource } from './rest';
 import type { FigmaType, PlanValue, Snapshot, SnapshotCollection, SnapshotVariable } from './types';
 
 interface MemoryCollection {
@@ -89,6 +90,37 @@ export class MemoryVariables implements VariablesAdapter {
     });
 
     return { collections, variables };
+  }
+
+  /**
+   * The same state, ids intact, for `toRestPayload`.
+   *
+   * `readSnapshot` above is lossy on purpose — it carries an alias by name
+   * because the planner needs it that way. The REST shape needs the id, so this
+   * hands over the ids rather than re-deriving them, and the dry run can then
+   * run the real drift detector over a file this model built. That is what
+   * makes "what the plugin writes is what the detector expects" a test.
+   */
+  readRestSource(): RestSource {
+    return {
+      collections: this.collections.map((c) => ({
+        id: c.id,
+        name: c.name,
+        defaultModeId: c.defaultModeId,
+        modes: c.modes.map((m) => ({ id: m.id, name: m.name })),
+      })),
+      variables: this.variables.map((v) => ({
+        id: v.id,
+        name: v.name,
+        collectionId: v.collectionId,
+        resolvedType: v.resolvedType,
+        description: v.description,
+        valuesByMode: Object.keys(v.valuesByMode).reduce<Record<string, ResolvedValue>>((out, modeId) => {
+          out[modeId] = v.valuesByMode[modeId];
+          return out;
+        }, {}),
+      })),
+    };
   }
 
   createCollection(name: string): { id: string; defaultModeId: string; defaultModeName: string } {

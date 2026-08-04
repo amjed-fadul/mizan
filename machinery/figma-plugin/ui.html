@@ -16,7 +16,19 @@
   without regenerating documentation, or redraw the documentation without
   touching a variable.
 
-  Plain HTML, CSS and JS. No framework, no build step, no network.
+  There is a third thing here that is not an action, because it changes
+  nothing: the **read bridge**. A plugin's main thread has no network — only
+  this iframe does — so if the drift detector is to read the variable table on
+  a plan where Figma's REST API is closed, the socket has to be opened here.
+
+  It is off until somebody switches it on, and while it is on this file is a
+  relay and nothing more. It never composes a protocol message: it asks the
+  main thread for one and forwards the bytes it is handed. Every word that can
+  travel over the socket is defined in `src/core/bridge.ts`, and there is no
+  word there for writing. See decision 016.
+
+  Plain HTML, CSS and JS. No framework, no build step, and no network except
+  the one socket above, to one port on the loopback interface.
 -->
 <meta charset="utf-8" />
 <style>
@@ -127,6 +139,10 @@
   </div>
   <input type="file" id="folder-input" webkitdirectory directory multiple />
   <input type="file" id="file-input" accept="application/json,.json" />
+  <div class="sources">
+    <button id="bridge-toggle">Start read bridge</button>
+    <span class="muted grow" id="bridge-status">Off. No socket is open.</span>
+  </div>
 </header>
 
 <main id="output">
@@ -276,9 +292,153 @@
     parent.postMessage({ pluginMessage: { type: 'close' } }, '*');
   };
 
+  /* ---------------------------------------------------------------- *
+   * The read bridge.
+   *
+   * Everything below is transport. It opens one socket, forwards what the
+   * main thread hands it, and decides nothing — deliberately, because this is
+   * the one file in the plugin that cannot be driven from the command line
+   * and therefore the one file whose behaviour cannot be asserted. So there
+   * is as little behaviour in it as the job allows.
+   *
+   * Two rules it keeps, and they are the reason the manifest's development-only
+   * network entry is defensible — `allowedDomains` never left `["none"]`:
+   *
+   *   It composes no protocol message. `hello` and `snapshot` both arrive
+   *   from `code.ts` as finished objects and are stringified unread. There is
+   *   no branch here that could invent a message the vocabulary does not have.
+   *
+   *   It obeys nothing off the wire. A frame is forwarded to the main thread
+   *   only when its `type` is exactly "snapshot-request". Anything else —
+   *   including something that looks like an instruction — is counted and
+   *   dropped. Text arriving on a socket is data, never a command.
+   *
+   * The port is a constant in four places: here, `src/core/bridge.ts`,
+   * `machinery/scripts/lib/bridge.mjs`, and twice in the manifest's
+   * `devAllowedDomains`. A manifest cannot take a variable, and this file is
+   * loaded by Figma rather than bundled, so neither can import the number from
+   * anywhere. `machinery/scripts/selftest.mjs` parses it out of all four and
+   * asserts they agree, which is what stops a partial change producing a
+   * bridge that silently never connects.
+   * ---------------------------------------------------------------- */
+
+  var BRIDGE_PORT = 8791;
+  var BRIDGE_PROTOCOL = 'mizan-bridge@1';
+  var RETRY_MS = 2000;
+
+  var socket = null;
+  var bridgeOn = false;
+  var retryTimer = null;
+  var answered = 0;
+  var ignored = 0;
+
+  $('bridge-toggle').onclick = function () {
+    if (bridgeOn) { stopBridge('Off. No socket is open.'); return; }
+    bridgeOn = true;
+    $('bridge-toggle').textContent = 'Stop read bridge';
+    connect();
+  };
+
+  function stopBridge(status) {
+    bridgeOn = false;
+    if (retryTimer) { clearTimeout(retryTimer); retryTimer = null; }
+    if (socket) {
+      var open = socket;
+      socket = null;
+      open.onclose = null;
+      open.onerror = null;
+      try { open.close(); } catch (error) { /* already gone */ }
+    }
+    $('bridge-toggle').textContent = 'Start read bridge';
+    bridgeStatus(status);
+  }
+
+  function bridgeStatus(text) { $('bridge-status').textContent = text; }
+
+  /**
+   * Connect, and keep trying while the bridge is on.
+   *
+   * The detector starts its server, runs, and stops — so for most of this
+   * plugin's life there is nothing to connect to, and a failed connection is
+   * the normal state rather than an error worth shouting about.
+   */
+  function connect() {
+    if (!bridgeOn) return;
+    bridgeStatus('Waiting for a reader on 127.0.0.1:' + BRIDGE_PORT + '…');
+    try {
+      socket = new WebSocket('ws://127.0.0.1:' + BRIDGE_PORT);
+    } catch (error) {
+      socket = null;
+      scheduleRetry();
+      return;
+    }
+
+    socket.onopen = function () {
+      bridgeStatus('Connected. Waiting to be asked for the variable table.');
+      parent.postMessage({ pluginMessage: { type: 'bridge-hello' } }, '*');
+    };
+
+    socket.onmessage = function (event) {
+      var frame = null;
+      try {
+        frame = JSON.parse(String(event.data));
+      } catch (error) {
+        frame = null;
+      }
+      /* The one thing this end answers. Note what is missing: an `else` that
+       * does something. */
+      if (frame && frame.protocol === BRIDGE_PROTOCOL && frame.type === 'snapshot-request'
+        && typeof frame.id === 'string') {
+        bridgeStatus('Reading the variable table…');
+        parent.postMessage({ pluginMessage: { type: 'bridge-read', id: frame.id } }, '*');
+        return;
+      }
+      ignored += 1;
+      bridgeStatus('Connected. ' + ignored + ' frame(s) ignored — this end answers one question only.');
+    };
+
+    socket.onclose = function () {
+      socket = null;
+      scheduleRetry();
+    };
+
+    /* A refused connection is the *normal* case — the detector's server only
+     * exists while a read is running — and browsers do not agree on whether
+     * that fires close, error, or both. Retrying from either, with a guard
+     * against scheduling twice, is the only version that reconnects on every
+     * engine. Retrying from close alone leaves the bridge dead after the first
+     * refusal on the ones that fire error only. */
+    socket.onerror = function () {
+      socket = null;
+      scheduleRetry();
+    };
+  }
+
+  function scheduleRetry() {
+    if (!bridgeOn || retryTimer) return;
+    bridgeStatus('No reader on 127.0.0.1:' + BRIDGE_PORT + '. Retrying…');
+    retryTimer = setTimeout(function () {
+      retryTimer = null;
+      connect();
+    }, RETRY_MS);
+  }
+
+  /** Forward a finished message from the main thread. Nothing is composed here. */
+  function sendOverBridge(message) {
+    if (!socket || socket.readyState !== 1) return;
+    socket.send(JSON.stringify(message));
+    if (message.type === 'snapshot') {
+      answered += 1;
+      bridgeStatus('Sent the variable table. ' + answered + ' read(s) answered, nothing written.');
+    } else if (message.type === 'error') {
+      bridgeStatus('Could not read the variables: ' + message.message);
+    }
+  }
+
   window.onmessage = function (event) {
     var message = event.data.pluginMessage;
     if (!message) return;
+    if (message.type === 'bridge-reply') { sendOverBridge(message.message); return; }
     if (message.type === 'plan') { plan = message.plan; render(message.plan, null); return; }
     if (message.type === 'stale') { plan = message.plan; render(message.plan, { kind: 'bad', text: message.message }); return; }
     if (message.type === 'applied') {

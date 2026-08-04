@@ -15,14 +15,29 @@
  * preview, its own diff, its own confirmation. Somebody may want to sync
  * without regenerating the documentation, or regenerate the documentation
  * without syncing, and folding the two together would take that choice away.
+ *
+ * The **bridge** is the one message here with no confirmation gate, and that
+ * is because it writes nothing: it reads the variable table and hands it back.
+ * A gate exists to stand between an intention and a change to the document.
+ * There is no change to stand in front of. See `core/bridge.ts` for why the
+ * vocabulary has no word for one.
  */
 
 import { applyPlan } from './core/apply';
+import { errorMessage, helloMessage, snapshotMessage } from './core/bridge';
 import { isApplicable, planSync } from './core/plan';
+import { toRestPayload } from './core/rest';
 import { SHEET_PAGE_NAME, isSheetApplicable, planSheet } from './core/sheet';
 import { applySheet } from './core/sheet-apply';
 import type { Plan, SheetPlan, TokenBundle } from './core/types';
-import { FigmaNodes, FigmaVariables, captureSheetSnapshot, captureSnapshot } from './figma-adapter';
+import {
+  FigmaNodes,
+  FigmaVariables,
+  captureDocument,
+  captureRestSource,
+  captureSheetSnapshot,
+  captureSnapshot,
+} from './figma-adapter';
 
 interface PreviewMessage {
   type: 'preview';
@@ -44,7 +59,29 @@ interface ApplySheetMessage {
   signature: string;
 }
 
-type Incoming = PreviewMessage | ApplyMessage | PreviewSheetMessage | ApplySheetMessage | { type: 'close' };
+/**
+ * The UI has a socket open and something on the other end asked for the
+ * variable table. `id` is the asker's own correlation id and is echoed back
+ * untouched; nothing in this file interprets it.
+ */
+interface BridgeReadMessage {
+  type: 'bridge-read';
+  id: string;
+}
+
+/** The UI's socket just opened and it needs the greeting to send. */
+interface BridgeHelloMessage {
+  type: 'bridge-hello';
+}
+
+type Incoming =
+  | PreviewMessage
+  | ApplyMessage
+  | PreviewSheetMessage
+  | ApplySheetMessage
+  | BridgeReadMessage
+  | BridgeHelloMessage
+  | { type: 'close' };
 
 let pending: { bundle: TokenBundle; plan: Plan } | null = null;
 let pendingSheet: { bundle: TokenBundle; plan: SheetPlan } | null = null;
@@ -175,6 +212,42 @@ figma.ui.onmessage = async (message: Incoming) => {
           ? `Proof sheet built — ${result.applied} change${result.applied === 1 ? '' : 's'} written.`
           : `Proof sheet finished with ${result.failures.length} failure${result.failures.length === 1 ? '' : 's'}.`,
       );
+      return;
+    }
+
+    /**
+     * The bridge's whole implementation on this side: read, project, hand back.
+     *
+     * `id` is echoed and never read. The reply is a finished protocol message
+     * rather than a payload the UI would have to wrap, so `ui.html` forwards
+     * bytes it was given and constructs no message of its own — which is what
+     * keeps the read-only claim a property of this file rather than of that one.
+     *
+     * The document's identity goes out beside the payload rather than inside it.
+     * `toRestPayload` produces the shape of Figma's read endpoint and is shared
+     * with the in-memory model, so it has no business carrying a document name;
+     * the envelope does. What it buys is that the drift report can say which
+     * file it read — and a report that cannot say that is a report whose remedy
+     * cannot be checked.
+     */
+    if (message.type === 'bridge-hello') {
+      figma.ui.postMessage({ type: 'bridge-reply', message: helloMessage() });
+      return;
+    }
+
+    if (message.type === 'bridge-read') {
+      try {
+        const payload = toRestPayload(await captureRestSource());
+        figma.ui.postMessage({
+          type: 'bridge-reply',
+          message: snapshotMessage(message.id, payload, captureDocument()),
+        });
+      } catch (error) {
+        figma.ui.postMessage({
+          type: 'bridge-reply',
+          message: errorMessage(message.id, error instanceof Error ? error.message : String(error)),
+        });
+      }
       return;
     }
   } catch (error) {

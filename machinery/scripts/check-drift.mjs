@@ -17,7 +17,9 @@
  *
  * Usage:
  *   node machinery/scripts/check-drift.mjs [--root <dir>] [--snapshot <file>]
- *                                          [--file-key <key>] [--save-snapshot <file>]
+ *                                          [--file-key <key>] [--bridge]
+ *                                          [--bridge-port <n>] [--bridge-timeout <s>]
+ *                                          [--save-snapshot <file>]
  *                                          [--json] [--quiet]
  *
  *   --root <dir>           token root. Defaults to $TOKENS_ROOT, then to the
@@ -26,11 +28,31 @@
  *                          credentials, reproducible — this is what makes the
  *                          detector testable in CI and in the selftest.
  *   --file-key <key>       fetch live instead. Defaults to $FIGMA_FILE_KEY.
- *                          Needs $FIGMA_TOKEN. --snapshot wins if both are given.
- *   --save-snapshot <file> write the fetched payload to disk, so a live run can
- *                          be turned into an offline fixture.
+ *                          Needs $FIGMA_TOKEN, and an Enterprise plan.
+ *   --bridge               read the live variables from a running Mizan Sync
+ *                          plugin over localhost. The route for every plan
+ *                          below Enterprise. Needs Figma Desktop open with the
+ *                          plugin running — a person, not a service.
+ *   --bridge-port <n>      default 8791, which the plugin manifest also names.
+ *   --bridge-timeout <s>   how long to wait for the plugin. Default 60.
+ *   --save-snapshot <file> write the payload to disk, whichever source it came
+ *                          from, so a live run becomes an offline fixture.
+ *                          Refused if it points inside --root: see below.
  *   --json                 machine-readable output on stdout.
  *   --quiet                suppress the passing summary; drift still prints.
+ *
+ * Three sources, one comparison. `--snapshot` wins over `--bridge`, which wins
+ * over `--file-key`, and the order is not arbitrary: the offline path is the
+ * one that runs in CI and in the selftest, so it stays the default and the
+ * privileged one. A live read is a convenience laid beside it, never a
+ * replacement for it.
+ *
+ * `--save-snapshot` will not write inside `--root`, and the refusal is a check
+ * rather than a warning. `lib/tokens.mjs` loads every `.json` under every
+ * subdirectory of the token root, so a snapshot saved there is read back as
+ * tokens on the very next run — which is a Figma value becoming a source, the
+ * one thing rule 1 forbids, arriving by a path nobody chose. It is checkable, so
+ * it is checked.
  *
  * Exits 1 on any drift or error, 0 when the display agrees with the source.
  *
@@ -88,7 +110,7 @@
  */
 
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
-import { dirname } from 'node:path';
+import { dirname, isAbsolute, relative, resolve, sep } from 'node:path';
 
 import {
   Diagnostics,
@@ -106,6 +128,7 @@ import {
   resolveTokens,
 } from './lib/tokens.mjs';
 import { narrowFontStack } from './lib/projection.mjs';
+import { BRIDGE_PORT, BRIDGE_TIMEOUT_MS, readSnapshotOverBridge } from './lib/bridge.mjs';
 
 /* ------------------------------------------------------------------ *
  * Constants
@@ -816,14 +839,56 @@ function compare(set, snapshot, diagnostics, sourceLabel) {
  * Main
  * ------------------------------------------------------------------ */
 
+/**
+ * Is one path inside another?
+ *
+ * By `relative`, not by string prefix. "/a/bc" starts with "/a/b" and is not
+ * inside it, and a containment test that gets that wrong is worse than none: it
+ * refuses writes that were fine and is trusted to catch the one that is not.
+ * A path equal to the directory counts as inside — a snapshot cannot be saved
+ * *as* the token root either.
+ */
+function isInside(directory, candidate) {
+  const rel = relative(resolve(directory), resolve(candidate));
+  if (rel === '') return true;
+  if (isAbsolute(rel)) return false; // a different drive, on Windows
+  return rel !== '..' && !rel.startsWith(`..${sep}`);
+}
+
+/**
+ * Refuse to write a Figma value into the token source.
+ *
+ * `--save-snapshot content/tokens/<anything>.json` is one flag away from being
+ * typed, and `loadTokenSet` reads every `.json` under every subdirectory of the
+ * root — so the file lands, the next run parses it as token documents, and Figma
+ * has quietly become a source. Nothing about that failure announces itself: the
+ * snapshot is valid JSON and the run that created it passes.
+ *
+ * Rule 4 says anything checkable gets a deterministic check, and this is
+ * checkable, so it is a named error before a byte is written rather than a
+ * sentence in a README asking people not to. The remedy is not "save it
+ * somewhere else in particular" — it is that the token root has one editing
+ * surface and a snapshot is not on it.
+ */
+function refuseSaveInsideRoot(savePath, root) {
+  if (!savePath) return null;
+  if (!isInside(root, savePath)) return null;
+  return {
+    code: 'save-snapshot-inside-root',
+    message: `--save-snapshot points inside the token root (${displayPath(resolve(savePath))} is under ${displayPath(resolve(root))}). `
+      + 'Refused, and nothing was written. Every .json under the token root is loaded as tokens, so a Figma snapshot saved there would be read back as a source on the next run — and Figma is a display, never a source. Save it outside the root: a fixture directory, or anywhere the loader does not look.',
+  };
+}
+
 async function main(argv) {
   const args = parseArgs(argv, {
-    flags: ['json', 'quiet', 'help'],
-    values: ['root', 'snapshot', 'file-key', 'save-snapshot'],
+    flags: ['json', 'quiet', 'help', 'bridge'],
+    values: ['root', 'snapshot', 'file-key', 'save-snapshot', 'bridge-port', 'bridge-timeout'],
   });
   if (args.help) {
     process.stdout.write(
       'Usage: check-drift.mjs [--root <dir>] [--snapshot <file>] [--file-key <key>]\n'
+      + '                       [--bridge] [--bridge-port <n>] [--bridge-timeout <s>]\n'
       + '                       [--save-snapshot <file>] [--json] [--quiet]\n',
     );
     return 0;
@@ -837,6 +902,15 @@ async function main(argv) {
   const diagnostics = new Diagnostics();
   const set = loadTokenSet(root, diagnostics);
 
+  /* Checked before any source is opened, so a refused save cannot cost somebody
+   * a sixty-second wait at the bridge to be told the destination was never
+   * allowed. Nothing has been written at this point and nothing will be. */
+  const refusal = refuseSaveInsideRoot(args['save-snapshot'], set.root);
+  if (refusal) {
+    diagnostics.error(refusal.code, refusal.message, { file: args['save-snapshot'] });
+    return report({ args, set, source: null, result: emptyResult(), diagnostics, empty: false });
+  }
+
   if (diagnostics.ok && isEmptyTokenSet(set)) {
     return report({ args, set, source: null, result: emptyResult(), diagnostics, empty: true });
   }
@@ -848,12 +922,56 @@ async function main(argv) {
   let source = null;
   let payload = null;
 
+  /* Saving is the same act whichever source produced the payload: a live read
+   * turned into a file is how a fixture gets made, and the bridge is the only
+   * live read most plans have. */
+  const savePayload = (data) => {
+    if (!args['save-snapshot']) return;
+    mkdirSync(dirname(args['save-snapshot']), { recursive: true });
+    writeFileSync(args['save-snapshot'], `${JSON.stringify(data, null, 2)}\n`);
+  };
+
   if (args.snapshot) {
     source = { kind: 'snapshot', path: args.snapshot };
     if (!existsSync(args.snapshot)) {
       diagnostics.error('snapshot-missing', `No snapshot at ${displayPath(args.snapshot)}.`, { file: args.snapshot });
     } else {
       payload = readJson(args.snapshot, diagnostics, 'invalid-snapshot');
+    }
+  } else if (args.bridge) {
+    const port = args['bridge-port'] === undefined ? BRIDGE_PORT : Number(args['bridge-port']);
+    const timeoutMs = args['bridge-timeout'] === undefined
+      ? BRIDGE_TIMEOUT_MS
+      : Number(args['bridge-timeout']) * 1000;
+    /* `document` is filled in from the answer, not from the request: a port is
+     * not an identity, and a report that cannot name the document it read is a
+     * report whose remedy cannot be checked. With the wrong file open every
+     * token comes back missing-in-figma and the remedy beside it says "re-sync
+     * outward" — which would write the entire token set into a document nobody
+     * meant to touch. Null means the plugin did not say, and that is printed
+     * rather than passed over. */
+    source = { kind: 'bridge', port, document: null };
+
+    if (!Number.isInteger(port) || port < 1 || port > 65535) {
+      diagnostics.error('bridge-port-invalid', `--bridge-port must be a port number; got ${JSON.stringify(args['bridge-port'])}.`, {});
+    } else if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
+      diagnostics.error('bridge-timeout-invalid', `--bridge-timeout must be a number of seconds; got ${JSON.stringify(args['bridge-timeout'])}.`, {});
+    } else {
+      /* Progress goes to stderr, always. This command's stdout is a contract —
+       * `--json` is parsed by the health dashboard — and a friendly line in the
+       * middle of it would be a breaking change dressed as a courtesy. */
+      const result = await readSnapshotOverBridge({
+        port,
+        timeoutMs,
+        onStatus: (text) => process.stderr.write(`bridge: ${text}\n`),
+      });
+      if (result.ok) {
+        payload = result.payload;
+        source.document = result.document ?? null;
+        savePayload(payload);
+      } else {
+        diagnostics.error(result.code, result.message, {});
+      }
     }
   } else if (fileKey) {
     const token = process.env.FIGMA_TOKEN;
@@ -867,10 +985,7 @@ async function main(argv) {
     } else {
       try {
         payload = await fetchSnapshot(fileKey, token);
-        if (args['save-snapshot']) {
-          mkdirSync(dirname(args['save-snapshot']), { recursive: true });
-          writeFileSync(args['save-snapshot'], `${JSON.stringify(payload, null, 2)}\n`);
-        }
+        savePayload(payload);
       } catch (error) {
         diagnostics.error('figma-unreachable', `Could not read variables from Figma: ${error.message}`, {});
       }
@@ -878,7 +993,7 @@ async function main(argv) {
   } else {
     diagnostics.error(
       'no-source',
-      'Nothing to compare against. Pass --snapshot <file> with a saved Figma variables payload, or --file-key/$FIGMA_FILE_KEY with $FIGMA_TOKEN set.',
+      'Nothing to compare against. Pass --snapshot <file> with a saved Figma variables payload; or --bridge to read the live file from a running Mizan Sync plugin; or --file-key/$FIGMA_FILE_KEY with $FIGMA_TOKEN set, which needs an Enterprise plan.',
       {},
     );
   }
@@ -897,7 +1012,10 @@ async function main(argv) {
     return report({ args, set, source, result: emptyResult(), diagnostics, empty: false });
   }
 
-  const sourceLabel = source?.path ?? `figma:${source?.fileKey ?? ''}`;
+  const sourceLabel = source?.path
+    ?? (source?.kind === 'bridge'
+      ? `bridge:127.0.0.1:${source.port}${source.document ? ` ("${source.document.name}")` : ''}`
+      : `figma:${source?.fileKey ?? ''}`);
   const snapshot = normaliseSnapshot(meta, diagnostics, sourceLabel);
   const result = compare(set, snapshot, diagnostics, sourceLabel);
   result.snapshot = snapshot;
@@ -977,11 +1095,7 @@ function report({ args, set, source, result, diagnostics, empty }) {
     return 0;
   }
 
-  out.push(source === null
-    ? 'figma: (none)'
-    : source.kind === 'snapshot'
-      ? `figma: snapshot ${displayPath(source.path)}`
-      : `figma: file ${source.fileKey} (live)`);
+  out.push(describeSource(source, result.snapshot !== null));
 
   if (result.snapshot) {
     out.push(
@@ -1039,6 +1153,39 @@ function report({ args, set, source, result, diagnostics, empty }) {
 
   if (!args.quiet || !ok) process.stdout.write(`${out.join('\n')}\n`);
   return ok ? 0 : 1;
+}
+
+/**
+ * The one line that says what was compared against.
+ *
+ * A snapshot names a path and a live fetch names a key, so both have always been
+ * answerable. A bridge read named only a port, and a port says nothing about
+ * which document was open — which matters most in the case that looks least like
+ * a problem: read the wrong file and every token comes back missing, with
+ * "re-sync outward" printed beside it. Follow that and the whole token set is
+ * written into a document nobody chose. The name is what makes the remedy
+ * checkable before it is carried out.
+ *
+ * When the plugin sent no identity that is said in the line rather than left
+ * out. An unnamed document is a fact about this report, and quietly omitting it
+ * would leave the line reading exactly as it did when the answer was known.
+ */
+function describeSource(source, read) {
+  if (source === null) return 'figma: (none)';
+  if (source.kind === 'snapshot') return `figma: snapshot ${displayPath(source.path)}`;
+  if (source.kind !== 'bridge') return `figma: file ${source.fileKey} (live)`;
+
+  const wire = `read through the plugin bridge on 127.0.0.1:${source.port}`;
+  if (source.document) {
+    // No file key is ordinary rather than wrong — an unsaved document has none.
+    const key = source.document.fileKey === null
+      ? 'no file key — the document may be unsaved'
+      : `file key ${source.document.fileKey}`;
+    return `figma: "${source.document.name}" (${key}), ${wire}`;
+  }
+  return read
+    ? `figma: the open file (the plugin did not name the document — rebuild it with npm run figma:build), ${wire}`
+    : `figma: the open file, ${wire}`;
 }
 
 function formatFinding(item) {
