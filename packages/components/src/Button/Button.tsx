@@ -33,11 +33,12 @@ export type ButtonVariant = 'primary' | 'secondary' | 'ghost'
  *
  * Decision 020: `size` names the **step**, and the product mode decides what
  * the step resolves to — the shape 007 and 008 settled for `text.secondary`.
- * That half is decided and owed. The two product mode files differ by exactly
- * three tokens and all three are colour, so no control geometry resolves by
- * product today and both products' buttons are currently the same size at the
- * same step. A visible temporary regression against v0, recorded rather than
- * hidden. See the Variants section of ./README.md.
+ * Decision 022 landed that half: `control.{sm,md,lg}.*` resolves per product,
+ * so the same step is a different control in each. Market's values are
+ * byte-for-byte what shipped before and Move's are larger at `md` and `lg` —
+ * Move is compact in what it puts on a screen and generous in the thing you
+ * hit at a curb. `sm` is deliberately identical in both. See the Variants
+ * section of ./README.md.
  *
  * A `density` prop is not the workaround. It would push the choice onto every
  * call site and let a Market screen ask for Move's geometry, which is the drift
