@@ -105,6 +105,7 @@ import {
   readJson,
   resolveTokens,
 } from './lib/tokens.mjs';
+import { narrowFontStack } from './lib/projection.mjs';
 
 /* ------------------------------------------------------------------ *
  * Constants
@@ -128,6 +129,13 @@ const FIGMA_NAME_SEPARATOR = '/';
  *
  * Kept in step by hand, because a gate that needs a TypeScript build to run is
  * not a gate. If `map.ts` changes, this changes with it.
+ *
+ * One rule is exempt from that arrangement and lives in `lib/projection.mjs`,
+ * which both sides import: narrowing a font stack to its first family. A
+ * mirrored rule that disagrees produces a finding somebody can read and fix; a
+ * *lossy* rule that disagrees produces drift no sync can ever clear, because the
+ * writer discards the information the reader would need to agree. That one is
+ * shared code, not a shared comment.
  */
 
 /** DTCG composites. Figma has no composite variable — these are styles. */
@@ -418,17 +426,15 @@ function tokenSideValue(type, value) {
   }
 
   if (typeof value === 'string') return { ok: true, kind, string: value, display: value };
-  if (Array.isArray(value) && value.length > 0 && value.every((item) => typeof item === 'string')) {
-    /* A DTCG fontFamily may be a stack; a Figma STRING holds one value. The
-     * plugin projects the first family and names the lost fallbacks, so the
-     * first family is what the file should hold. */
-    return {
-      ok: true,
-      kind,
-      string: value[0],
-      display: value[0],
-      note: value.length > 1 ? `narrowed from a stack; fallbacks not represented: ${value.slice(1).join(', ')}` : undefined,
-    };
+
+  /* A DTCG fontFamily may be a stack; a Figma STRING holds one value. Which one
+   * is not decided here — `lib/projection.mjs` decides it, and the sync plugin
+   * imports the same function. This is the one rule the two sides cannot state
+   * separately: a stack narrowed differently at each end is drift no sync can
+   * ever clear. See that file for why it is the exception. */
+  const narrowed = narrowFontStack(value);
+  if (narrowed !== null) {
+    return { ok: true, kind, string: narrowed.family, display: narrowed.family, note: narrowed.note };
   }
   return { ok: false, reason: `expected a string or a list of strings; got ${JSON.stringify(value)}` };
 }
@@ -541,7 +547,7 @@ function compareInMode(context) {
 
     const expectedAlias = aliasTarget(composedNode.rawValue);
     const expectedValue = tokenSideValue(resolvedNode.type, resolvedNode.value);
-    const key = `${expectedAlias ?? ''} ${expectedValue.ok ? expectedValue.display : expectedValue.reason}`;
+    const key = `${expectedAlias ?? ''}\u0000${expectedValue.ok ? expectedValue.display : expectedValue.reason}`;
     if (!groups.has(key)) groups.set(key, { expectedAlias, expectedValue, labels: [] });
     groups.get(key).labels.push(label);
   }

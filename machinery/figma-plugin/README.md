@@ -128,13 +128,23 @@ with its two mode files produces a third collection with two modes and moves the
 | `dimension` | `FLOAT` | `px` only. Figma's FLOAT is unitless and its canvas unit is the pixel. |
 | `number` | `FLOAT` | Line heights, multipliers. |
 | `fontWeight` | `FLOAT` or `STRING` | Numeric weights become FLOAT; keyword weights become STRING. |
-| `fontFamily` | `STRING` | A stack narrows to its first family — the one Figma can resolve to a font. The fallbacks are named in a warning. `machinery/scripts/check-drift.mjs` compares against the same first family; the convention has to move in both files or not at all. |
+| `fontFamily` | `STRING` | A stack narrows to its first family — the one Figma can resolve to a font. The fallbacks are named in a warning. **The narrowing is not implemented here:** it is imported from `machinery/scripts/lib/projection.mjs`, which `check-drift.mjs` imports too. See below. |
 | `duration` | `FLOAT` | Milliseconds. |
 | `boolean` | `BOOLEAN` | |
 | `shadow`, `typography`, `border`, `transition`, `gradient`, `cubicBezier` | — | **Not projected.** Figma has no composite variable; these are styles, not variables. Each one is listed in the diff with that reason. |
 | `dimension` in `rem` | — | **Not projected.** Converting needs a root font size, which is a fact about a document rather than about the token. Refused rather than assumed. |
 
 `$description` is carried into the Figma variable description verbatim, so the reasoning travels with the value — a designer hovering a variable reads the same sentence a developer reads in the JSON. `$deprecated` is prefixed to it.
+
+### The one rule this plugin does not own alone
+
+`machinery/scripts/check-drift.mjs` reads these variables back and asks whether they are still what was written, so it has to agree with `src/core/map.ts` about every row of the table above. Most of those rows are safe to state twice: if the two disagree, the detector reports a finding and somebody fixes it.
+
+The `fontFamily` row is not. Narrowing a stack **discards** the fallbacks, and nothing on the Figma side can put them back — so if the writer picked the first family and the reader expected the joined stack, the detector would report drift, the sync would rewrite the file, and the same drift would come back after every sync. There is no fix for that from either end, and the only way to get a green build would be to stop running the gate.
+
+So the narrowing is one function, in `machinery/scripts/lib/projection.mjs`. `check-drift.mjs` imports it directly; `map.ts` imports it too, and `build.mjs` bundles it — the plugin still ships as one file with no runtime dependencies, and the gate still runs with no build step. `machinery/scripts/selftest.mjs` asserts that both files import it, that exactly one file under `machinery/` defines it, and — where `dist/core.mjs` has been built — that this plugin's `mapValue` and the detector land on the same family and the same warning text.
+
+The general rule: **a projection that discards information is shared code; a projection that does not can be stated twice.**
 
 ---
 
@@ -197,7 +207,8 @@ The two files were written independently and agree on all four conventions that 
 | `manifest.json` | Figma plugin manifest. `documentAccess: dynamic-page`, no network. |
 | `src/core/` | The pure core. No Figma, no Node — this is what the dry run drives. |
 | `src/core/token-model.ts` | The fs-free port of `machinery/scripts/lib/tokens.mjs`: flatten, `$type` inheritance, mode discovery, composition. |
-| `src/core/map.ts` | DTCG values to Figma values, and every refusal to translate one. |
+| `src/core/map.ts` | DTCG values to Figma values, and every refusal to translate one. Owns all of it except the font-stack narrowing, which it imports. |
+| `../scripts/lib/projection.mjs` | Not in this directory on purpose: the one projection rule this plugin and the drift gate share as code. Bundled into both outputs. |
 | `src/core/plan.ts` | The projection and the diff. The architecture argument lives in its header. |
 | `src/core/apply.ts` | Writing a plan, through an adapter. The only apply path there is. |
 | `src/core/memory-adapter.ts` | Figma's variable model in memory, for the dry run. |

@@ -209,6 +209,17 @@
           "1:0": 8
         }
       },
+      "VariableID:1:11": {
+        "id": "VariableID:1:11",
+        "name": "font-family/sans",
+        "variableCollectionId": "VariableCollectionId:1:0",
+        "resolvedType": "STRING",
+        "description": "",
+        "valuesByMode": {
+          "1:0": "Fixture Sans, Fixture Fallback, sans-serif"
+        },
+        "_defect": "value-mismatch, and the one that guards the lossy rule. The source declares a three-family stack; the sync writes the first family alone, because that is the only value Figma can bind to a font. Somebody has pasted the whole CSS stack in instead. It reads as correct to anyone who knows the source and renders as nothing in the file. It is also the shape a *divergence between the two tools* would take: if machinery/scripts/check-drift.mjs narrowed differently from machinery/figma-plugin, this is the finding that would come back after every sync, forever. Both now import the narrowing from machinery/scripts/lib/projection.mjs."
+      },
       "VariableID:2:1": {
         "id": "VariableID:2:1",
         "name": "surface/default",
@@ -303,6 +314,20 @@
           }
         },
         "_defect": "description-drift. The source carries the long $description; somebody rewrote it in Figma. The value still matches, which is the point: documentation at the moment of use has forked from the decision that produced it."
+      },
+      "VariableID:2:9": {
+        "id": "VariableID:2:9",
+        "name": "typeface/body",
+        "variableCollectionId": "VariableCollectionId:4:0",
+        "resolvedType": "STRING",
+        "description": "",
+        "_note": "Untouched, and left that way on purpose: the semantic that aliases the stack is still a reference, so the font-family finding above is the narrowing and nothing else.",
+        "valuesByMode": {
+          "4:0": {
+            "type": "VARIABLE_ALIAS",
+            "id": "VariableID:1:11"
+          }
+        }
       },
       "VariableID:3:1": {
         "id": "VariableID:3:1",

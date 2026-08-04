@@ -205,6 +205,17 @@
           "1:0": 8
         }
       },
+      "VariableID:1:11": {
+        "id": "VariableID:1:11",
+        "name": "font-family/sans",
+        "variableCollectionId": "VariableCollectionId:1:0",
+        "resolvedType": "STRING",
+        "description": "",
+        "_note": "The source declares a three-family stack. This is what machinery/figma-plugin actually writes for it: the first family alone, because a Figma variable holds one string and binds it to an installed font by name. The narrowing rule lives in machinery/scripts/lib/projection.mjs and both the plugin and check-drift.mjs import it, so this value cannot drift out of step with the syncer without this fixture failing.",
+        "valuesByMode": {
+          "1:0": "Fixture Sans"
+        }
+      },
       "VariableID:2:1": {
         "id": "VariableID:2:1",
         "name": "surface/default",
@@ -305,6 +316,19 @@
           "4:0": {
             "type": "VARIABLE_ALIAS",
             "id": "VariableID:1:2"
+          }
+        }
+      },
+      "VariableID:2:9": {
+        "id": "VariableID:2:9",
+        "name": "typeface/body",
+        "variableCollectionId": "VariableCollectionId:4:0",
+        "resolvedType": "STRING",
+        "description": "",
+        "valuesByMode": {
+          "4:0": {
+            "type": "VARIABLE_ALIAS",
+            "id": "VariableID:1:11"
           }
         }
       },

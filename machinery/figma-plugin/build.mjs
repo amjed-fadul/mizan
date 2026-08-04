@@ -9,8 +9,12 @@
  *                  exactly the code the plugin runs. There is no second
  *                  implementation of the mapping to keep in step.
  *
- * No runtime dependencies go into either: the core imports nothing but itself,
- * and `code.js` additionally uses Figma's own globals.
+ * No runtime dependencies go into either. The core imports nothing but itself
+ * and one file from `machinery/scripts/lib/` — the font-stack narrowing, which
+ * the drift detector has to agree with exactly and which is therefore shared
+ * code rather than a comment in two places. Bundling it is the point: the
+ * plugin still ships as one file, and the gate still runs with no build step.
+ * `code.js` additionally uses Figma's own globals.
  *
  *   node build.mjs [--quiet] [--watch]
  */

@@ -1,0 +1,6 @@
+{
+  "typeface": {
+    "$type": "fontFamily",
+    "body": { "$value": "{font-family.sans}" }
+  }
+}

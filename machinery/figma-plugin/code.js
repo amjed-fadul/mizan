@@ -351,6 +351,18 @@
     });
   }
 
+  // ../scripts/lib/projection.mjs
+  function narrowFontStack(value) {
+    if (!Array.isArray(value) || value.length === 0 || !value.every((item) => typeof item === "string")) {
+      return null;
+    }
+    const [family, ...fallbacks] = value;
+    return { family, fallbacks, note: fallbacks.length > 0 ? fontStackNote(fallbacks) : void 0 };
+  }
+  function fontStackNote(fallbacks) {
+    return `narrowed to the first family; a Figma variable holds one value, so the fallbacks (${fallbacks.join(", ")}) are not represented`;
+  }
+
   // src/core/map.ts
   var COMPOSITE_TYPES = /* @__PURE__ */ new Set([
     "shadow",
@@ -466,14 +478,9 @@
         if (typeof rawValue === "string") {
           return { ok: true, type, value: { kind: "STRING", value: rawValue } };
         }
-        if (Array.isArray(rawValue) && rawValue.length > 0 && rawValue.every((v) => typeof v === "string")) {
-          const [first, ...rest] = rawValue;
-          return {
-            ok: true,
-            type,
-            value: { kind: "STRING", value: first },
-            note: rest.length > 0 ? `narrowed to the first family; Figma holds one value, so the fallbacks (${rest.join(", ")}) are not represented` : void 0
-          };
+        const narrowed = narrowFontStack(rawValue);
+        if (narrowed !== null) {
+          return { ok: true, type, value: { kind: "STRING", value: narrowed.family }, note: narrowed.note };
         }
         return { ok: false, reason: `expected a string or a list of strings; got ${JSON.stringify(rawValue)}` };
       }

@@ -7,19 +7,29 @@
  * A gate that has never rejected anything is an untested claim, and a gate
  * asserted only on its exit code can pass for the wrong reason.
  *
+ * It also holds one piece of structure in place that no fixture can: the sync
+ * plugin and the drift detector must narrow a font stack identically, because
+ * that projection is lossy and a disagreement would produce drift no sync could
+ * ever clear. The rule is one shared function; these assertions are what keep it
+ * one.
+ *
  * Usage: node machinery/scripts/selftest.mjs [--verbose]
  * Exits 1 if any assertion fails.
  */
 
 import { spawnSync } from 'node:child_process';
-import { readFileSync, rmSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import { existsSync, readFileSync, readdirSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { displayPath, parseArgs } from './lib/tokens.mjs';
+import { narrowFontStack } from './lib/projection.mjs';
 
 const SCRIPTS_DIR = dirname(fileURLToPath(import.meta.url));
+const MACHINERY_DIR = dirname(SCRIPTS_DIR);
+const PLUGIN_DIR = join(MACHINERY_DIR, 'figma-plugin');
 const FIXTURES = join(SCRIPTS_DIR, '__fixtures__');
 const VALID = join(FIXTURES, 'valid');
 const BROKEN = join(FIXTURES, 'broken');
@@ -57,6 +67,16 @@ function run(script, extraArgs) {
 
 function codes(list) {
   return new Set((list ?? []).map((entry) => entry.code));
+}
+
+/** Is a package installed for a given directory? Nothing here requires one. */
+function canResolve(specifier, fromDir) {
+  try {
+    createRequire(join(fromDir, 'package.json')).resolve(specifier);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /* ------------------------------------------------------------------ *
@@ -213,8 +233,8 @@ assert((aligned.payload?.findings ?? []).length === 0, 'aligned snapshot: no dri
 assert((aligned.payload?.errors ?? []).length === 0 && (aligned.payload?.warnings ?? []).length === 0,
   'aligned snapshot: no errors and no warnings either',
   JSON.stringify([aligned.payload?.errors, aligned.payload?.warnings]));
-assert(aligned.payload?.counts?.aligned === 18 && aligned.payload?.counts?.checks === 72,
-  'aligned snapshot: all eighteen tokens compared, in every mode combination',
+assert(aligned.payload?.counts?.aligned === 20 && aligned.payload?.counts?.checks === 80,
+  'aligned snapshot: all twenty tokens compared, in every mode combination',
   JSON.stringify(aligned.payload?.counts));
 assert((aligned.payload?.tokens ?? []).every((token) => token.status === 'aligned'),
   'aligned snapshot: every row of the dashboard table says aligned',
@@ -282,7 +302,8 @@ assert(/\{color\.neutral\.500\}/.test(targetMismatch?.expected?.display ?? '')
   'drifted snapshot: an alias mismatch names both targets, source side first',
   JSON.stringify(targetMismatch));
 
-const valueMismatch = (drifted.payload?.findings ?? []).find((f) => f.code === 'value-mismatch');
+const valueMismatch = (drifted.payload?.findings ?? [])
+  .find((f) => f.code === 'value-mismatch' && f.token === 'color.neutral.900');
 assert(valueMismatch?.expected?.display === '#2e2e2e' && valueMismatch?.actual?.display === '#333333',
   'drifted snapshot: a value mismatch shows both values',
   JSON.stringify(valueMismatch));
@@ -313,6 +334,91 @@ assert(driftHuman.stdout.includes('Figma is a display, never a source')
   && driftHuman.stdout.includes('runs outward'),
   'drifted snapshot: the human-readable output states the direction of the fix, not just the disagreement',
   driftHuman.stdout);
+
+/* ------------------------------------------------------------------ *
+ * The lossy rule: one narrowing, imported by both ends of the sync.
+ *
+ * A DTCG font stack becomes one Figma string, and the projection throws the
+ * fallbacks away. Two tools that mirrored that rule by hand and then drifted
+ * apart would produce the worst possible failure: the detector reports drift,
+ * the sync runs, the file is rewritten, and the same finding comes back — a gate
+ * nobody can ever clear, whose only remedy is to stop running it. So the rule is
+ * one function in lib/projection.mjs, and these assertions are what keep it one.
+ * ------------------------------------------------------------------ */
+
+process.stdout.write('\nProjection: the font-stack narrowing is shared code, not a shared comment\n');
+
+const SOURCE_STACK = ['Fixture Sans', 'Fixture Fallback', 'sans-serif'];
+
+assert(narrowFontStack(SOURCE_STACK)?.family === 'Fixture Sans'
+  && narrowFontStack(SOURCE_STACK)?.fallbacks.join() === 'Fixture Fallback,sans-serif',
+  'projection: a stack narrows to its first family, and the lost fallbacks are named rather than dropped',
+  JSON.stringify(narrowFontStack(SOURCE_STACK)));
+
+// The aligned fixture holds what the sync plugin writes. If check-drift.mjs ever
+// narrowed differently, this fixture would stop being aligned — which is why the
+// zero-drift assertion above is itself a test of the shared rule.
+const alignedStack = JSON.parse(readFileSync(FIGMA_ALIGNED, 'utf8'))
+  .meta.variables['VariableID:1:11'].valuesByMode['1:0'];
+assert(alignedStack === narrowFontStack(SOURCE_STACK)?.family,
+  'projection: the aligned fixture stores exactly what the shared narrowing produces',
+  `fixture holds ${JSON.stringify(alignedStack)}`);
+
+const stackDrift = (drifted.payload?.findings ?? [])
+  .find((f) => f.code === 'value-mismatch' && f.token === 'font-family.sans');
+assert(stackDrift?.expected?.display === 'Fixture Sans'
+  && stackDrift?.actual?.display === 'Fixture Sans, Fixture Fallback, sans-serif',
+  'projection: a whole CSS stack pasted into the variable is caught, and the source side is the first family',
+  JSON.stringify(stackDrift));
+
+/* One definition, two importers — asserted on the source, so re-inlining the
+ * rule in either file fails here rather than in Figma six months later. */
+
+const mapSource = readFileSync(join(PLUGIN_DIR, 'src', 'core', 'map.ts'), 'utf8');
+const driftSource = readFileSync(join(SCRIPTS_DIR, 'check-drift.mjs'), 'utf8');
+assert(/import \{ narrowFontStack \} from '\.\.\/\.\.\/\.\.\/scripts\/lib\/projection\.mjs'/.test(mapSource),
+  'projection: the sync plugin imports the narrowing rather than owning a copy of it');
+assert(/import \{ narrowFontStack \} from '\.\/lib\/projection\.mjs'/.test(driftSource),
+  'projection: the drift detector imports the same function from the same file');
+
+// Assembled from parts so this file is not itself a match, and `code.js` is not
+// excluded by name: the bundler drops the `export` keyword, so a generated copy
+// of the rule cannot be mistaken for a second authored one.
+const DEFINITION = ['export', 'function', 'narrowFontStack'].join(' ');
+const definitions = spawnSync('grep', [
+  '-rl', '--include=*.mjs', '--include=*.ts', '--include=*.js',
+  '--exclude-dir=node_modules', '--exclude-dir=dist',
+  DEFINITION, MACHINERY_DIR,
+], { encoding: 'utf8' });
+const definingFiles = definitions.stdout.split('\n').filter(Boolean);
+assert(definingFiles.length === 1 && definingFiles[0].endsWith(join('lib', 'projection.mjs')),
+  'projection: exactly one file under machinery/ defines the narrowing',
+  definingFiles.join(', ') || '(none found)');
+
+/* And the plugin's own build, run against the same input, must land on the same
+ * answer. This is the only assertion here that needs a build step, so it is the
+ * only one allowed not to run — and it says so out loud when it cannot. */
+
+const CORE = join(PLUGIN_DIR, 'dist', 'core.mjs');
+if (!existsSync(CORE) && canResolve('esbuild', PLUGIN_DIR)) {
+  spawnSync(process.execPath, [join(PLUGIN_DIR, 'build.mjs'), '--quiet'], { cwd: PLUGIN_DIR, encoding: 'utf8' });
+}
+if (existsSync(CORE)) {
+  const { mapValue } = await import(pathToFileURL(CORE).href);
+  const mapped = mapValue(SOURCE_STACK, 'fontFamily');
+  assert(mapped.ok === true && mapped.value?.value === narrowFontStack(SOURCE_STACK)?.family,
+    'projection: the built plugin core writes the same family the detector expects',
+    JSON.stringify(mapped));
+  assert(mapped.note === narrowFontStack(SOURCE_STACK)?.note,
+    'projection: and reports the loss in the same words, because the wording is shared too',
+    `${mapped.note}\n        ${narrowFontStack(SOURCE_STACK)?.note}`);
+} else {
+  process.stdout.write(
+    '  note  the plugin core is not built and esbuild is not installed, so the round-trip\n'
+    + '        against machinery/figma-plugin was not run. The import assertions above still\n'
+    + '        hold: there is one definition of the rule and both files import it.\n',
+  );
+}
 
 /* No snapshot and no credentials is a failure, not a quiet pass. -------- */
 
@@ -368,6 +474,47 @@ assert(alignedDashboard.status === 0, 'dashboard: --strict passes when every gat
 try { rmSync(dashboardOut, { force: true }); } catch { /* nothing to clean up */ }
 
 /* ------------------------------------------------------------------ *
+ * Searchability: every authored file under machinery/ must be plain text
+ *
+ * A NUL byte is a tempting delimiter for a composite key — it cannot occur
+ * in ordinary text, so it never collides. The cost is invisible and only
+ * shows up later: grep classifies the whole file as binary and silently
+ * returns nothing, and file(1) reports it as data. A search that finds no
+ * matches looks exactly like a search that found nothing to match.
+ *
+ * That cost is unacceptable here specifically. machinery/ is the half of
+ * this repo published for other teams to read and fork, and a file nobody
+ * can grep is a file nobody can audit. This has now been introduced three
+ * separate times by three different authors, which is the definition of a
+ * mistake that wants a check rather than a note. Write it as the six-character escape sequence instead.
+ * ------------------------------------------------------------------ */
+
+process.stdout.write('\nSearchability: authored machinery files are greppable text\n');
+
+const CONTROL_BYTE = (byte) => byte === 0 || byte < 9 || (byte > 13 && byte < 32 && byte !== 27);
+
+function authoredFiles(dir, found = []) {
+  for (const entry of readdirSync(dir)) {
+    if (entry === 'node_modules' || entry === 'dist') continue;
+    const full = join(dir, entry);
+    if (statSync(full).isDirectory()) authoredFiles(full, found);
+    // code.js is bundler output, not authored, and is excluded on that basis.
+    else if (/\.(mjs|js|ts|json|md|html)$/.test(entry) && !full.endsWith('code.js')) found.push(full);
+  }
+  return found;
+}
+
+const binaryFiles = authoredFiles(MACHINERY_DIR).filter((file) => {
+  const buffer = readFileSync(file);
+  for (let i = 0; i < buffer.length; i += 1) if (CONTROL_BYTE(buffer[i])) return true;
+  return false;
+});
+
+assert(binaryFiles.length === 0,
+  'searchability: no authored file under machinery/ contains a control byte',
+  binaryFiles.map(displayPath).join(', ') || '(none)');
+
+/* ------------------------------------------------------------------ *
  * Summary
  * ------------------------------------------------------------------ */
 
@@ -375,7 +522,8 @@ process.stdout.write(`\nFixtures: ${displayPath(FIXTURES)}\n`);
 if (failures.length === 0) {
   process.stdout.write(
     `Result: pass. ${passes.length} assertion(s). Rung 1 proven to accept the valid token set and reject the broken one; `
-    + 'rung 2 proven to accept a Figma snapshot that agrees and to catch each way one can disagree.\n',
+    + 'rung 2 proven to accept a Figma snapshot that agrees and to catch each way one can disagree; '
+    + 'and the one lossy projection proven to be a single function both ends import.\n',
   );
   process.exitCode = 0;
 } else {

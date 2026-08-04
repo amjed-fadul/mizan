@@ -13,6 +13,10 @@
 
 import type { FigmaType, PlanValue, Rgba } from './types';
 import { aliasTarget, isPlainObject } from './token-model';
+// The one projection rule this plugin does not own alone. See the file's header
+// for why it is shared code rather than a comment in two places; the build
+// bundles it, so the plugin still ships as one file with no dependencies.
+import { narrowFontStack } from '../../../scripts/lib/projection.mjs';
 
 export type MapResult =
   | { ok: true; type: FigmaType; value: PlanValue; note?: string }
@@ -171,26 +175,16 @@ export function mapValue(rawValue: unknown, declaredType: string | undefined): M
       if (typeof rawValue === 'string') {
         return { ok: true, type, value: { kind: 'STRING', value: rawValue } };
       }
-      if (Array.isArray(rawValue) && rawValue.length > 0 && rawValue.every((v) => typeof v === 'string')) {
-        // A DTCG fontFamily may be a stack; a Figma STRING variable holds one
-        // value. The first family is projected, because a Figma font-family
-        // variable is only useful if it holds a name Figma can actually resolve
-        // to a font — a joined stack would round-trip perfectly and bind to
-        // nothing. The fallbacks are named in the warning rather than dropped
-        // quietly, and `machinery/scripts/check-drift.mjs` compares against the
-        // same first family, so the two agree. If that convention ever changes,
-        // it changes in both files at once or the drift detector reports drift
-        // the sync can never resolve.
-        const [first, ...rest] = rawValue as string[];
-        return {
-          ok: true,
-          type,
-          value: { kind: 'STRING', value: first },
-          note:
-            rest.length > 0
-              ? `narrowed to the first family; Figma holds one value, so the fallbacks (${rest.join(', ')}) are not represented`
-              : undefined,
-        };
+      // A DTCG fontFamily may be a stack; a Figma STRING variable holds one
+      // value. Which one is not decided here: `narrowFontStack` decides it, and
+      // `machinery/scripts/check-drift.mjs` imports the same function to decide
+      // what the file *should* hold. A stack is the one projection that throws
+      // information away, so the two ends cannot re-derive each other's answer —
+      // if they picked differently, the detector would report drift, a sync
+      // would run, and the same drift would come back forever.
+      const narrowed = narrowFontStack(rawValue);
+      if (narrowed !== null) {
+        return { ok: true, type, value: { kind: 'STRING', value: narrowed.family }, note: narrowed.note };
       }
       return { ok: false, reason: `expected a string or a list of strings; got ${JSON.stringify(rawValue)}` };
     }

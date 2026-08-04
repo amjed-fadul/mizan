@@ -17,6 +17,7 @@ Also not here: Mizan's values. A script may enforce that no raw hex appears in t
 | File | Purpose |
 |---|---|
 | `lib/tokens.mjs` | Shared library: load DTCG documents, resolve `$type` inheritance and aliases, compose modes, and do WCAG colour maths. No CLI. |
+| `lib/projection.mjs` | The one projection rule the drift detector and the Figma sync plugin cannot state separately. Imported by both. No CLI. |
 | `check-schema.mjs` | Structural gate over a token set. |
 | `check-contrast.mjs` | WCAG gate over the declared foreground/background pairs, in every mode combination. |
 | `check-drift.mjs` | Governance rung 2: compares a Figma variables snapshot against the token source. |
@@ -24,7 +25,7 @@ Also not here: Mizan's values. A script may enforce that no raw hex appears in t
 | `selftest.mjs` | Runs the gates against the fixture sets and asserts the specific defects that come back. |
 | `dtcg-adapt.mjs` | **Temporary.** Degrades DTCG 2025.10 values into what Style Dictionary can read today. Deleted when it can read them itself. |
 | `build-tokens.mjs` | The token build: gates, then adapt, then Style Dictionary, for every mode combination. |
-| `__fixtures__/` | One valid token set and one deliberately broken one. See its README. |
+| `__fixtures__/` | One valid token set, one deliberately broken one, and two Figma snapshots of the valid one. See its README. |
 
 The gates are Node 22, plain ESM, zero dependencies — Node built-ins only, and that is a constraint worth keeping: a governance gate that cannot run because an install failed is not a gate. The **build** is the one exception: it depends on `style-dictionary`. That is a deliberate line. A gate must run everywhere; a build only has to run where things are built.
 
@@ -248,15 +249,38 @@ times.
 
 `machinery/figma-plugin/` writes the variables; this reads them back and asks
 whether they are still what was written. The two therefore have to agree on the
-same projection — the type table, the `px`-only dimension rule, the first-family
-narrowing of a font stack, the `[deprecated: …]` description prefix, and the 1e-6
-comparison tolerance are all mirrored from `src/core/map.ts` and `src/core/plan.ts`.
+same projection — the type table, the `px`-only dimension rule, the
+`[deprecated: …]` description prefix and the 1e-6 comparison tolerance are
+mirrored from `src/core/map.ts` and `src/core/plan.ts`.
 
 A detector more lenient than the syncer calls a file aligned that the syncer
 would still rewrite. A detector stricter than the syncer reports drift nobody can
-fix. They are mirrored by hand, and deliberately so: the plugin's core is
+fix. Most of it is mirrored by hand, and deliberately so: the plugin's core is
 TypeScript that needs a build, and **a gate that needs a build step is not a
-gate**. If `map.ts` changes, `check-drift.mjs` changes with it.
+gate**. If `map.ts` changes, `check-drift.mjs` changes with it — and the
+disagreement in the meantime is a finding somebody can read and fix.
+
+**One rule is not safe to mirror, and it is shared code instead.** Narrowing a
+DTCG font stack to its first family is *lossy*: `["A", "B", "sans-serif"]` becomes
+`"A"`, because a Figma variable holds one string and binds it to an installed font
+by name. Nothing on the Figma side can re-derive the stack, so if the writer and
+the reader ever chose differently there would be no finding anybody could clear —
+the detector reports drift, the sync runs, the file is rewritten, and the same
+drift comes back. Forever. The only way to make the build green would be to stop
+running the gate.
+
+So the narrowing lives in `lib/projection.mjs`, `check-drift.mjs` imports it, and
+`src/core/map.ts` imports the same file — the plugin's esbuild step bundles it, so
+the plugin still ships as one dependency-free file and the gate still runs with no
+build. `selftest.mjs` holds the arrangement in place four ways: the shared function
+does what it claims; the aligned fixture stores exactly what it produces, so a
+change on the detector's side stops that fixture being aligned; both files are
+asserted to *import* it and exactly one file under `machinery/` is allowed to
+define it; and where the plugin core has been built, its `mapValue` is run on a
+stack and must land on the same family and the same warning text.
+
+The general rule this is an instance of: **a projection that discards information
+is shared code; a projection that does not can be stated twice.**
 
 ## health-dashboard.mjs — governance you can screenshot
 
@@ -308,7 +332,11 @@ Runs both gates against both fixture sets and asserts the valid set passes with 
 
 `decorative` is asserted the only way that means anything: the valid fixture declares a decorative pair sitting at about **1.14:1** in light — below every WCAG threshold, including the 3.0 a `ui` declaration would impose — and the assertions are that its threshold is `null`, that it is resolved in all four combinations, that each result carries a measured ratio, that it appears by name in the passing run's output, and that the gate still exits 0. A threshold that was merely lenient would pass an exit-code check; only the ratio and the printed line prove there is no bar at all.
 
-**Rung 2 is held to the same standard.** Both drift fixtures are snapshots of the *same* correct token set: `figma/aligned.json`, which must report zero drift, zero errors and zero warnings with all eighteen tokens compared in all four combinations; and `figma/drifted.json`, which must report **each of the eight drift codes by name**. `alias-flattened` is asserted three ways, because its exit code alone would prove nothing: that the flattened Figma value *equals* what the alias resolves to — so a value-only comparison would have called it aligned — that it is caught in the one Figma mode it was planted in, and that the untouched mode of the same variable reports nothing. The remedies are asserted too: no finding may tell anybody to take a Figma value back into the source.
+**Rung 2 is held to the same standard.** Both drift fixtures are snapshots of the *same* correct token set: `figma/aligned.json`, which must report zero drift, zero errors and zero warnings with all twenty tokens compared in all four combinations; and `figma/drifted.json`, which must report **each of the eight drift codes by name**. `alias-flattened` is asserted three ways, because its exit code alone would prove nothing: that the flattened Figma value *equals* what the alias resolves to — so a value-only comparison would have called it aligned — that it is caught in the one Figma mode it was planted in, and that the untouched mode of the same variable reports nothing. The remedies are asserted too: no finding may tell anybody to take a Figma value back into the source.
+
+Every planted edit is attributable: repair one of them and exactly its own code stops being reported, which is what makes "the gate caught `description-drift`" a statement about the defect rather than about the pile.
+
+The font-stack narrowing gets its own block, described under [check-drift.mjs](#kept-in-step-with-the-sync-plugin) above. It is the only projection rule shared as code rather than mirrored as a comment, so it is the only one whose two consumers are asserted to be the *same* two consumers.
 
 The dashboard is asserted on the same terms. It writes a complete document, nothing in it is fetched from anywhere, every drift class appears on the page by its label, both sides of a value mismatch appear, its palette is the one resolved from the fixture's tokens rather than a hardcoded default, and `--strict` returns 1 on the drifted snapshot and 0 on the aligned one.
 
