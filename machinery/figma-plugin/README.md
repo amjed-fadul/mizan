@@ -2,7 +2,9 @@
 
 A Figma plugin that generates variables from a DTCG token root, and a proof sheet that binds every one of them.
 
-Figma's REST API can *read* variables on any plan but can only *write* them on Enterprise. A plugin can write them on any plan. That asymmetry is the entire reason this exists: it is how the token JSON reaches Figma without an Enterprise seat and without anybody retyping a hex.
+Figma's REST API can only *write* variables on Enterprise — and, as it turned out, can only *read* them there too ([015](../../decisions/015-rung-2-has-a-plan-floor.md)). A plugin does both on any plan. That asymmetry is the entire reason this exists: it is how the token JSON reaches Figma without an Enterprise seat and without anybody retyping a hex, and later how it is read back ([the read bridge](#the-read-bridge)).
+
+This paragraph used to say the REST API reads on any plan. That is the exact claim 015 exists to retract, it was written before 015 and survived three edits to this file, and it was the first factual sentence a reader met.
 
 **The direction is one way, always outward.**
 
@@ -378,7 +380,7 @@ The two files were written independently and agree on all four conventions that 
 | `src/core/bridge.ts` | The read bridge's vocabulary and the whole of it: four message types, none of them a write. |
 | `../scripts/lib/bridge.mjs` | Not in this directory on purpose either: the detector's end of the bridge — the server, and the one question it asks. |
 | `../scripts/lib/ws-server.mjs` | Nor this: an RFC 6455 server for localhost, with no dependencies, because a fork inherits every dependency. |
-| `src/figma-adapter.ts` | The only file that knows Figma exists — both adapters. |
+| `src/figma-adapter.ts` | Both adapters, and every Plugin API call that touches the document. `src/code.ts` uses the `figma` global too, for UI plumbing and notifications; what neither of them shares is `src/core/`, which is pure. |
 | `src/code.ts` | The plugin main thread: message plumbing and the two confirmation gates. |
 | `ui.html` | The source picker and the two diffs. Plain HTML, CSS and JS. |
 | `build.mjs` | esbuild → `code.js` for Figma, `dist/core.mjs` for Node. |
