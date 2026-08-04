@@ -18,7 +18,7 @@ That is the whole reason this is a living document rather than a finished one. A
 
 The rules here are ours, but they are not all discovered here. The largest external source is Ahmad Shadeed's [RTL Styling 101](https://rtlstyling.com/posts/rtl-styling/), the fullest public treatment of the subject, and several rules below exist because that guide names a failure we had not written down.
 
-Everything taken from it was re-verified in a current browser before being adopted, because the guide dates from 2019–20 and parts of it have expired. Where its advice is no longer needed it has been dropped rather than repeated: the `box-shadow` fallback for underlines, physical fallbacks for logical `border-radius`, and the LTR/RTL stylesheet-doubling tools it recommends, which produce two physical stylesheets and contradict §1 outright. The guide also branches on `[dir="rtl"]` inside component selectors — reasonable in a codebase without logical properties, unnecessary in one with them, and forbidden by §1. Individual departures are noted where they arise.
+Everything taken from it was re-verified in a current browser before being adopted, because the guide dates from 2019–20 and parts of it have expired. Where its advice is no longer needed it has been dropped rather than repeated: the `box-shadow` fallback for underlines, physical fallbacks for logical `border-radius`, and the LTR/RTL stylesheet-doubling tools it recommends, which produce two physical stylesheets and contradict §1 outright. The guide also branches on `[dir="rtl"]` inside component selectors — reasonable in a codebase without logical properties, unnecessary in one with them, and forbidden by §1. One piece of its advice is refused rather than expired — the placeholder that changes alignment as the user types into it — and the reason is in §6. Individual departures are noted where they arise.
 
 ---
 
@@ -48,7 +48,9 @@ Setting the direction flips the box model and the text. It does not touch a prop
 - **Background images do not flip, and `background-position` has no logical keywords.** This was checked rather than assumed: `background-position: inline-start 6px center` does not parse in a current engine — `left`, `right`, `top` and `bottom` are all there is. A search glyph painted as a background image on the right edge of a field stays on the right edge in Arabic, at the opposite end from the caret and the placeholder it belongs to, and any arrow drawn into the image points the way it was drawn. Directional affordances are elements or pseudo-elements placed with `inset-inline-*`. If something genuinely has to be a background image, it needs a per-direction asset chosen by the mirroring flag in §5, not a position that gets nudged.
 - **Scrollbars flip, and their side is not yours to assume.** A scrolling container inside an RTL subtree puts its scrollbar on the left. Physical padding reserved for it then opens a gap on one side while content slides under the bar on the other. Reserve the space with `scrollbar-gutter: stable` and logical padding. The viewport's own scrollbar is a separate question that engines answer differently — Chromium keeps it on the right even with an RTL root — so no layout may depend on which side it lands.
 
-Direction is set once, high up, via `dir` on a root element. Components never set `dir` themselves and never read it to branch their styling. A component that needs to know the direction to lay itself out is a component that has not been written with logical properties.
+The *layout* direction is set once, high up, via `dir` on a root element. Components never read it to branch their styling, and a component that needs to know the direction to lay itself out is a component that has not been written with logical properties.
+
+What `dir` may still do further down is declare the direction of the *content* inside a particular element. There are three such cases and no others: content that may be in either direction — declared from data where we know it, `dir="auto"` where nobody can (§3); a field whose value is Latin whatever the page is (§6); and a surface drawn by somebody else that the bidirectional algorithm must not touch (§7). Each of those is a statement about content. None of them is a component choosing a layout.
 
 ## 2. Typography
 
@@ -185,7 +187,47 @@ The flag says *whether*. It has never said *how*, and the two available answers 
 
 That makes the flag three-valued rather than boolean: *does not mirror*, *mirrors by transform*, *mirrors by asset*. The default is still *does not mirror*, and an icon whose flag says *mirrors by asset* without the asset existing is a build failure, not a fallback to the transform.
 
-## 6. Surfaces the system does not own
+## 6. Components
+
+Everything above is about properties. This section is about component APIs, because a rule that a prop can violate is not enforceable by any amount of CSS discipline. Each defect here enters through an API decision that looks direction-neutral at the moment it is made, and each of them lands in Stage 4 rather than in a stylesheet.
+
+### The same label is not the same size in Arabic
+
+Translation changes the length of a string in both directions and by more than padding absorbs. Measured in one face at one size — 16px `system-ui`, current Chromium — "Done" sets 38.3px wide and تم sets 15.1px, 39 per cent of it. That is the guide's example and it holds. "Remove" against إزالة is 43 per cent. But "Add to cart" against أضف إلى السلة is 117 per cent, and "View all" against عرض الكل 115. Arabic is not shorter than English. It is differently long, string by string, and no per-component allowance covers both ends.
+
+What the reader sees at the contraction end is a button-shaped slab of brand colour with two characters stranded in the middle of it, which reads as a label that failed to load rather than as a word. At the expansion end the label wraps onto a line the control has no room for, or is clipped, or is ellipsised — an action whose name has been cut in half at the moment of pressing it.
+
+- **A component does not take a width.** Width is content plus padding, with a `min-width` from the token layer where a control needs a floor to stay a tap target. The guide's advice is a `min-width` on the button that broke; the rule is the same measure made a property of every component rather than a patch applied to the one somebody noticed.
+- **Nor a height fitted to Latin ink.** The vertical axis is worse because it clips instead of reflowing. At 16px in the same face, "Checkout" paints 12.0px of ink; إتمام الشراء paints 16.5px, because Arabic descends below the baseline as a matter of course; and مُخفَّض, with its diacritics, paints 19.1px and reaches 16.4px above the baseline — higher than the font's own declared ascent of 15.0px. A control whose height was measured against Latin cuts the tops off the diacritics, and §2 is why a lost mark is a different word rather than a cosmetic loss. The fix is padding and the Arabic line-height, never a fixed height.
+- **No prop shortens a string.** `maxChars`, `truncate={12}`, a three-letter weekday: §2 says why, and it applies to the API as much as to the string.
+- **The layout is always designed before the translation exists.** That is why this is an API rule and not a QA step. By the time a screen is being reviewed in Arabic, the prop that caused the problem has already been named — usually `width`, sometimes `size`.
+
+### Fields whose value is not in the language of the page
+
+Email addresses, phone numbers, URLs, IBANs, order references, card numbers and promo codes are Latin and Western-digit whatever the interface language is.
+
+The platform handles exactly one of them. Under the HTML specification's directionality algorithm an `<input type="tel">` with no `dir` attribute resolves to `ltr` whatever surrounds it, and the suggested rendering carries `input[type=tel i]:dir(ltr) { direction: ltr; }`. Nothing else is covered: `email`, `url`, `number`, `search` and plain `text` inherit the page. Verified in a current browser — every one of those computes `direction: rtl` inside an RTL page.
+
+What the user sees was rendered rather than reasoned about. `+971 50 123 4567` in a plain text input on an RTL page paints as `4567 123 50 971+`: the groups in reverse order and the country code at the far end, so somebody checking their own number is reading a different number. An email under composition is worse, because it moves — `amjed@` paints as `@amjed`, the `@` jumping to the opposite end of the field and returning once a domain is typed. In every one of these the stored value is correct and only the painting is wrong, which is exactly why it survives being tested by a developer who reads the value out of the state instead of off the screen.
+
+- **An input whose value is Latin by nature carries `dir="ltr"` explicitly.** Not inherited, not left to the user agent, and not limited to the one type the user agent already covers. These values are the transcribed identifiers of §4 and the reason is the one given there: they are compared against a thing in the world, so their order is not ours to rearrange.
+- **The placeholder is not where Arabic goes.** A field's direction is computed from its *value*; the placeholder never contributes to it. So an Arabic placeholder inside an `ltr` field is painted hard against the left edge of an interface that is read from the right. The guide's answer is to right-align the placeholder and let the alignment flip when typing starts. We refuse that one: a field that jumps as the first character lands is the defect, not the fix. Instructions belong in the label, which sits outside the field and stays RTL. The placeholder is an example of the value — `name@example.com`, `+971 50 123 4567` — and is therefore in the same script as the value.
+- **`dir="auto"` on an empty field is `ltr`.** The same rule read from the other end: auto direction comes from the value, an empty value contains no strong character, and the specified fallback is `ltr`. An Arabic search field with `dir="auto"` and an Arabic placeholder therefore opens left-aligned on an Arabic page and snaps to the right on the first letter typed. `dir="auto"` still belongs on fields whose typed value is genuinely of unknown direction (§3) — a search box, a customer's name, an address line — but nothing that matters may depend on where its placeholder sits.
+- **A multi-line field takes `dir="auto"` and gets it per paragraph.** A `<textarea dir="auto">` computes `unicode-bidi: plaintext`, so a review with an Arabic paragraph and an English one aligns each of them correctly instead of forcing both to the direction of whichever was typed first. This is the one place the browser's heuristic beats a value we could set ourselves, because the content has more than one direction in it and a single attribute could not describe it.
+
+### Component-level flips
+
+Some things flip on their own and some do not, and the split is not where intuition puts it.
+
+Flexbox and grid flip — the guide's point, still true and now unremarkable. So do the native form controls: verified, `<input type="range">` and `<progress>` set to 20 per cent both fill from the right in an RTL page with no help at all.
+
+A custom re-implementation of the same control does not, because it is built out of the one thing §1 says does not flip. The toggle switch is the case worth carrying around, and its failure is not subtle. A thumb positioned with `inset-inline-start: 2px` and moved to its "on" position with `translateX(30px)` was measured in an RTL page with the track spanning 657–717px across the viewport and the thumb 719–745px — the knob begins two pixels after the track ends. It is not at the wrong end of the track. It is outside the track altogether, floating in the gap beside it, on a control whose whole job is to show which end it is at. Half of that component was written logically and half physically, and under RTL the two halves moved in opposite directions.
+
+- **A control whose state is a position states that position logically** — `inset-inline-end` for the "on" end. If it must animate, the transform takes its sign from the direction (§1) and is authored as one composed declaration (§5).
+- The components where the flip is most of the work: toggles, custom sliders and steppers, tabs and segmented controls (which end the selection sits at, and which corners are round), carousels and anything with next and previous, drawers and sheets that enter from an edge, menus and popovers aligned to a trigger, tooltip arrows, count badges overlaid on a cart or an avatar, breadcrumb separators (§5) and the scrollbar (§1).
+- The test for a component is not "does it look mirrored". It is **"is every directional value in it derived, or is one of them written down?"** One written-down value is all a half-flipped component takes, and §1 has already said which way that reads.
+
+## 7. Surfaces the system does not own
 
 Some surfaces are drawn by somebody else and only rendered by us: a map, an embedded payment or 3-D Secure page, an OS-drawn date picker or select popup, a video player with vendor chrome, a captcha, an ad slot. They sit inside our layout, they do not read our tokens, and they do not obey our direction.
 
@@ -195,7 +237,7 @@ The rule: **the container flips, the surface does not.**
 
 - Chrome around it — controls, sheets, overlays, attribution, the ETA chip — is ours. It uses logical properties like everything else and it mirrors.
 - The surface itself is direction-neutral and is treated as an opaque box. A map is a depiction of physical space (§5), so mirroring it produces a false map.
-- This is the one place a subtree may re-set `dir`. `dir="ltr"` on the embed keeps the bidirectional algorithm away from anything the vendor draws. §1 says components never set `dir` themselves; this is the declared exception to that, and it is declared here rather than decided inside the component that happens to hold the map.
+- **`dir="ltr"` on the embed** keeps the bidirectional algorithm away from anything the vendor draws. This is the third of the three content-direction cases in §1 and the only one where the content belongs to somebody else — which is why it is declared here rather than settled inside whichever component happens to hold the map.
 - Third-party APIs almost always position in physical terms — `top`, `left`, `bottom-right`. Converting logical to physical is permitted **only in the adapter at that boundary**, and that adapter is the only place in the system allowed to contain a physical direction property. Everywhere else it is still a defect.
 
 ### Declaring one
