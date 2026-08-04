@@ -120,7 +120,8 @@ export function RebuiltPane() {
   const [activeFilter, setActiveFilter] = useState<FilterId>('all')
 
   return (
-    // mz-script is where the script mode is applied. Not :root — decision 013.
+    // mz-script is where the Arabic type treatment is scoped. Not :root —
+    // decision 013, whose script mode is decided and not yet built.
     <div className="rb mz-script">
       <nav className="rb-nav" aria-label={s(ui.screen.grocery, lang)}>
         {[ui.screen.home, ui.screen.grocery, ui.screen.cart, ui.screen.move].map((label, index) => (

@@ -93,8 +93,11 @@ ol {
 /* ------------------------------------------------------- the script subtree */
 
 /*
-  Decision 013. Script is a mode of the type scale, and it is scoped: the class
-  says where, :lang() says which. Nothing here is attached to :root.
+  Decision 013 argues script should be a mode of the type scale, scoped rather
+  than attached to :root. It is decided and not yet in the token layer, so what
+  follows is the approximation: the class says where, :lang() says which, and
+  the two sides are separately named primitives rather than one resolved name.
+  See src/lib/script.ts.
 
   .mz-script carries the three inherited properties. .mz-run carries the optical
   size correction and is always an inner element inside whatever set the size, so
