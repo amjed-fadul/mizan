@@ -1,0 +1,419 @@
+{
+  "$schema": "./component-contract.schema.json",
+  "name": "ProductCard",
+  "status": "stable",
+  "source": "packages/components/src/ProductCard/ProductCard.tsx",
+  "propsType": "ProductCardProps",
+  "extends": [],
+  "purpose": "Market's product tile, and a container rather than a control. It shows one product in a grid and holds the two things a shopper does with it — open the product page, and add it to the cart — as independently reachable targets.",
+  "responsibilities": [
+    "Render an <article> with no click handler of its own, holding a real link and a real button.",
+    "Show one product: image, name, package size, price, any discount, unit price, stock and delivery.",
+    "Keep the name and the package size as separate elements, so no string is built by concatenation.",
+    "Disable the action when the product is out of stock, and say so in words.",
+    "Nothing about formatting. Every number arrives already formatted through §4's boundary.",
+    "Nothing about the cart. It reports that the button was pressed."
+  ],
+  "do": [
+    "Pass name and packageSize separately. Joining them is the defect the Stage 1 audit found scrambling Arabic titles in one card out of eight.",
+    "Pass wasPriceLabel whenever wasPrice is given, so the struck price is announced as the old one.",
+    "Pass every price already formatted by §4's boundary.",
+    "Use stockLevel='out' with a stockLabel, and let the disabled action carry the rest.",
+    "Give the image empty alt text where the name already says what it is, which is most of a grid."
+  ],
+  "dont": [
+    "Do not make the card clickable. A container that navigates on click takes the middle-click, the copy-link, the open-in-new-tab and the status-bar preview away and gives nothing back.",
+    "Do not put a selection state on it. Adding selection changes what element it is — decision 024 — and the answer would be a distinct component rather than a prop.",
+    "Do not use it for a ride. RideCard is a radio and this is a container.",
+    "Do not communicate out-of-stock with opacity. v0 uses opacity 0.5, which renders a colour no token declares and therefore a ratio the gate cannot see.",
+    "Do not reach for commerce.stock.low to set a sentence. It is declared at the 3.0 indicator bar and sits at 4.29:1, so it marks the line and text.secondary sets it."
+  ],
+  "do_not_use_when": [
+    {
+      "when": "The card is one option in an exclusive choice the user must make.",
+      "use_instead": "RideCard, or a radio-based control. Decision 024: a container and a control are different elements."
+    },
+    {
+      "when": "The product needs a quantity stepper inside the card.",
+      "use_instead": "Nothing yet. A stepper is a third interactive target and a component of its own, and it should be built before it is embedded here."
+    },
+    {
+      "when": "The screen is Move's.",
+      "use_instead": "RideCard. This component names commerce.* tokens, which only Market has."
+    },
+    {
+      "when": "The item is a line in a cart rather than a tile in a grid.",
+      "use_instead": "Nothing yet. A cart line is horizontal, carries a quantity control and a remove action, and shares only its content with this."
+    },
+    {
+      "when": "There is no product page to link to.",
+      "use_instead": "Plain content. href is required, because a tile with no destination is a card pretending to be one."
+    }
+  ],
+  "alternatives": [
+    {
+      "use": "RideCard",
+      "for": "an option in an exclusive choice",
+      "in_system": true
+    },
+    {
+      "use": "Button",
+      "for": "the action on its own, without a tile around it",
+      "in_system": true
+    },
+    {
+      "use": "plain content",
+      "for": "a product shown with nothing to do to it",
+      "in_system": false
+    }
+  ],
+  "content": [
+    "The product name, and the package size as a separate value.",
+    "The price, the old price and the discount, each already formatted.",
+    "The unit price, the stock label and the delivery estimate.",
+    "The label on the action."
+  ],
+  "constraints": [
+    "No width and no fixed height. v0 hard-codes width 240px in an inline style, which is the prop §6 names as the usual culprit arriving as a style object.",
+    "No className and no style.",
+    "No prop shortens a string.",
+    "No numbers. Every price and quantity is a node, already formatted.",
+    "No click handler on the card, and no selection state.",
+    "No heading-level prop. The heading is an h3, and exposing a level would let a call site produce an outline that skips levels — the more common failure.",
+    "No alt text invented here. This component cannot know whether an image adds information the name does not already carry.",
+    "No colour that content/tokens/pairs.json has not seen, and none used outside the context it was declared in.",
+    "One written number, the 1px control edge, and one value the token layer owes a name to — the 0.25em underline offset §2 says belongs in the token layer."
+  ],
+  "rtl": {
+    "behaviour": [
+      "Logical properties throughout. The discount badge is placed with inset-inline-start, and the low-stock mark is a border-inline-start, so both sit on the reading-start edge in either direction with no side named.",
+      "The badge is an element rather than a background image, because §1 records that background-position has no logical keywords at all — checked rather than assumed.",
+      "The name and the package size are separate elements, which makes the audit's bidi finding structurally impossible rather than fixed after the fact.",
+      "Prices carry unicode-bidi: isolate, the CSS equivalent of §3's <bdi>.",
+      "The link underline declares an offset, because §2 records that a default underline is drawn through the dots Arabic carries below the baseline, and that skip-ink turns the line into fragments instead.",
+      "letter-spacing 0, always. There is no [dir='rtl'] selector anywhere."
+    ],
+    "mirrors": [
+      "The whole card, with the document.",
+      "The discount badge and the low-stock mark, which follow the reading-start edge."
+    ],
+    "does_not_mirror": [
+      "The product image, which depicts a real object. §5: mirroring a photograph produces a false one."
+    ]
+  },
+  "accessibility": {
+    "guarantees": [
+      "An <article> with no role, no tabindex and no click handler, so the card is not a control pretending to be one.",
+      "The name is a real link inside a real heading, so it is reachable, and so a screen-reader user can navigate the grid by heading.",
+      "The action is a Button, which brings its own focus indicator, its own disabled semantics and its own 44 by 44 hit target.",
+      "The old price is labelled as well as struck. §2: line-through is drawn across the glyphs with no property that will move it, and read aloud an unlabelled struck price is just a second number.",
+      "Out of stock is carried by words and a disabled action, never by colour or opacity alone.",
+      "The low-stock mark is a colour used as a mark, at the indicator bar it was declared for, with the words in a text token.",
+      "0 axe violations across all eight stories, checked in dark + Market + RTL."
+    ],
+    "consumer_must": [
+      "Supply alt text on the image, or empty alt where the name already carries the meaning. This component cannot decide that.",
+      "Pass wasPriceLabel with wasPrice. The type does not require it, because a card may legitimately show no old price, but a struck price without one is a number a screen-reader user cannot interpret.",
+      "Ensure the heading level is right for the page. The card renders an h3 and a screen that puts it under an h1 has skipped a level."
+    ]
+  },
+  "stylesheet": "packages/components/src/ProductCard/ProductCard.css",
+  "tokens": [
+    "border.default",
+    "commerce.discount",
+    "commerce.stock.low",
+    "focus.ring",
+    "focus.ring-contrast",
+    "font-family.sans",
+    "font-size.200",
+    "font-size.300",
+    "font-size.400",
+    "font-weight.medium",
+    "letter-spacing.none",
+    "line-height.normal",
+    "radius.0",
+    "radius.100",
+    "radius.200",
+    "space.100",
+    "space.200",
+    "space.25",
+    "space.50",
+    "surface.default",
+    "surface.sunken",
+    "text.primary",
+    "text.secondary"
+  ],
+  "tokens_absent": [],
+  "props": [
+    {
+      "name": "addToCartLabel",
+      "type": "ReactNode",
+      "values": null,
+      "required": false,
+      "default": null,
+      "description": "The label on the action. Required when `onAddToCart` is given — a button with no accessible name is not a button, and there is no default here because a default would be an English string in a component that ships Arabic.",
+      "guidance": "Required when the action is present. There is no default, because a default would be an English string in a component that ships Arabic.",
+      "figmaProperty": "Action label"
+    },
+    {
+      "name": "delivery",
+      "type": "ReactNode",
+      "values": null,
+      "required": false,
+      "default": null,
+      "description": "The delivery estimate — \"Get it tomorrow\". Formatted.",
+      "guidance": "Already formatted.",
+      "figmaProperty": "Delivery"
+    },
+    {
+      "name": "discount",
+      "type": "ReactNode",
+      "values": null,
+      "required": false,
+      "default": null,
+      "description": "The discount, already formatted — \"-20%\". Painted in `commerce.discount`, which this component may name because decision 024 kept it Market's.",
+      "guidance": "Already formatted. Painted in commerce.discount, which this component may name because decision 024 kept it Market's — and which is declared as text at 4.5, so it is allowed to be the colour of its own words.",
+      "figmaProperty": "Discount"
+    },
+    {
+      "name": "href",
+      "type": "string",
+      "values": null,
+      "required": true,
+      "default": null,
+      "description": "Where the product page is. Rendered as a real `<a>` wrapping the name.",
+      "notes": [
+        "A link, not a click handler on the card. Decision 024: this component is a container, and the things inside it are independently reachable. A card that navigates on click takes the middle-click, the copy-link, the open-in-new-tab and the status-bar preview away from everybody and gives nothing back."
+      ],
+      "guidance": "Where the product page is. A real link, because decision 024 makes this a container whose contents are independently reachable.",
+      "figmaProperty": null
+    },
+    {
+      "name": "image",
+      "type": "ReactNode",
+      "values": null,
+      "required": false,
+      "default": null,
+      "description": "The product image. A node rather than a `src`, so a consumer can hand over whatever their image pipeline produces — a plain `<img>`, a framework's optimised component, or nothing.",
+      "notes": [
+        "Alt text is the caller's, and deliberately: this component cannot know whether the image adds information the name does not already carry. Where it does not — the usual case in a grid where the name is right there — the correct alt is empty, and a component that invented one would be adding noise to every card in the list."
+      ],
+      "guidance": "A node rather than a src, so any image pipeline fits. Alt text is the caller's, deliberately: this component cannot know whether the image adds information the name does not already carry.",
+      "figmaProperty": null
+    },
+    {
+      "name": "name",
+      "type": "ReactNode",
+      "values": null,
+      "required": true,
+      "default": null,
+      "description": "The product name.",
+      "notes": [
+        "**Kept separate from `packageSize`, and this is a fix rather than a preference.** v0 builds its title as `product.name + ' - ' + product.size` at three call sites, and the Stage 1 audit found the result: *\"Every Arabic product name renders correctly on its own. It is the concatenation that scrambles them. Seven of eight cards look right and one is wrong, which is exactly why this survives review.\"* Two nodes, rendered as two elements, cannot produce that."
+      ],
+      "guidance": "Kept separate from packageSize, and that separation is a fix rather than a preference — v0 joins them at three call sites and the audit found the result scrambling Arabic titles in one card out of eight.",
+      "figmaProperty": "Name"
+    },
+    {
+      "name": "onAddToCart",
+      "type": "() => void",
+      "values": null,
+      "required": false,
+      "default": null,
+      "description": "Add to cart. Omit it and the card renders with no action at all.",
+      "guidance": "Omit it and no action renders. That the card is still a card with no action is what makes it a container rather than a control.",
+      "figmaProperty": null
+    },
+    {
+      "name": "packageSize",
+      "type": "ReactNode",
+      "values": null,
+      "required": false,
+      "default": null,
+      "description": "The package size — \"500 g\", \"6 × 1.5 L\". A property of the product, not of this component's geometry, which is why it is not called `size`: `size` in this library names a control step, and one word meaning two things across a component library is the defect decision 020 found in v0's three names for a variant.",
+      "guidance": "A property of the product, not of this component's geometry, which is why it is not called size: size names a control step everywhere else in this library.",
+      "figmaProperty": "Package size"
+    },
+    {
+      "name": "price",
+      "type": "ReactNode",
+      "values": null,
+      "required": true,
+      "default": null,
+      "description": "The current price, already formatted by the boundary in `content/rules/rtl-arabic.md` §4 — symbol placed by `Intl`, Western digits in both locales, the currency's own minor-unit count. Never a number: v0 writes `'AED ' + price.toFixed(2)`, which is the concatenation §4 exists to end.",
+      "guidance": "Already formatted. v0 writes 'AED ' + price.toFixed(2), which is the concatenation §4 exists to end.",
+      "figmaProperty": "Price"
+    },
+    {
+      "name": "stockLabel",
+      "type": "ReactNode",
+      "values": null,
+      "required": false,
+      "default": null,
+      "description": "What to call the stock state. The words are the catalogue's.",
+      "guidance": "The words are the catalogue's. A component that mapped 'low' to 'Only a few left' would be holding an English string.",
+      "figmaProperty": "Stock label"
+    },
+    {
+      "name": "stockLevel",
+      "type": "StockLevel",
+      "values": [
+        "in",
+        "low",
+        "out"
+      ],
+      "required": false,
+      "default": "'in'",
+      "description": "How much is left. Defaults to `'in'`.",
+      "guidance": "A state rather than a sentence. Only 'low' takes a colour, and it takes it as a mark: commerce.stock.low is declared at the 3.0 indicator bar and sits at 4.29:1, which clears 4.5 nowhere.",
+      "figmaProperty": "Stock level"
+    },
+    {
+      "name": "unitPrice",
+      "type": "ReactNode",
+      "values": null,
+      "required": false,
+      "default": null,
+      "description": "The unit price — \"AED 4.20 per kg\". Formatted, like every other number.",
+      "guidance": "Already formatted, like every other number here.",
+      "figmaProperty": "Unit price"
+    },
+    {
+      "name": "wasPrice",
+      "type": "ReactNode",
+      "values": null,
+      "required": false,
+      "default": null,
+      "description": "What it used to cost, when it is on offer. Struck through *and* labelled — §2 records that `line-through` is drawn across the glyphs with no property that will move it, so the strike cannot be the only thing carrying the meaning. `wasPriceLabel` is the other half.",
+      "guidance": "Struck and labelled. §2: line-through cannot be moved off the glyphs, so the strike may not be the only carrier of the meaning.",
+      "figmaProperty": "Was price"
+    },
+    {
+      "name": "wasPriceLabel",
+      "type": "ReactNode",
+      "values": null,
+      "required": false,
+      "default": null,
+      "description": "The accessible name for `wasPrice` — \"Was\", \"كان\". Rendered visually hidden beside the struck price.",
+      "notes": [
+        "Required whenever `wasPrice` is given, and the reason is in §2: a struck price read aloud is just a second number, and a screen-reader user hearing \"AED 12.50, AED 9.99\" has no way to tell which one they pay."
+      ],
+      "guidance": "Visually hidden, read aloud. Without it a screen-reader user hears two amounts and cannot tell which one they pay.",
+      "figmaProperty": null
+    }
+  ],
+  "figma": {
+    "component": "ProductCard",
+    "properties": [
+      {
+        "property": "Action label",
+        "prop": "addToCartLabel",
+        "values": null
+      },
+      {
+        "property": "Delivery",
+        "prop": "delivery",
+        "values": null
+      },
+      {
+        "property": "Discount",
+        "prop": "discount",
+        "values": null
+      },
+      {
+        "property": "Name",
+        "prop": "name",
+        "values": null
+      },
+      {
+        "property": "Package size",
+        "prop": "packageSize",
+        "values": null
+      },
+      {
+        "property": "Price",
+        "prop": "price",
+        "values": null
+      },
+      {
+        "property": "Stock label",
+        "prop": "stockLabel",
+        "values": null
+      },
+      {
+        "property": "Stock level",
+        "prop": "stockLevel",
+        "values": [
+          "in",
+          "low",
+          "out"
+        ]
+      },
+      {
+        "property": "Unit price",
+        "prop": "unitPrice",
+        "values": null
+      },
+      {
+        "property": "Was price",
+        "prop": "wasPrice",
+        "values": null
+      }
+    ],
+    "unmapped": [
+      {
+        "prop": "href",
+        "why": "A destination has no visual form. Figma has prototype links, which describe navigation between frames rather than a product's address."
+      },
+      {
+        "prop": "onAddToCart",
+        "why": "A handler is behaviour."
+      },
+      {
+        "prop": "image",
+        "why": "Mapped through the media placeholder rather than as a property: a designer swaps the image fill on the layer, which is the same act and one fewer property."
+      },
+      {
+        "prop": "wasPriceLabel",
+        "why": "It renders visually hidden — it exists for a screen reader and has no drawn form at all. A Figma property for it would be a field a designer fills in and never sees, which is how a property becomes decoration."
+      }
+    ]
+  },
+  "aiHints": {
+    "keywords": [
+      "product",
+      "product card",
+      "tile",
+      "grid",
+      "catalogue",
+      "price",
+      "discount",
+      "stock",
+      "add to cart",
+      "market",
+      "groceries",
+      "listing",
+      "offer"
+    ],
+    "use_when": [
+      "A product appears in a grid or a carousel and can be opened or added to a cart.",
+      "A Market category or search screen needs its tiles.",
+      "A tile needs a link and an action that are independently reachable."
+    ],
+    "not_a": [
+      "A ride option. That is RideCard and it is a radio.",
+      "A selectable card. Adding selection changes what element it is.",
+      "A cart line.",
+      "A component that formats numbers."
+    ]
+  },
+  "deprecation": {
+    "policy": "It replaces v0's three unused ProductCard components and the five inline copies that actually rendered, so it is withdrawn only by a decision naming what replaces it. A prop is withdrawn ahead of the component: mark it @deprecated in the source with the replacement named in the tag, keep it working for one minor version, then remove it in a major one with the migration written down. The likeliest growth is a quantity stepper, which is a new component embedded here rather than a prop on this one."
+  },
+  "generated": {
+    "by": "machinery/scripts/gen-contract.mjs",
+    "from": "packages/components/src/ProductCard/ProductCard.tsx",
+    "authored": "machinery/metadata/authored/product-card.json",
+    "note": "Build output. Edit the component or the authored half and regenerate; an edit made here is overwritten by the next run and reported by check-contracts.mjs in the meantime."
+  }
+}
