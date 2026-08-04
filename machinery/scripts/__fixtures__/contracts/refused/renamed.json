@@ -1,0 +1,217 @@
+{
+  "$schema": "./component-contract.schema.json",
+  "name": "Renamed",
+  "status": "draft",
+  "source": "machinery/scripts/__fixtures__/contracts/src/Widget.tsx",
+  "propsType": "Widgetty",
+  "extends": [
+    "SomethingElseProps"
+  ],
+  "purpose": "A fixture component's authored half. It carries every authored field the schema requires, so that the aligned contract is a complete one rather than a minimal one.",
+  "responsibilities": [
+    "Stand still while the gate reads it."
+  ],
+  "do": [
+    "Read it as an example of the shape, never of the content."
+  ],
+  "dont": [
+    "Do not copy its prose into a real contract. It describes a fixture."
+  ],
+  "do_not_use_when": [
+    {
+      "when": "You are looking for an example of judgment rather than of shape.",
+      "use_instead": "A real contract in machinery/metadata/."
+    }
+  ],
+  "alternatives": [
+    {
+      "use": "a real component's contract",
+      "for": "an example of what a contract says",
+      "in_system": false
+    }
+  ],
+  "content": [
+    "The label."
+  ],
+  "constraints": [
+    "Nothing here is a decision about anything."
+  ],
+  "rtl": {
+    "behaviour": [
+      "Logical properties only, like everything outside legacy/."
+    ],
+    "does_not_mirror": [
+      "Whatever it is handed. Mirroring is the icon's own flag."
+    ]
+  },
+  "accessibility": {
+    "guarantees": [
+      "Nothing. It renders null."
+    ]
+  },
+  "stylesheet": "machinery/scripts/__fixtures__/contracts/src/Widget.css",
+  "tokens": [
+    "action.primary",
+    "border.subtle",
+    "font-family.sans",
+    "space.100",
+    "space.200",
+    "surface.default",
+    "text.on-action",
+    "text.primary",
+    "text.secondary"
+  ],
+  "tokens_absent": [
+    {
+      "property": "--motion-fast",
+      "why": "The fixture token set has no motion scale. The stylesheet names the token it wants and takes no fallback, so the gap stays visible instead of a literal being hidden in a component."
+    }
+  ],
+  "props": [
+    {
+      "name": "busy",
+      "type": "boolean",
+      "values": null,
+      "required": false,
+      "default": "false",
+      "description": "Whether it is doing something.",
+      "figmaProperty": "Busy"
+    },
+    {
+      "name": "caption",
+      "type": "ReactNode",
+      "values": null,
+      "required": false,
+      "default": null,
+      "description": "The old name for the label.",
+      "deprecated": "Use label.",
+      "figmaProperty": null
+    },
+    {
+      "name": "hint",
+      "type": "string",
+      "values": null,
+      "required": false,
+      "default": null,
+      "description": "A line of help beneath it.",
+      "figmaProperty": "Hint"
+    },
+    {
+      "name": "label",
+      "type": "ReactNode",
+      "values": null,
+      "required": true,
+      "default": null,
+      "description": "The label.",
+      "notes": [
+        "Required, and with no default, which is the pair the reader has to keep apart from an optional prop that happens to have none."
+      ],
+      "figmaProperty": "Label"
+    },
+    {
+      "name": "onPress",
+      "type": "(event: MouseEvent<HTMLButtonElement>) => void",
+      "values": null,
+      "required": false,
+      "default": null,
+      "description": "Called on activation.",
+      "figmaProperty": null
+    },
+    {
+      "name": "scale",
+      "type": "'small' | 'large'",
+      "values": [
+        "small",
+        "large"
+      ],
+      "required": false,
+      "default": "'small'",
+      "description": "How much room it takes.",
+      "guidance": "The step, not the pixels.",
+      "figmaProperty": "Scale"
+    },
+    {
+      "name": "tone",
+      "type": "WidgetTone",
+      "values": [
+        "plain",
+        "loud",
+        "quiet"
+      ],
+      "required": false,
+      "default": "'plain'",
+      "description": "Which appearance to paint.",
+      "notes": [
+        "A second paragraph, so that the summary and the notes are two things."
+      ],
+      "figmaProperty": "Tone"
+    }
+  ],
+  "figma": {
+    "component": "Widget",
+    "properties": [
+      {
+        "property": "Busy",
+        "prop": "busy",
+        "values": null
+      },
+      {
+        "property": "Hint",
+        "prop": "hint",
+        "values": null
+      },
+      {
+        "property": "Label",
+        "prop": "label",
+        "values": null
+      },
+      {
+        "property": "Scale",
+        "prop": "scale",
+        "values": [
+          "small",
+          "large"
+        ]
+      },
+      {
+        "property": "Tone",
+        "prop": "tone",
+        "values": [
+          "plain",
+          "loud",
+          "quiet"
+        ]
+      }
+    ],
+    "unmapped": [
+      {
+        "prop": "caption",
+        "why": "Deprecated, so it has no Figma side to keep in step."
+      },
+      {
+        "prop": "onPress",
+        "why": "A handler is behaviour."
+      }
+    ]
+  },
+  "aiHints": {
+    "keywords": [
+      "fixture",
+      "widget",
+      "example",
+      "test"
+    ],
+    "not_a": [
+      "A component anybody should use."
+    ]
+  },
+  "deprecation": {
+    "policy": "Deleted when the gate no longer needs it."
+  },
+  "generated": {
+    "by": "machinery/scripts/gen-contract.mjs",
+    "from": "machinery/scripts/__fixtures__/contracts/src/Widget.tsx",
+    "authored": "machinery/scripts/__fixtures__/contracts/aligned/authored/widget.json",
+    "note": "Build output. Edit the component or the authored half and regenerate; an edit made here is overwritten by the next run and reported by check-contracts.mjs in the meantime."
+  }
+}

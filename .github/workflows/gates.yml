@@ -76,7 +76,7 @@ jobs:
     # a script's output that the script itself cannot assert about its own run.
     env:
       CHECK_FLOOR: 44
-      SELFTEST_FLOOR: 164
+      SELFTEST_FLOOR: 203
       DRY_RUN_FLOOR: 187
 
     steps:
@@ -130,7 +130,7 @@ jobs:
       # and the build after both, because a build that consumed a token set no
       # gate had accepted would be reporting on nothing.
 
-      - name: 'Gate 1/5 — npm run check (schema + contrast)'
+      - name: 'Gate 1/6 — npm run check (schema + contrast)'
         run: |
           npm run check 2>&1 | tee "$RUNNER_TEMP/check.log"
           count=$(sed -nE 's/^Result: pass\. ([0-9]+) check\(s\) passed.*/\1/p' "$RUNNER_TEMP/check.log" | tail -n 1)
@@ -140,19 +140,30 @@ jobs:
             exit 1
           fi
 
-      - name: 'Gate 2/5 — npm run selftest (proves the gates reject things)'
+      # The contract gate. It reads every component's source and asks whether
+      # the contract describing it is still what the generator would write, so
+      # it needs the component sources and nothing built from them.
+      #
+      # No floor: the number it reports is a count of contracts, which goes up
+      # when a component is added and is not a measure of how much was checked.
+      # The claim that this gate rejects things is held by selftest's fixtures,
+      # which is where the floor above already covers it.
+      - name: 'Gate 2/6 — npm run check:contracts (contracts against their components)'
+        run: npm run check:contracts
+
+      - name: 'Gate 3/6 — npm run selftest (proves the gates reject things)'
         run: |
           npm run selftest 2>&1 | tee "$RUNNER_TEMP/selftest.log"
           count=$(sed -nE 's/^Result: pass\. ([0-9]+) assertion\(s\)\..*/\1/p' "$RUNNER_TEMP/selftest.log" | tail -n 1)
           echo "selftest: ${count:-no} assertion(s) reported, floor $SELFTEST_FLOOR"
-          # 140 here rather than 164 means dist/core.mjs is missing and the
+          # A count 24 short of the floor means dist/core.mjs is missing and the
           # read-bridge sections skipped — check the two steps above, not this one.
           if [ -z "$count" ] || [ "$count" -lt "$SELFTEST_FLOOR" ]; then
-            echo "::error title=Gate 2: selftest count regressed::npm run selftest reported ${count:-no} assertion(s); the floor is $SELFTEST_FLOOR. A count near 140 means machinery/figma-plugin/dist/core.mjs was not built and the read-bridge sections were skipped."
+            echo "::error title=Gate 3: selftest count regressed::npm run selftest reported ${count:-no} assertion(s); the floor is $SELFTEST_FLOOR. A count 24 short of the floor means machinery/figma-plugin/dist/core.mjs was not built and the read-bridge sections were skipped."
             exit 1
           fi
 
-      - name: 'Gate 3/5 — npm run build:tokens'
+      - name: 'Gate 4/6 — npm run build:tokens'
         run: npm run build:tokens
 
       # Nothing in dry-run is conditional the way selftest's read-bridge sections
@@ -160,17 +171,17 @@ jobs:
       # floor is here anyway: it is the file most likely to grow assertions, and
       # a floor that only exists where a regression has already happened once is
       # a record of past incidents rather than a rule.
-      - name: 'Gate 4/5 — npm run figma:dry-run (the plugin against the real token root)'
+      - name: 'Gate 5/6 — npm run figma:dry-run (the plugin against the real token root)'
         run: |
           npm run figma:dry-run 2>&1 | tee "$RUNNER_TEMP/dry-run.log"
           count=$(sed -nE 's/^([0-9]+) assertion\(s\) passed, .*/\1/p' "$RUNNER_TEMP/dry-run.log" | tail -n 1)
           echo "figma:dry-run: ${count:-no} assertion(s) reported, floor $DRY_RUN_FLOOR"
           if [ -z "$count" ] || [ "$count" -lt "$DRY_RUN_FLOOR" ]; then
-            echo "::error title=Gate 4: dry-run count regressed::npm run figma:dry-run reported ${count:-no} assertion(s); the floor is $DRY_RUN_FLOOR. An assertion count is a floor and is never lowered to make something pass."
+            echo "::error title=Gate 5: dry-run count regressed::npm run figma:dry-run reported ${count:-no} assertion(s); the floor is $DRY_RUN_FLOOR. An assertion count is a floor and is never lowered to make something pass."
             exit 1
           fi
 
-      - name: 'Gate 5/5 — npm run build:preview'
+      - name: 'Gate 6/6 — npm run build:preview'
         run: npm run build:preview
 
 # On the sockets, since it is the question a reader of this file will have:

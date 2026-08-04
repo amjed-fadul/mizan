@@ -13,6 +13,8 @@
     "check:schema": "node machinery/scripts/check-schema.mjs",
     "check:contrast": "node machinery/scripts/check-contrast.mjs",
     "check:drift": "node machinery/scripts/check-drift.mjs",
+    "check:contracts": "node machinery/scripts/check-contracts.mjs",
+    "gen:contract": "node machinery/scripts/gen-contract.mjs",
     "health": "node machinery/scripts/health-dashboard.mjs --title \"Mizan Health\"",
     "selftest": "node machinery/scripts/selftest.mjs",
     "adapt:tokens": "node machinery/scripts/dtcg-adapt.mjs",

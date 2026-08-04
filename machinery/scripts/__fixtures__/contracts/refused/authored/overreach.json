@@ -1,0 +1,73 @@
+{
+  "status": "draft",
+  "purpose": "A fixture component's authored half. It carries every authored field the schema requires, so that the aligned contract is a complete one rather than a minimal one.",
+  "responsibilities": [
+    "Stand still while the gate reads it."
+  ],
+  "do": [
+    "Read it as an example of the shape, never of the content."
+  ],
+  "dont": [
+    "Do not copy its prose into a real contract. It describes a fixture."
+  ],
+  "do_not_use_when": [
+    {
+      "when": "You are looking for an example of judgment rather than of shape.",
+      "use_instead": "A real contract in machinery/metadata/."
+    }
+  ],
+  "alternatives": [
+    {
+      "use": "a real component's contract",
+      "for": "an example of what a contract says",
+      "in_system": false
+    }
+  ],
+  "content": [
+    "The label."
+  ],
+  "constraints": [
+    "Nothing here is a decision about anything."
+  ],
+  "rtl": {
+    "behaviour": [
+      "Logical properties only, like everything outside legacy/."
+    ],
+    "does_not_mirror": [
+      "Whatever it is handed. Mirroring is the icon's own flag."
+    ]
+  },
+  "accessibility": {
+    "guarantees": [
+      "Nothing. It renders null."
+    ]
+  },
+  "aiHints": {
+    "keywords": [
+      "fixture",
+      "widget",
+      "example",
+      "test"
+    ],
+    "not_a": [
+      "A component anybody should use."
+    ]
+  },
+  "deprecation": {
+    "policy": "Deleted when the gate no longer needs it."
+  },
+  "figma": {
+    "component": "Overreach"
+  },
+  "props": {
+    "tone": {
+      "figmaProperty": "Tone",
+      "type": "'plain' | 'loud' | 'shouty'"
+    },
+    "label": {
+      "figmaProperty": "Label",
+      "default": "'Untitled'"
+    }
+  },
+  "propsType": "OverreachProps"
+}

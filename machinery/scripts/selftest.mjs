@@ -33,7 +33,7 @@
 
 import { spawn, spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -1240,6 +1240,185 @@ assert(alignedDashboard.status === 0, 'dashboard: --strict passes when every gat
 try { rmSync(dashboardOut, { force: true }); } catch { /* nothing to clean up */ }
 
 /* ------------------------------------------------------------------ *
+ * Rung 1, one layer up: the component contracts
+ *
+ * The token gates check a value against the rule that governs it. This checks
+ * a *description* against the thing it describes, which is a different claim
+ * with the same failure mode — a contract that has never disagreed with its
+ * component is an untested claim, and one asserted on its exit code alone can
+ * pass for the wrong reason.
+ *
+ * So the three fixture metadata directories are held to the standard the drift
+ * fixtures are held to. `aligned/` must report nothing at all, with every prop
+ * compared and the token list read out of a stylesheet. `drifted/` must report
+ * each of the eleven codes **by name**, and one of them — the authored half
+ * edited in the generated file — is asserted separately, because it is the only
+ * one that no comparison against the source could ever catch and it is the one
+ * that makes the contract build output rather than a file that started that way.
+ * `refused/` covers the failures that happen before a comparison can.
+ * ------------------------------------------------------------------ */
+
+process.stdout.write('\nContracts: a description checked against the thing it describes\n');
+
+const CONTRACTS = join(FIXTURES, 'contracts');
+const CONTRACT_SCHEMA = join(MACHINERY_DIR, 'metadata', 'component-contract.schema.json');
+
+function runContracts(dir) {
+  return run('check-contracts.mjs', [
+    '--metadata', join(CONTRACTS, dir),
+    '--schema', CONTRACT_SCHEMA,
+    '--root', VALID,
+  ]);
+}
+
+const alignedContracts = runContracts('aligned');
+assert(alignedContracts.status === 0, 'contracts: the aligned fixture passes',
+  `exit ${alignedContracts.status}; ${JSON.stringify(alignedContracts.payload?.errors ?? alignedContracts.stderr)}`);
+assert((alignedContracts.payload?.errors ?? []).length === 0, 'contracts: the aligned fixture reports no errors',
+  JSON.stringify(alignedContracts.payload?.errors));
+assert((alignedContracts.payload?.warnings ?? []).length === 0, 'contracts: the aligned fixture reports no warnings either',
+  JSON.stringify(alignedContracts.payload?.warnings));
+assert(alignedContracts.payload?.contracts?.[0]?.props === 7,
+  'contracts: every prop the fixture component declares was compared',
+  JSON.stringify(alignedContracts.payload?.contracts));
+
+// The token list is derived from the stylesheet beside the component rather
+// than typed out beside it, so the count is a property of two files agreeing.
+// Nine is what Widget.css references and the fixture token set defines; the
+// tenth reference is the declared absence below.
+assert(alignedContracts.payload?.contracts?.[0]?.tokens === 9,
+  'contracts: the token list was read out of the component stylesheet',
+  JSON.stringify(alignedContracts.payload?.contracts));
+
+const alignedContract = JSON.parse(readFileSync(join(CONTRACTS, 'aligned', 'widget.json'), 'utf8'));
+assert(alignedContract.tokens_absent?.[0]?.property === '--motion-fast',
+  'contracts: a custom property the token set does not define is declared, not tolerated',
+  JSON.stringify(alignedContract.tokens_absent));
+assert(!alignedContract.tokens.includes('--motion-fast'),
+  'contracts: a declared absence is not counted as a token the component consumes');
+
+// A union behind a local alias still yields its members, because a Figma
+// variant property mirrors the members and not the alias name.
+const tone = alignedContract.props.find((prop) => prop.name === 'tone');
+assert(tone?.type === 'WidgetTone' && JSON.stringify(tone?.values) === JSON.stringify(['plain', 'loud', 'quiet']),
+  'contracts: a union behind a local alias is recorded as the name and the members',
+  JSON.stringify(tone));
+assert(alignedContract.props.find((prop) => prop.name === 'caption')?.deprecated === 'Use label.',
+  'contracts: a @deprecated tag reaches the contract with its replacement');
+assert(alignedContract.props.find((prop) => prop.name === 'label')?.required === true
+  && alignedContract.props.find((prop) => prop.name === 'label')?.default === null,
+  'contracts: required with no default is kept apart from optional with none');
+assert(
+  alignedContract.figma.properties.every((entry) => alignedContract.props.some((prop) => prop.name === entry.prop))
+  && alignedContract.figma.unmapped.length === 2,
+  'contracts: every prop either mirrors a Figma property or says why it does not',
+  JSON.stringify(alignedContract.figma));
+
+const driftedContracts = runContracts('drifted');
+assert(driftedContracts.status === 1, 'contracts: the drifted fixture fails', `exit ${driftedContracts.status}`);
+
+const contractCodes = codes(driftedContracts.payload?.errors);
+for (const code of [
+  'prop-type-mismatch',
+  'prop-values-mismatch',
+  'prop-default-mismatch',
+  'prop-required-mismatch',
+  'prop-deprecation-drift',
+  'prop-description-drift',
+  'prop-missing-in-contract',
+  'prop-unknown-to-source',
+  'contract-token-unknown',
+  'alternative-not-in-system',
+  'contract-stale',
+]) {
+  assert(contractCodes.has(code), `contracts: drifted fixture reports ${code}`,
+    `codes: ${[...contractCodes].join(', ')}`);
+}
+
+// Named individually rather than left to the regeneration, because "the file
+// differs" is not something anybody can act on. Each finding has to carry the
+// prop it is about.
+const propFindings = (driftedContracts.payload?.errors ?? []).filter((error) => error.code.startsWith('prop-'));
+assert(propFindings.length >= 8 && propFindings.every((error) => typeof error.prop === 'string'),
+  'contracts: every prop-level finding names its prop',
+  JSON.stringify(propFindings.map((error) => [error.code, error.prop])));
+
+// The one edit no comparison against the source could catch: the authored half
+// rewritten in the generated file. It is what makes the contract build output.
+const stale = (driftedContracts.payload?.errors ?? []).find((error) => error.code === 'contract-stale');
+assert(stale?.message.includes('purpose'),
+  'contracts: an authored field edited in the generated file is caught by regenerating, and named',
+  stale?.message);
+
+const refusedContracts = runContracts('refused');
+assert(refusedContracts.status === 1, 'contracts: the refused fixture fails', `exit ${refusedContracts.status}`);
+const refusedCodes = codes(refusedContracts.payload?.errors);
+for (const code of [
+  'component-source-missing',
+  'source-unreadable',
+  'authored-invalid',
+  'authored-missing',
+  'contract-invalid',
+  'component-name-mismatch',
+  'props-type-mismatch',
+  'extends-mismatch',
+]) {
+  assert(refusedCodes.has(code), `contracts: refused fixture reports ${code}`,
+    `codes: ${[...refusedCodes].join(', ')}`);
+}
+assert(codes(refusedContracts.payload?.warnings).has('orphan-authored'),
+  'contracts: an authored half nobody generated from is a warning, not a failure',
+  JSON.stringify(refusedContracts.payload?.warnings));
+
+// The authored half may annotate a prop and may not restate one. Two of the
+// three ways to cross that line are planted in refused/authored/overreach.json.
+const overreach = (refusedContracts.payload?.errors ?? []).filter((error) => error.code === 'authored-invalid');
+assert(overreach.some((error) => error.message.includes('type'))
+  && overreach.some((error) => error.message.includes('default')),
+  'contracts: the authored half may not state a prop\'s type or its default',
+  JSON.stringify(overreach.map((error) => error.message)));
+
+// The gate re-derives rather than trusting; the generator writes rather than
+// merging. Running the generator over the aligned fixture must therefore be a
+// no-op, and a generator that has drifted from the checker shows up here rather
+// than as a contract nobody can make green.
+const regenerated = run('gen-contract.mjs', [
+  '--source', join(CONTRACTS, 'src', 'Widget.tsx'),
+  '--metadata', join(CONTRACTS, 'aligned'),
+  '--schema', CONTRACT_SCHEMA,
+  '--root', VALID,
+]);
+assert(regenerated.status === 0 && regenerated.payload?.results?.[0]?.unchanged === true,
+  'contracts: regenerating the aligned fixture changes nothing — the generator and the gate agree',
+  JSON.stringify(regenerated.payload ?? regenerated.stderr));
+
+// An empty metadata directory passes, and says why. The same rule the token
+// gates hold: nothing to reject is not the same claim as nothing wrong.
+const emptyMetadata = mkdtempSync(join(tmpdir(), 'mizan-contracts-'));
+const emptyRun = run('check-contracts.mjs', ['--metadata', emptyMetadata, '--schema', CONTRACT_SCHEMA, '--root', VALID]);
+assert(emptyRun.status === 0 && emptyRun.payload?.empty === true,
+  'contracts: an empty metadata directory is reported as empty rather than as a pass',
+  JSON.stringify(emptyRun.payload ?? emptyRun.stderr));
+try { rmSync(emptyMetadata, { recursive: true, force: true }); } catch { /* nothing to clean up */ }
+
+// The schema is interpreted rather than restated, so a keyword the interpreter
+// does not implement must stop the run instead of being ignored. An unenforced
+// constraint that looks enforced is the one failure mode this arrangement has
+// that an off-the-shelf validator does not.
+const schemaDir = mkdtempSync(join(tmpdir(), 'mizan-schema-'));
+const realSchema = JSON.parse(readFileSync(CONTRACT_SCHEMA, 'utf8'));
+realSchema.properties.name.allOf = [{ type: 'string' }];
+const plantedSchema = join(schemaDir, 'component-contract.schema.json');
+writeFileSync(plantedSchema, JSON.stringify(realSchema, null, 2));
+const unsupported = run('check-contracts.mjs', [
+  '--metadata', join(CONTRACTS, 'aligned'), '--schema', plantedSchema, '--root', VALID,
+]);
+assert(unsupported.status === 2 && /allOf/.test(unsupported.stderr),
+  'contracts: a schema keyword the validator does not implement stops the run rather than being ignored',
+  `exit ${unsupported.status}; ${unsupported.stderr}`);
+try { rmSync(schemaDir, { recursive: true, force: true }); } catch { /* nothing to clean up */ }
+
+/* ------------------------------------------------------------------ *
  * Searchability: every authored file under machinery/ must be plain text
  *
  * A NUL byte is a tempting delimiter for a composite key — it cannot occur
@@ -1289,6 +1468,8 @@ if (failures.length === 0) {
   process.stdout.write(
     `Result: pass. ${passes.length} assertion(s). Rung 1 proven to accept the valid token set and reject the broken one; `
     + 'rung 2 proven to accept a Figma snapshot that agrees and to catch each way one can disagree; '
+    + 'the contract gate proven to accept a component contract that is still true and to name each way '
+    + 'one stops being true, including the edit no comparison against a source could ever catch; '
     + 'and the read bridge proven read-only by construction — one port agreed across four files, '
     + 'a vocabulary of four words none of which is a verb, and a round trip over a real socket.\n'
     + (skipped.length === 0
