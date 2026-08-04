@@ -75,7 +75,24 @@ So the role narrows rather than the colour darkening past recognition: **these t
 
 The audit could tell me which values are close. It could not tell me which are the *same*. That distinction is the entire content of this decision, and it is why the consolidation could not be mechanical.
 
-Three of the seven judgments went against the measurement. `discount` and `safety` are close and stay apart. The two brand greens are further apart than either of those pairs and merge. A rule built on distance would have got all three backwards.
+**Correction to an earlier draft of this entry.** It claimed the brand greens were further apart than the refused pairs and that a distance rule would have got three judgments backwards. Both statements are false, and recomputing CIEDE2000 from scratch is what surfaced it:
+
+| | ΔE00 | Call |
+|---|---|---|
+| borders | 0.23 | merge |
+| surfaces | 0.62 | merge |
+| dark text | 1.28 | merge |
+| brand greens | 2.90 | merge |
+| brand dark | 3.07 | merge |
+| `discount` / `safety` | 4.21 | **refuse** |
+| Market / Move secondary | 6.30 | **refuse** |
+| `stock.low` / `surge` | 6.71 | **refuse** |
+
+Sorted by distance, the calls are perfectly **monotonic**. Every merge is closer than every refusal, and a threshold anywhere in the 1.14-wide window between 3.07 and 4.21 would reproduce all eight.
+
+That is a weaker claim than I first made and a more interesting one. The measurement is not backwards — it is *fittable after the fact and unusable in advance*. The only principled threshold available is the just-noticeable difference, 2.3, and at 2.3 the brand greens (2.90) and the brand dark pair (3.07) **do not merge** — so the standard bar leaves the single most consequential consolidation in this entry undone. The window that reproduces these decisions can only be found by already knowing them.
+
+So the honest version: distance told me which values are close, and I still had to decide which are the same. A threshold drawn afterwards can be made to agree with me; it could not have replaced me.
 
 The refusals also carry more weight than the merges, because a merge can be undone by adding a token back, while a merge that erased a real distinction is invisible afterwards — nobody can see the meaning that used to be there.
 

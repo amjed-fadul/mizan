@@ -1,7 +1,9 @@
 # Decision 013 — The Arabic type scale is a mode of the Latin scale, and script becomes a third dimension
 
 **Date:** 2026-08-04
-**Status:** accepted
+**Status:** accepted — decided, not yet implemented
+
+> **Implementation gap, stated so it is not mistaken for done.** `content/tokens/modes.json` still declares two dimensions (theme × product) and `packages/tokens/` still holds four combinations. The Arabic typography tokens currently exist as `arabic-*` primitive names rather than being resolved by a script mode. This entry records the decision and its costs; the eight-combination matrix is Stage 3 work, alongside the Figma mode mapping that makes the ceiling concrete.
 
 ## Context
 
