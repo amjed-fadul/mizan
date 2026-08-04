@@ -12,6 +12,12 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev", "--workspace", "@mizan/preview", "--", "--port", "5174", "--strictPort"],
       "port": 5174
+    },
+    {
+      "name": "mizan-storybook",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "storybook", "--workspace", "@mizan/components", "--", "--no-open"],
+      "port": 6006
     }
   ]
 }
