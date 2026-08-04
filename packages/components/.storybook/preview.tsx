@@ -115,7 +115,39 @@ const preview: Preview = {
       // component and on every prop into the page an agent or a designer reads,
       // which is why those comments are written as documentation rather than as
       // notes to the next maintainer.
-      toc: true
+      toc: true,
+
+      story: {
+        /*
+          Every story on a docs page renders in its OWN iframe, and this is a
+          correctness fix rather than a preference. Two things broke without it,
+          and both come from the same cause: a docs page renders every story at
+          once, into one shared document.
+
+          1. THE MODE ATTRIBUTES LEAKED. `withModes` above writes data-theme,
+             data-product, dir and lang onto document.documentElement, because
+             the generated token CSS selects on `:root[data-theme][data-product]`
+             — the modes have to be on the root or no token resolves. On a story
+             page there is one story and that is correct. On a docs page every
+             story's effect ran against the same root and the LAST one won, and
+             the last export in every stories file is the Arabic one. So every
+             docs page in this library rendered right-to-left, with the prose
+             right-aligned and its punctuation at the wrong end.
+
+          2. THE DIALOG DOCS PAGE WAS UNREADABLE. showModal() puts a dialog in
+             the browser's top layer, which is above the page and is per
+             DOCUMENT. Seven stories meant seven stacked modals over the
+             documentation, their scrims compounding to near-black. The page was
+             not degraded, it was invisible.
+
+          An iframe per story gives each one its own document, so it gets its
+          own root to write modes onto and its own top layer to open into. It
+          costs a frame per story, which is the honest price of components that
+          legitimately touch document-level state.
+        */
+        inline: false,
+        height: '320px'
+      }
     }
   },
   tags: ['autodocs']
