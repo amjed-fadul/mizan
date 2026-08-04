@@ -32,4 +32,10 @@ Tokens are the only editing surface. CSS variables and Figma variables are gener
 
 ## Status
 
-Stage 0: repository skeleton. Directories carry READMEs stating what belongs in them and what does not; implementation arrives stage by stage per the roadmap.
+**Stage 2 — the foundation is re-architected, and it is visible.**
+
+- **Stage 1** audited Mizan v0 and wrote down what it costs: 33 distinct colour values, four spacing rhythms, four button implementations behind three contradictory APIs, 72 physical direction properties and not one logical, and an accessibility floor that turns out to be mostly a token problem. [`audit/`](./audit/).
+- **Stage 2** rebuilt the foundation. Spec-strict DTCG source in [`content/tokens/`](./content/tokens/) as the only editing surface; two blocking gates in [`machinery/scripts/`](./machinery/scripts/) — structure and WCAG contrast — with a self-test that proves they reject a broken token set rather than merely accepting a good one; generated CSS, iOS and Android output in `packages/tokens/` for four mode combinations; and a preview in `packages/preview/` that reads the build output rather than restating it.
+- **Decisions 001–013 and 018** are in [`decisions/`](./decisions/), including the ones that were refusals. 014–017 are numbered and not here: they belong to Stage 3, on another branch.
+
+Stage 3 — Figma, the sync plugin and the drift detector — is not in this branch. There is no `check-drift.mjs` here, and nothing in `machinery/` yet talks to Figma.
