@@ -68,7 +68,9 @@
     "No density prop. size names the step and the product mode decides what it resolves to, so a Market screen cannot ask for Move's geometry.",
     "No decision about the icon it is handed. Mirroring is a three-valued flag on the icon — does not mirror, mirrors by transform, mirrors by asset — and the button neither reads it nor overrides it. It cannot: a \"turn right\" glyph in a Move button describes a physical manoeuvre and stays as drawn, a \"next\" chevron flips, and the difference is a property of the glyph that nothing at this layer can see.",
     "Both products' buttons are the same size until the product-density token work lands. The decision is taken and the mode files do not carry it yet — a visible temporary regression against v0 rather than a quiet one.",
-    "The variant vocabulary is visual. Nothing in this API names what an action means."
+    "The variant vocabulary is visual. Nothing in this API names what an action means.",
+    "No motion value is decided inside the component. Every duration, cycle length and curve resolves from content/tokens/primitive/motion.json; a transition list names its properties and never says all; and nothing that could cause a layout is transitioned. The press acknowledgement is a transform and the hover change is a background colour, which is a paint on the control's own box and the only non-transform property in any list.",
+    "Under prefers-reduced-motion the press scale is removed and the hover colour transition is kept — fewer and gentler, not zero — and the busy indicator keeps rotating, because an indicator that stops indicating is a bug rather than an accommodation. The blanket animation-duration override is refused: it cannot tell a slide from a spinner."
   ],
   "rtl": {
     "behaviour": [
@@ -77,6 +79,7 @@
       "Arabic sets at letter-spacing 0, always, and takes the Arabic line height rather than the Latin one.",
       "There is no [dir='rtl'] selector anywhere in the component. Every directional value in it is derived — logical properties and flex order — which is the test §6 sets for a component rather than \"does it look mirrored\".",
       "The busy indicator rotates and its rotation is not mirrored. Clockwise is clockwise in every locale.",
+      "The press feedback is a scale and not a translate. A translate has a direction and a scale has none, so the pressed control is identical under either direction with no rule of its own — the same reason the focus indicator needs none.",
       "The control has no width and no fixed height, because the same label is not the same size in Arabic — measured in one face at one size, تم is 39 per cent of the width of \"Done\" and أضف إلى السلة is 117 per cent of \"Add to cart\"."
     ],
     "mirrors": [
@@ -104,12 +107,7 @@
       "Supply an icon that carries its own mirroring flag."
     ]
   },
-  "tokens_absent": [
-    {
-      "property": "--duration-500",
-      "why": "The one token this component asked for and did not find. content/tokens/ has colour, dimension, elevation and typography and no motion scale at all. The busy indicator names the token anyway and takes no fallback, so the animation is invalid at computed-value time and the ring is static — visibly unfinished, which is the honest state of a system with no motion tokens, and it starts spinning the day the scale is declared with no change to the stylesheet. A literal here would have been a system decision taken inside one component."
-    }
-  ],
+  "tokens_absent": [],
   "aiHints": {
     "keywords": [
       "button",

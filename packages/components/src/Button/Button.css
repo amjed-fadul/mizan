@@ -9,10 +9,15 @@
   here and is stricter, because this ships: a hex, a px or an em written down in
   this file is the same defect as an edited generated file, arriving by hand.
 
-  Two token gaps are named where they arise rather than papered over with an
-  invented value: there is no motion scale (search for `--duration-`), and there
-  is no density dimension (search for `density`). Both are recorded in
-  ./README.md with what they would change.
+  One token gap is named where it arises rather than papered over with an
+  invented value: there is no density dimension (search for `density`). It is
+  recorded in ./README.md with what it would change. The other gap this file
+  used to carry — no motion scale — is closed: decision 021 added
+  content/tokens/primitive/motion.json, and everything under "the motion" below
+  resolves from it.
+
+  Two written numbers remain, both named at the point they are written: the 1px
+  control edge, and the 0.97 of the press scale.
 */
 
 /* -------------------------------------------------------------- the control */
@@ -202,12 +207,206 @@
   background-color: var(--surface-sunken);
 }
 
+/* --------------------------------------------------------------- the motion */
+
 /*
-  No transition on any of the above. Not an omission: there is no motion scale
-  in content/tokens/, the preview draws every state change instantly for the
-  same reason, and a duration written here would be a system decision taken
-  inside one component. README records it.
+  Everything in this section resolves from content/tokens/primitive/motion.json.
+  The note that used to sit here — no transition on any of the above, because
+  there is no motion scale and a duration written in a component is a system
+  decision taken in the wrong place — is gone because the scale exists.
+
+  Four rules govern the section, and each is a rule about what a control owes a
+  hand rather than a preference about how a button should feel.
+
+  1. NOTHING THAT REFLOWS. Only `transform` is animated continuously, and the
+     one other property that transitions is a background colour, which repaints
+     the control's own box and cannot move anything else on the screen. No
+     geometry property transitions, so no state change in this file can cause a
+     layout. `transition: all` appears nowhere and must not: it is the
+     declaration that silently animates whichever property somebody adds next.
+
+  2. THE PRESS IS THE ONE THAT MATTERS. A control that changes nothing between
+     pointer-down and pointer-up has not told the hand it was heard, and on a
+     touch screen — where there was no hover to have said it already — that is
+     the only acknowledgement available before the action resolves.
+
+  3. THE HOVER TRANSITION IS GATED. A touch device fires hover on tap and leaves
+     it applied after the finger has gone, so an ungated hover *animation* draws
+     the eye to a state that is already false. Note what is gated and what is
+     not: the gate is on the transition, not on the hover rule itself. The
+     sticky-hover-on-touch problem belongs to the rule and outlives this change;
+     it is named in README rather than fixed in a commit about motion.
+
+  4. ROTATION IS THE EXCEPTION TO "NEVER LINEAR". Argued where it applies, at
+     the busy indicator below.
+
+  What deliberately does NOT transition: the focus indicator. `outline` and
+  `box-shadow` are absent from every list here, so the indicator appears on the
+  frame the element takes focus. A ring that fades in is a ring that is not yet
+  there while a keyboard user is deciding whether they moved.
 */
+
+.mz-button {
+  /*
+    duration.100 is the instant tier, and the token file names hover, press and
+    focus as precisely what it is for: past roughly 160ms a change stops reading
+    as a consequence of the input and starts reading as a response to it.
+
+    easing.entrance is the only strong ease-out in the scale, and an ease-out is
+    what a press wants — most of the movement done before the eye finds it, the
+    last of it settling. easing.move is eased at both ends and its slow start is
+    a delay on the leading edge of an answer to a finger; easing.exit
+    accelerates away, which is the one shape this must never have. The name is
+    the imperfect fit and it is recorded in README rather than worked around
+    here: a press is not an arrival, and the curve a press wants has no name of
+    its own in the scale yet.
+
+    Only `transform` is listed at this level. The colour is added inside the
+    hover query below, and the two lists are written out rather than composed,
+    because CSS has no way to append to a transition list.
+  */
+  transition: transform var(--duration-100) var(--easing-entrance);
+}
+
+/*
+  The press.
+
+  0.97 is a written number and it is the second one in this file after the 1px
+  control edge. There is no scale ramp in content/tokens/ — dimension.json holds
+  a space ramp and a radius ramp, both of them lengths — and a fraction of a
+  control's own size is not a length, so no spacing step could carry it even in
+  principle. Named here and recorded in README beside the other gaps, on the
+  same terms as the border width: an honest literal with the gap written down
+  beats a token invented backwards from one component.
+
+  It scales rather than moving, and that is an RTL decision as much as a motion
+  one. A translate has a direction and every directional value in this component
+  is derived (§6); a scale is the one transform with no side, so the press is
+  identical under `dir="rtl"` for exactly the reason the focus indicator is —
+  there is nothing in it to mirror.
+
+  The selector matches hover's, deliberately. A busy or disabled control does
+  not acknowledge a press it is about to refuse: `cursor: progress` and
+  `cursor: not-allowed` already say why nothing happened, and a control that
+  animates and then does nothing has said two things at once.
+
+  On the focus indicator, which this was checked against rather than assumed
+  past: both mechanisms paint outside the border box and both are part of the
+  element's own rendering, so a transform scales them with it. Measured at md,
+  the 8px outer extent of the three bands becomes 7.76px and the 2px outline
+  becomes 1.94px while the pointer is down. The indicator stays present, stays
+  proportional, keeps every tone and every ratio decision 019 argued — those are
+  colours and a scale does not touch them — and returns on release. What it does
+  not do is disappear, clip, or change shape, which are the three ways a
+  transform is normally found to have broken a ring.
+*/
+.mz-button:enabled:not([aria-busy='true']):active {
+  transform: scale(0.97);
+}
+
+/*
+  The hover transition, and the gate rule 3 describes.
+
+  The transitioned property is `background-color` and not the opacity of an
+  overlay, and that is decision 010 deciding it rather than a performance
+  preference. A translucent layer over a declared fill renders a colour no token
+  declares, which is the exact defect the disabled state was rebuilt to avoid —
+  the README's "no state uses opacity to produce a colour". So the cheap
+  compositor-only property is unavailable here on principle, and the honest
+  answer is a paint on the control's own box: it repaints one element, it cannot
+  reflow anything, and it is the only non-transform property in this file's
+  transition lists.
+
+  Same tier and same curve as the press. At 100ms the shape of a curve is not
+  perceptible; what is perceptible is whether the change starts at once, which
+  is what an ease-out gives. Two curves here would imply a distinction nobody
+  can see.
+*/
+@media (hover: hover) and (pointer: fine) {
+  .mz-button {
+    transition:
+      transform var(--duration-100) var(--easing-entrance),
+      background-color var(--duration-100) var(--easing-entrance);
+  }
+}
+
+/*
+  Reduced motion — fewer and gentler, not zero.
+
+  The blanket `animation-duration: 0.01ms !important` that circulates as the
+  reduced-motion snippet is refused here. It is a single statement about every
+  animation on a page, and the user's setting is not a request for a page with
+  no feedback in it — it is a request not to be moved. So this component removes
+  movement one property at a time, which is what duration.0 exists for: the
+  token file says selecting it is a component deciding, one property at a time,
+  that the thing being removed is movement, and that a global substitution
+  decides nothing because it cannot tell a slide from a spinner.
+
+  REMOVED: the press scale. It is the only movement in the component, it is
+  polish rather than information, and `transform: none` is the substantive half
+  — a duration of zero on its own would leave the control still snapping to 97
+  per cent, which is a scale that merely happens instantly. Both halves are
+  written: the transform goes, and the transition that carried it is stated as
+  duration.0 rather than dropped out of the system.
+
+  The cost, stated rather than glossed: a reduced-motion user gets no press
+  acknowledgement at all. The fix is not a smaller scale — a small movement is
+  still movement — it is a non-motion cue, and the only honest one is a colour,
+  and there is no `action.pressed` ground in content/tokens/ to draw it with.
+  Inventing one here would be designing a token backwards from a component.
+  README records it as the gap this section opened.
+
+  KEPT: the hover colour. It aids comprehension — it says which control the
+  pointer is on — and nothing about it moves. This is the half of the "fewer and
+  gentler" reading that the blanket snippet gets wrong in the other direction.
+
+  KEPT UNCHANGED, and this is the argument rather than an oversight: the busy
+  indicator keeps rotating at cycle.spin. Three reasons, in the order they
+  decided it.
+
+    A busy indicator that stops indicating is a bug, not an accommodation. The
+    rotation is the state's only visible carrier — `aria-busy` carries it to
+    assistive technology, but a sighted user with the preference set would be
+    left looking at a static ring, which is indistinguishable from a decorative
+    border on a control that has simply stopped responding.
+
+    The preference is about being moved, and this does not move. Every point on
+    a 16px ring rotating about its own centre stays inside that 16px box: there
+    is no translation across the viewport, no parallax, and no change of scale —
+    the three things the vestibular case is actually about.
+
+    Every alternative costs a token that does not exist. Slowing it needs a
+    second cycle value; swapping the rotation for an opacity pulse needs a
+    `cycle.pulse`, because the length of an endless animation is a cycle and not
+    a duration tier — that separation is the whole of motion.json's second
+    group, and reaching for duration.500 to time a pulse is precisely the
+    substitution it was written to prevent. Neither token is invented here.
+
+  So the deliberate absence below is the decision: there is no rule overriding
+  `.mz-button__busy`, and one must not be added without a `cycle` token to
+  point it at.
+*/
+@media (prefers-reduced-motion: reduce) {
+  .mz-button:enabled:not([aria-busy='true']):active {
+    transform: none;
+  }
+
+  .mz-button {
+    transition-duration: var(--duration-0);
+  }
+}
+
+/*
+  The hover half of it, restated because the list it overrides is longer. The
+  positions are `transform, background-color` from the query above, so this
+  removes the movement and leaves the colour at the instant tier rather than
+  taking both to zero.
+*/
+@media (prefers-reduced-motion: reduce) and (hover: hover) and (pointer: fine) {
+  .mz-button {
+    transition-duration: var(--duration-0), var(--duration-100);
+  }
+}
 
 /* ---------------------------------------------------------- the full-width  */
 
@@ -352,24 +551,47 @@
   border-block-start-color: transparent;
 
   /*
-    THE ONE TOKEN THIS COMPONENT ASKED FOR AND DID NOT FIND.
+    THE TOKEN THIS COMPONENT ASKED FOR AND DID NOT FIND, NOW FOUND.
 
-    `--duration-500` does not exist: content/tokens/ has colour, dimension,
-    elevation and typography, and no motion scale at all. The declaration names
-    the token anyway and takes no fallback, which is deliberate. An unresolved
-    var() makes the shorthand invalid at computed-value time, so today the
-    indicator is a static ring — visibly unfinished, which is the honest state
-    of a system with no motion tokens — and the day content/tokens/ declares a
-    motion scale it spins, with no change to this file.
+    The declaration used to name `--duration-500` with no fallback, which made
+    the shorthand invalid at computed-value time and left the ring static — the
+    honest rendering of a system with no motion tokens, and a placeholder rather
+    than a value. It resolves to two different tokens now, and both changes are
+    corrections rather than substitutions.
 
-    A literal here (0.9s, 1s, whatever looked right) would have been a system
-    decision taken inside one component, and the next component would take a
-    different one.
+    cycle.spin, not duration.500. The length of an endless animation is a cycle
+    and not a transition tier: every value in the duration ramp is the length of
+    a change that has a start and an end, and a rotation has neither. The two
+    groups are also chosen against different questions — a tier against how much
+    of the screen is changing, a cycle against how fast the loop reads — so the
+    old name was not merely long, it was a value from the wrong group. It is
+    800ms, and the number is chosen: a faster rotation makes an identical wait
+    feel shorter, and there is nothing to be won by a stately one. Below roughly
+    600ms a 2px ring stops reading as something rotating and starts reading as
+    something flickering, which is the floor. 800ms also sits above the 600ms
+    ceiling the duration ramp sets for itself, which is the clearest available
+    evidence that it is not a tier.
+
+    easing.continuous, and this is the one place in this file where a constant
+    speed is right. The standing advice about easing is "never linear", and that
+    advice is about transitions: an eased spinner visibly speeds up and slows
+    down once per revolution and reads as struggling rather than working. So the
+    rule and its exception are the same rule — a curve describes the shape of a
+    change between two states, and a rotation has no two states to be between.
+    The token resolves to cubic-bezier(0, 0, 1, 1), which is the definition of
+    the `linear` keyword rather than an approximation of it; writing the keyword
+    instead would be a value decided inside a component, however small, and a
+    bare `linear` reads as no choice having been made where `continuous` reads
+    as a choice somebody can disagree with.
+
+    It keeps spinning under prefers-reduced-motion, and the argument for that is
+    with the reduced-motion rules above rather than here, because the decision
+    is the deliberate absence of a rule and an absence cannot carry a comment.
 
     Rotation is not mirrored under RTL and must not be: clockwise is clockwise
     in every locale (§5, the same reason a clock does not mirror).
   */
-  animation: mz-button-spin var(--duration-500) linear infinite;
+  animation: mz-button-spin var(--cycle-spin) var(--easing-continuous) infinite;
 }
 
 @keyframes mz-button-spin {

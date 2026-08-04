@@ -35,12 +35,12 @@ It is written in the order every later component follows, and the order is not a
 | Content | `span.mz-button__content` | always | The flex row. Mirrors with `dir` on its own. |
 | Icon | `span.mz-button__icon` | `icon` is passed | `aria-hidden`. Decorative by construction. |
 | Label | `span.mz-button__label` | always | Carries the accessible name and the Arabic optical correction. |
-| Busy indicator | `span.mz-button__busy` | `loading` | `aria-hidden`. Shares the stack cell with the content. |
-| Focus indicator | — | `:focus-visible` | Three bands, two tones, painted outside the border box. |
+| Busy indicator | `span.mz-button__busy` | `loading` | `aria-hidden`. Shares the stack cell with the content. Rotates at `cycle.spin`, on `easing.continuous`, and keeps rotating under reduced motion. |
+| Focus indicator | — | `:focus-visible` | Three bands, two tones, painted outside the border box. Never transitions — it appears on the frame focus lands. |
 
 **The stack is the load-bearing part.** Content and indicator occupy the same grid cell, so the control's inline size is `max(label, indicator)` in both states, which is the label. That is the entire mechanism by which a loading button does not resize: nothing is measured in JavaScript, nothing is pinned, and there is no `min-width` set from a previous render. The label is hidden by `opacity: 0` rather than removed, which keeps its box *and* keeps it in the accessibility tree — the button holds its accessible name for the whole of the busy state.
 
-There is no wrapper element outside the `<button>` and there will not be one. A control that renders a `<div>` around itself cannot be placed in a flex row, a grid cell or an inline run without the parent discovering the wrapper.
+There is no wrapper element outside the `<button>` and there will not be one. A control that renders a `<div>` around itself cannot be placed in a flex row, a grid cell or an inline run without the parent discovering the wrapper. It is also what keeps the press feedback honest: the scale is applied to the control itself, so what shrinks under the finger is exactly the thing that was pressed, rather than a box drawn around it.
 
 ---
 
@@ -49,7 +49,7 @@ There is no wrapper element outside the `<button>` and there will not be one. A 
 **What Button owns:**
 
 - Rendering a real `<button>` with an explicit `type` attribute.
-- Its own visual states — rest, hover, focus, busy, disabled — drawn only from declared tokens.
+- Its own visual states — rest, hover, press, focus, busy, disabled — drawn only from declared tokens, and its own motion between them, timed and curved only from declared tokens.
 - Its own hit target floor, and its own inline floor for short labels.
 - Correct layout under any `dir` and correct type under any `lang`, without being told which.
 - Blocking activation when it is busy or unavailable, and saying so to assistive technology.
@@ -114,20 +114,62 @@ Until the tokens land, a Move screen that wants the geometry it had names the st
 
 ## States
 
-| State | Trigger | What changes | What does not |
-|---|---|---|---|
-| Rest | — | — | — |
-| Hover | pointer, and only when enabled and not busy | `primary` takes `action.primary-hover`; `secondary` and `ghost` take a `surface.sunken` ground | size, position, shape |
-| Focus | `:focus-visible` | the three-band indicator appears outside the border box | size, position, shape |
-| Busy | `loading` | `aria-busy`, `aria-disabled`, activation blocked, content at `opacity: 0`, indicator shown | **size**, accessible name, focusability, variant colours |
-| Disabled | `disabled` | the platform attribute; all three variants collapse to `surface.sunken` + `text.secondary`, edge transparent | size |
-| Busy **and** disabled | both | disabled wins the paint; both attributes are set | — |
+| State | Trigger | What changes | What does not | Motion |
+|---|---|---|---|---|
+| Rest | — | — | — | — |
+| Hover | pointer, and only when enabled and not busy | `primary` takes `action.primary-hover`; `secondary` and `ghost` take a `surface.sunken` ground | size, position, shape | `background-color`, `duration.100`, `easing.entrance` — **only on a device with a real hover** |
+| Press | `:active`, and only when enabled and not busy | `transform: scale(0.97)` | colour, size in layout, position, shape | `transform`, `duration.100`, `easing.entrance`. Removed under reduced motion |
+| Focus | `:focus-visible` | the three-band indicator appears outside the border box | size, position, shape | **none, deliberately** |
+| Busy | `loading` | `aria-busy`, `aria-disabled`, activation blocked, content at `opacity: 0`, indicator shown | **size**, accessible name, focusability, variant colours | the indicator rotates: `cycle.spin`, `easing.continuous`, `infinite` |
+| Disabled | `disabled` | the platform attribute; all three variants collapse to `surface.sunken` + `text.secondary`, edge transparent | size | none — a disabled control matches neither the hover nor the press selector |
+| Busy **and** disabled | both | disabled wins the paint; both attributes are set | — | the indicator still rotates |
 
-**No state changes the size of the control.** That is one rule with three consequences: the focus indicator paints outside the border box rather than as a border, the busy indicator shares the label's grid cell rather than taking a column, and hover changes colour only. A control that grows at the moment it is being pointed at or pressed is a different defect from the one each of those mechanisms was chosen to avoid, and it is worse than all of them.
+**No state changes the size of the control.** That is one rule with four consequences: the focus indicator paints outside the border box rather than as a border, the busy indicator shares the label's grid cell rather than taking a column, hover changes colour only, and the press is a `transform` rather than a padding change. A transform is drawn after layout — it changes what the pixels look like and not what the box measures — so a pressed button occupies exactly the space it occupied at rest and nothing beside it moves. A control that grows at the moment it is being pointed at, or that nudges its neighbours at the moment it is pressed, is a different defect from the one each of those mechanisms was chosen to avoid, and it is worse than all of them.
+
+**The press is the state that most decides whether the control feels like it heard you.** It is also the one v0 never had: none of `.btn`, `.market-btn`, `.mk-btn` or `.mv-action` has an `:active` rule, so all four of them are visually identical between pointer-down and pointer-up. On a touch screen that is the whole gap — there is no hover to have said anything first, and the press is the only acknowledgement available before the action resolves.
+
+**Only `transform` and `background-color` are ever transitioned, and both lists name their properties.** `transition: all` appears nowhere and must not: it is the declaration that animates whatever property is added next without anybody choosing to. Nothing that could cause a layout is in either list. `background-color` is the one property in the file that is neither `transform` nor `opacity`, and it is there because [decision 010](../../../../decisions/010-contrast-is-a-token-layer-guarantee.md) rules out the alternative — a translucent overlay faded with `opacity` would render a hover colour no token declares, which is the same defect the disabled state was rebuilt to avoid. A paint on the control's own box cannot reflow anything, so the cost is bounded and named.
 
 **No state uses `opacity` to produce a colour.** v0 carries `opacity: 0.5` on the disabled button in all three stylesheets, which renders a foreground no token declares and therefore a contrast ratio `check:contrast` cannot see. The disabled state here is a declared pair — `text.secondary` on `surface.sunken`, gated at the full 4.5 text threshold — and the busy state's `opacity: 0` renders no foreground at all, so there is no pairing to declare.
 
-**No state has a transition.** There is no motion scale in `content/tokens/`; see Constraints.
+### Motion
+
+Every duration, cycle length and curve below resolves from `content/tokens/primitive/motion.json`. There are no literals: the note this section replaces said there were no state transitions *because there was no motion scale*, and the scale now exists.
+
+**The instant tier, for everything a hand triggers.** `duration.100`. The token layer names hover, press and focus as exactly what that tier is for, and puts the line at roughly 160ms — past it, a change stops reading as a consequence of the input and starts reading as a response to it.
+
+**A strong ease-out, for the same reason twice.** `easing.entrance`. A press wants most of its movement done before the eye finds it; `easing.move` is eased at both ends and its slow start is a delay on the leading edge of an answer to a finger, and `easing.exit` accelerates away, which is the one shape a press must never have. The hover colour takes the same curve because at 100ms the shape of a curve is not perceptible and two curves would imply a distinction nobody can see.
+
+> **One naming tension, recorded rather than worked around.** A press is not an arrival, and `easing.entrance` is named for the motion it describes. It is used here because it is the only strong ease-out in the scale and the curve is the right curve; what is missing is a name for it. If a second component reaches for the same curve on a state that is also not an arrival, the scale wants a fifth name and this component is the first evidence for it. That is a token-layer decision and it is not taken here.
+
+**The rotation is the exception to "never linear", and the exception is the rule restated.** `easing.continuous`, which resolves to `cubic-bezier(0, 0, 1, 1)` — the definition of the `linear` keyword rather than an approximation of it. A curve describes the shape of a change between two states; a rotation has no two states to be between, and an eased spinner visibly speeds up and slows down once per revolution, which reads as struggling rather than working. The token is named for the motion and not for the shape, so using it on a transition means writing a word that is false about a transition. That is the cheapest guard the naming layer can offer, and it is why the component writes `var(--easing-continuous)` rather than the keyword: a bare `linear` reads as no choice having been made.
+
+**The cycle is 800ms, and 800 is a decision.** `cycle.spin`, not a duration tier — the length of an endless animation is a cycle, and every value in the duration ramp is the length of a change with a start and an end. It also matters that it is fast: a quicker rotation makes an identical wait *feel* shorter, and there is nothing to be won by a stately one. The floor is real too — below roughly 600ms a 2px ring stops reading as something rotating and starts reading as something flickering.
+
+**The focus indicator does not transition, and that is a decision rather than an omission.** It appears on the frame the element takes focus. A ring that fades in is a ring that is not yet there while a keyboard user is deciding whether they moved.
+
+**The hover transition is gated to `(hover: hover) and (pointer: fine)`.** A touch device fires hover on tap and leaves it applied after the finger has gone, so an ungated hover *animation* draws the eye to a state that is already false. Note precisely what is gated: the transition, not the hover rule. The sticky hover state itself belongs to the rule, it predates this section, and it is not fixed here — a change to when the hover *colour* applies is a change to the States table above and wants its own argument.
+
+**The press does not break the focus indicator.** This was measured rather than assumed, because it is the kind of thing that is fine in one mechanism and broken in the other. Both mechanisms paint outside the border box and both are part of the element's own rendering, so a `transform` scales them along with the control: at `md`, the 8px outer extent becomes 7.76px and the 2px outline becomes 1.94px while the pointer is down, and both return on release. The indicator stays present, stays proportional, and keeps every ratio [decision 019](../../../../decisions/019-the-focus-indicator-is-two-tone.md) argued — those are colours, and a scale does not touch a colour. What it does not do is disappear, clip, or change shape, which are the three ways a transform is normally found to have broken a ring.
+
+### Reduced motion — fewer and gentler, not zero
+
+The blanket `animation-duration: 0.01ms !important` that circulates as the reduced-motion snippet is refused here. It is one statement about every animation on a page, and a user who sets the preference is not asking for an interface with no feedback in it — they are asking not to be moved. `duration.0` exists so that a component can remove movement one property at a time, and the token's own description says why: a global substitution decides nothing, because it cannot tell a slide from a spinner.
+
+| Under `prefers-reduced-motion: reduce` | What happens | Why |
+|---|---|---|
+| Press scale | **removed** — `transform: none`, and the transition it rode on stated as `duration.0` | It is the only movement in the component and it is polish rather than information. Removing only the duration would leave the control still snapping to 97 per cent, which is a scale that merely happens instantly. |
+| Hover colour transition | **kept**, at `duration.100` | It aids comprehension — it says which control the pointer is on — and nothing about it moves. |
+| Focus indicator | unchanged | It never transitioned. |
+| Busy indicator | **keeps rotating**, unchanged | Argued below. |
+
+**Why the spinner keeps spinning.** Three reasons, in the order they decided it.
+
+- **A busy indicator that stops indicating is a bug, not an accommodation.** The rotation is the state's only visible carrier. `aria-busy` carries it to assistive technology, but a sighted user with the preference set would be left looking at a static ring — indistinguishable from a decorative border on a control that has simply stopped responding, at the exact moment they are waiting to find out whether their press did anything.
+- **The preference is about being moved, and a ring rotating about its own centre does not move.** Every point on it stays inside its own 16px box. There is no translation across the viewport, no parallax and no change of scale, which are the three things the vestibular case is actually about.
+- **Every alternative costs a token that does not exist.** Slowing it needs a second `cycle` value. Swapping the rotation for an opacity pulse needs a `cycle.pulse` — the length of an endless animation is a cycle and not a duration tier, and reaching for `duration.500` to time a pulse is precisely the substitution `motion.json`'s second group was written to prevent. Neither token is invented here, so neither alternative is available, and the one that is available is also the right one.
+
+**The cost, stated.** A reduced-motion user gets no press acknowledgement at all — the platform's own and nothing else. The fix is not a smaller scale, because a small movement is still movement; it is a non-motion cue, and the only honest one is a colour. There is no `action.pressed` ground in `content/tokens/` to draw it with, and inventing one would be designing a token backwards from a component. It is recorded in Constraints as the gap this section opened.
 
 ### What a busy button says
 
@@ -193,12 +235,17 @@ The list has no `id`, no `name`, no `form`, no `aria-describedby`, no `ref`. A f
 
 `fullWidth` is the one layout escape hatch in the API, and 020 keeps it while saying it is uneasy: unlike a wrong variant, a wrong `fullWidth` looks fine. It survives because v0 did not avoid the problem by omitting it — `.mv-action` is `display: block; width: 100%` unconditionally, so Move hardcoded the choice into a stylesheet where it looked like a fact. It is named as an escape hatch here so its spread can be measured. If it appears on a large share of call sites, layout has leaked into the control.
 
-### Two tokens this component asked for and did not find
+### What this component asked the token layer for
 
-Both are recorded here rather than invented, because inventing either would be a system decision taken inside one component.
+**One of them arrived.** The motion scale that this section used to report as missing is now `content/tokens/primitive/motion.json`. The busy indicator's `--duration-500` was a placeholder with no fallback, deliberately invalid at computed-value time so that the ring stayed static; it is now `cycle.spin` on `easing.continuous`, and it spins. The rest of the Motion section above is what the scale bought. Worth recording that the placeholder was also *wrong*, not merely unresolved: the length of an endless rotation is a cycle and not a transition tier, so the name it had named a value from the wrong group.
 
-- **No motion scale.** `content/tokens/` has colour, dimension, elevation and typography, and nothing for duration or easing. So there are no state transitions, and the busy indicator does not spin: the animation names `--duration-500`, takes no fallback, and is therefore invalid at computed-value time. A static ring is the honest rendering of a system with no motion tokens, and the day a motion scale is declared it spins with no change to `Button.css`. **This blocks nothing except the polish of one state**, which is why it is a report rather than a refusal to ship.
-- **No tap-target semantic and no border-width scale.** 44 CSS px is a floor from WCAG, not from Mizan, and there is no `size.tap-target` to name it — so `md` takes the next spacing step that clears it, `space.600` at 48px, rather than composing 44 out of two steps. The 1px control edge is the one number written rather than resolved in the whole stylesheet; `border.default` and `border.control` are colours, not widths, and both decision 019 and `packages/tokens/docs/button.md` describe the edge as 1px in prose and in their reference CSS.
+**Three are still outstanding**, recorded here rather than invented, because inventing any of them would be a system decision taken inside one component.
+
+- **No tap-target semantic and no border-width scale.** 44 CSS px is a floor from WCAG, not from Mizan, and there is no `size.tap-target` to name it — so `md` takes the next spacing step that clears it, `space.600` at 48px, rather than composing 44 out of two steps. The 1px control edge is one of two numbers written rather than resolved in the whole stylesheet; `border.default` and `border.control` are colours, not widths, and both decision 019 and `packages/tokens/docs/button.md` describe the edge as 1px in prose and in their reference CSS.
+- **No scale ramp, which is why `0.97` is the second written number.** `dimension.json` holds a `space` ramp and a `radius` ramp and both are lengths; a fraction of a control's own size is not a length, so no spacing step could carry the press scale even in principle. It is named at the point it is written, on the same terms as the border width: an honest literal with the gap recorded beats a token invented backwards from one component. A second component wanting a press scale is what turns this into a token, and the value it would carry is a ratio rather than a distance.
+- **No `action.pressed` ground**, which is the gap the reduced-motion rules opened. A reduced-motion user gets no press acknowledgement, and the only non-motion cue available is a colour the token layer has not declared. It is a smaller gap than it sounds — it affects one state for users with one preference set — and it is the honest price of removing movement rather than shrinking it.
+
+**One naming gap rather than a missing value:** `easing.entrance` is the right curve for the press and the wrong word for it. See the Motion section.
 
 One pairing this component renders is not yet in `pairs.json`: **`border.control` on `surface.sunken`**, produced by `secondary`'s hover ground meeting its own edge. It passes on the numbers — **3.83:1 in light and 3.84:1 in dark**, in all four combinations, against the 3.0 non-text bar — but an undeclared pairing is an unchecked one whether or not it currently passes, which is the whole argument of decision 010. It wants an entry, at context `ui`, and it is the one gap between what this component draws and what the gate can see.
 
@@ -233,6 +280,7 @@ Every directional value in this component is derived. §6's test for a component
 - **All spacing is logical** — `padding-inline`, `padding-block`, `min-inline-size`, `min-block-size`, `inline-size`.
 - **The focus indicator mirrors for free.** Both `outline` and `box-shadow` follow the element's own `border-radius`, including logical corners, so nothing about the indicator has a side.
 - **The busy indicator's rotation is not mirrored, and must not be.** Clockwise is clockwise in every locale — §5, the same reason a clock does not mirror.
+- **The press is a scale and not a translate**, which is an RTL decision as much as a motion one. A translate has a direction and every directional value in this component is derived; a scale is the one transform with no side, so the pressed control is identical under either `dir` with no rule of its own — the same reason the focus indicator needs none.
 - **Whether the icon's glyph mirrors is the icon's flag, never Button's.** A button that mirrored what it was handed would mirror a "turn right" glyph in a Move screen, and a turn-by-turn icon describes a physical manoeuvre rather than an interface direction. The default is *do not mirror*.
 - **`letter-spacing` is `0` and is never overridden.** Arabic is cursive and joined; tracking breaks the joins and renders the text wrong rather than differently styled. There is one tracking token in the system and this is it. v0 applies a global `0.01em` that reaches every Arabic label, and `.mv-action` restates it on the button itself.
 - **The Arabic face and leading arrive through `:lang(ar)`**, scoped to the subtree that sets the language rather than to `:root` — [decision 013](../../../../decisions/013-script-is-a-mode-not-a-parallel-scale.md), because an Arabic page contains Latin runs and an English page contains Arabic ones. `font-family.arabic`, and `line-height.arabic-tight` at 1.45 against Latin's 1.25.
@@ -296,7 +344,10 @@ Every value, and this is the table that has to keep matching `packages/tokens/do
 | Weight, face, leading | `font-weight.medium`, `font-family.sans`, `line-height.tight` |
 | Arabic face, leading, correction | `font-family.arabic`, `line-height.arabic-tight`, `font-size.arabic-scale` |
 | Tracking | `letter-spacing.none` |
-| Duration | **none — see Constraints** |
+| Hover and press duration | `duration.100` |
+| Hover and press curve | `easing.entrance` |
+| Press duration under reduced motion | `duration.0` |
+| Busy indicator cycle / curve | `cycle.spin` / `easing.continuous` |
 
 ### To Figma
 
