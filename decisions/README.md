@@ -39,3 +39,5 @@ Entries are numbered sequentially in the order decisions actually happen. Number
 | [012](./012-western-numerals-and-what-follows.md) | Western numerals in both locales, and the formatted/transcribed split | 2 |
 | [013](./013-script-is-a-mode-not-a-parallel-scale.md) | The Arabic type scale is a mode, and script becomes a third dimension | 2 |
 | [014](./014-direction-is-not-a-mode-dimension.md) | Direction is not a mode dimension — logical properties make it unnecessary | 3 |
+| [015](./015-rung-2-has-a-plan-floor.md) | Governance rung 2 has a plan floor, and the floor is published | 3 |
+| [016](./016-build-the-read-bridge-rather-than-adopt-figma-console-mcp.md) | The variable read bridge is built read-only, not adopted from `figma-console-mcp` | 3 |

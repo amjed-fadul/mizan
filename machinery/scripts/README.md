@@ -162,10 +162,22 @@ that does not run.
 **`--file-key <key>`** (or `$FIGMA_FILE_KEY`, with `$FIGMA_TOKEN`) — a live read
 of `GET /v1/files/<key>/variables/local`. `--save-snapshot <file>` writes what
 came back, so a live run becomes tomorrow's offline fixture. Figma's variables
-**write** API is Enterprise-gated, which is why `machinery/figma-plugin/` exists;
-reading is the half this gate needs. If the read endpoint is unavailable on a
-given plan, nothing changes here — the plugin can export the same shape and the
-snapshot path takes it.
+**write** API is Enterprise-gated, which is why `machinery/figma-plugin/` exists.
+
+**Correction.** This section previously said reading was "the half this gate
+needs" and that an unavailable read endpoint would change nothing here. Both are
+wrong. Figma gates the variables REST API **in both directions** — `GET
+/v1/files/:key/variables/local` needs the `file_variables:read` scope *and* a
+Full seat in an Enterprise org. So below Enterprise the live path is not merely
+inconvenient, it is unavailable, and the snapshot path is the only one.
+
+That is not a like-for-like substitute and this file should not imply it is. A
+snapshot is a photograph, not a window: it shows that the display agreed when it
+was taken, which is a weaker claim than that it agrees now. The case it cannot
+cover is the one the ladder most wants — a hand-edit nobody reported, found
+without anyone running a sync. The dashboard says so on its own face, and
+[decision 015](../../decisions/015-rung-2-has-a-plan-floor.md) records the floor
+and what degrades below it.
 
 Neither source given is an error, not a quiet pass. Reporting zero drift because
 there was nothing to compare against is the failure mode this gate exists to

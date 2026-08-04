@@ -645,6 +645,10 @@ function renderPage({ title, root, source, generatedAt, schema, contrast, drift,
   const first = palettes[0];
   const rootAttributes = first.attributes.map((a) => ` data-${escapeHtml(a.dimension)}="${escapeHtml(a.mode)}"`).join('');
 
+  // A snapshot is a photograph, not a window. "Aligned" against one means the display
+  // agreed when the snapshot was taken; a hand-edit since then is invisible here.
+  const observed = source != null && source.kind === 'snapshot';
+
   const sourceLine = source === null || source === undefined
     ? 'no Figma source given'
     : source.kind === 'snapshot'
@@ -673,10 +677,15 @@ ${renderCss(palettes)}
 </header>
 
 <section class="verdict ${allOk ? 'verdict-ok' : 'verdict-fail'}">
-  <span class="verdict-state">${allOk ? 'ALIGNED' : 'DRIFTED'}</span>
+  <span class="verdict-state">${allOk ? (observed ? 'ALIGNED AS OBSERVED' : 'ALIGNED') : 'DRIFTED'}</span>
   <span class="verdict-detail">${escapeHtml(
     allOk
-      ? 'All three gates pass. The display agrees with the source.'
+      ? observed
+        ? 'All three gates pass against a snapshot. This says the display agreed with the source '
+          + 'when the snapshot was taken — not that it agrees now. A hand-edit made since then is '
+          + 'invisible to this page. Reading Figma live needs the variables REST API, which is '
+          + 'Enterprise-only; see decisions/015.'
+        : 'All three gates pass, read live. The display agrees with the source.'
       : `${[!schemaOk && 'schema', !contrastOk && 'contrast', !driftOk && 'drift'].filter(Boolean).join(', ')} failing.`,
   )}</span>
 </section>
