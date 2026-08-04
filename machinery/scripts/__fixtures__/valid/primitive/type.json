@@ -1,0 +1,7 @@
+{
+  "font-family": {
+    "$type": "fontFamily",
+    "$description": "Fixture only. Declared as a CSS stack, which is the whole reason it is here: a Figma variable holds one string, so the projection has to choose, and both ends of the sync have to choose the same way or the drift is permanent.",
+    "sans": { "$value": ["Fixture Sans", "Fixture Fallback", "sans-serif"] }
+  }
+}

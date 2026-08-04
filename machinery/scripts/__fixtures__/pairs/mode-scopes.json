@@ -1,0 +1,32 @@
+{
+  "$description": "Fixture only, for check-contrast.mjs against valid/. Four pairings that all pass, declared with four different mode scopes, so the selftest can assert how many combinations each one is checked in rather than only that the run went green. Every pairing here is one of valid/pairs.json's, so nothing about the arithmetic is new — the subject is the scope, and the count is the evidence.",
+  "pairs": [
+    {
+      "foreground": "text.primary",
+      "background": "surface.default",
+      "context": "text",
+      "modes": ["theme.light", "theme.dark"],
+      "$description": "Both modes of one dimension. This is the declaration that used to match nothing: a combination holds one mode per dimension, so requiring both at once was unsatisfiable and the pair was skipped everywhere, silently. It reads as 'check this in both themes' and now means it. 4 checks."
+    },
+    {
+      "foreground": "text.secondary",
+      "background": "surface.default",
+      "context": "text",
+      "modes": ["theme.dark"],
+      "$description": "One mode of one dimension. Unchanged by the scope rule — the old conjunction and the new per-dimension rule agree wherever the old one selected anything. 2 checks."
+    },
+    {
+      "foreground": "text.on-action",
+      "background": "action.primary",
+      "context": "text",
+      "modes": ["theme.dark", "density.compact"],
+      "$description": "One mode of each of two dimensions, which is still an and: the single combination that is both. Also unchanged, and here to prove that narrowing across dimensions survived the change rather than being traded for the other reading. 1 check."
+    },
+    {
+      "foreground": "border.default",
+      "background": "surface.default",
+      "context": "ui",
+      "$description": "No scope at all, which is every combination. The control. 4 checks."
+    }
+  ]
+}

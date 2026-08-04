@@ -1,0 +1,26 @@
+{
+  "$description": "Fixture only, for check-contrast.mjs against valid/. A mode id misspelt on a pair and another misspelt on an exception. Neither is a value defect and neither used to be reported: an unrecognised mode simply matched no combination, so the pair vanished from the run and the exception stopped applying, and the gate printed a smaller number of checks and the word pass. Do not correct the spellings — they are the test.",
+  "pairs": [
+    {
+      "foreground": "text.primary",
+      "background": "surface.default",
+      "context": "text",
+      "modes": ["theme.lite"],
+      "$description": "One character wrong. The pairing is real and passes comfortably in every combination; the typo used to remove it from the run entirely."
+    },
+    {
+      "foreground": "border.default",
+      "background": "surface.default",
+      "context": "ui",
+      "$description": "Sound, and here so the run still has something to check — a file in which nothing at all is evaluated would prove the error was raised without proving the rest of the gate kept working."
+    }
+  ],
+  "exceptions": [
+    {
+      "foreground": "border.default",
+      "background": "surface.default",
+      "reason": "Fixture only. The waiver itself is sound; its mode id is not. An exception that silently stops applying fails safe rather than open, but it is still a documented decision that has quietly left the building, so the unknown id is an error here too.",
+      "modes": ["theme.darc"]
+    }
+  ]
+}

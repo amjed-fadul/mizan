@@ -15,6 +15,7 @@ This seam is not stylistic tidiness. It is what makes extracting a headless open
 | Path | Purpose | Arrives |
 |---|---|---|
 | `scripts/` | Deterministic checks and build scripts | Stage 2 |
+| `figma-plugin/` | **Mizan Sync** — one-way sync from a DTCG token root into Figma variables | Stage 3 |
 | `metadata/` | Structured per-component JSON — the agents' knowledge base | Stage 4 |
 | `agents/` | Agent instruction files | Stage 5 |
 

@@ -1,0 +1,349 @@
+{
+  "status": 200,
+  "error": false,
+  "meta": {
+    "variableCollections": {
+      "VariableCollectionId:1:0": {
+        "id": "VariableCollectionId:1:0",
+        "name": "primitive",
+        "modes": [
+          {
+            "modeId": "1:0",
+            "name": "Default"
+          }
+        ],
+        "defaultModeId": "1:0",
+        "remote": false,
+        "hiddenFromPublishing": false
+      },
+      "VariableCollectionId:2:0": {
+        "id": "VariableCollectionId:2:0",
+        "name": "theme",
+        "modes": [
+          {
+            "modeId": "2:0",
+            "name": "light"
+          },
+          {
+            "modeId": "2:1",
+            "name": "dark"
+          }
+        ],
+        "defaultModeId": "2:0",
+        "remote": false,
+        "hiddenFromPublishing": false
+      },
+      "VariableCollectionId:3:0": {
+        "id": "VariableCollectionId:3:0",
+        "name": "density",
+        "modes": [
+          {
+            "modeId": "3:0",
+            "name": "Default"
+          }
+        ],
+        "defaultModeId": "3:0",
+        "remote": false,
+        "hiddenFromPublishing": false,
+        "_defect": "not drift by itself: this collection now has one mode, which is the invariant convention. No mode-missing-in-figma may be reported for the dimension it used to model."
+      },
+      "VariableCollectionId:4:0": {
+        "id": "VariableCollectionId:4:0",
+        "name": "semantic",
+        "modes": [
+          {
+            "modeId": "4:0",
+            "name": "Default"
+          }
+        ],
+        "defaultModeId": "4:0",
+        "remote": false,
+        "hiddenFromPublishing": false
+      }
+    },
+    "variables": {
+      "VariableID:1:1": {
+        "id": "VariableID:1:1",
+        "name": "color/neutral/0",
+        "variableCollectionId": "VariableCollectionId:1:0",
+        "resolvedType": "COLOR",
+        "description": "",
+        "valuesByMode": {
+          "1:0": {
+            "r": 1,
+            "g": 1,
+            "b": 1,
+            "a": 1
+          }
+        }
+      },
+      "VariableID:1:2": {
+        "id": "VariableID:1:2",
+        "name": "color/neutral/100",
+        "variableCollectionId": "VariableCollectionId:1:0",
+        "resolvedType": "COLOR",
+        "description": "",
+        "valuesByMode": {
+          "1:0": {
+            "r": 0.94,
+            "g": 0.94,
+            "b": 0.94,
+            "a": 1
+          }
+        }
+      },
+      "VariableID:1:3": {
+        "id": "VariableID:1:3",
+        "name": "color/neutral/400",
+        "variableCollectionId": "VariableCollectionId:1:0",
+        "resolvedType": "COLOR",
+        "description": "",
+        "valuesByMode": {
+          "1:0": {
+            "r": 0.55,
+            "g": 0.55,
+            "b": 0.55,
+            "a": 1
+          }
+        }
+      },
+      "VariableID:1:4": {
+        "id": "VariableID:1:4",
+        "name": "color/neutral/500",
+        "variableCollectionId": "VariableCollectionId:1:0",
+        "resolvedType": "COLOR",
+        "description": "",
+        "valuesByMode": {
+          "1:0": {
+            "r": 0.5,
+            "g": 0.5,
+            "b": 0.5,
+            "a": 1
+          }
+        }
+      },
+      "VariableID:1:5": {
+        "id": "VariableID:1:5",
+        "name": "color/neutral/600",
+        "variableCollectionId": "VariableCollectionId:1:0",
+        "resolvedType": "COLOR",
+        "description": "",
+        "valuesByMode": {
+          "1:0": {
+            "r": 0.4,
+            "g": 0.4,
+            "b": 0.4,
+            "a": 1
+          }
+        }
+      },
+      "VariableID:1:6": {
+        "id": "VariableID:1:6",
+        "name": "color/neutral/900",
+        "variableCollectionId": "VariableCollectionId:1:0",
+        "resolvedType": "COLOR",
+        "description": "",
+        "valuesByMode": {
+          "1:0": {
+            "r": 0.18,
+            "g": 0.18,
+            "b": 0.18,
+            "a": 1
+          }
+        }
+      },
+      "VariableID:1:7": {
+        "id": "VariableID:1:7",
+        "name": "color/neutral/1000",
+        "variableCollectionId": "VariableCollectionId:1:0",
+        "resolvedType": "COLOR",
+        "description": "",
+        "valuesByMode": {
+          "1:0": {
+            "r": 0.06,
+            "g": 0.06,
+            "b": 0.06,
+            "a": 1
+          }
+        }
+      },
+      "VariableID:1:8": {
+        "id": "VariableID:1:8",
+        "name": "color/accent/500",
+        "variableCollectionId": "VariableCollectionId:1:0",
+        "resolvedType": "COLOR",
+        "description": "",
+        "valuesByMode": {
+          "1:0": {
+            "r": 0.1,
+            "g": 0.35,
+            "b": 0.2,
+            "a": 1
+          }
+        }
+      },
+      "VariableID:1:9": {
+        "id": "VariableID:1:9",
+        "name": "space/100",
+        "variableCollectionId": "VariableCollectionId:1:0",
+        "resolvedType": "FLOAT",
+        "description": "",
+        "valuesByMode": {
+          "1:0": 4
+        }
+      },
+      "VariableID:1:10": {
+        "id": "VariableID:1:10",
+        "name": "space/200",
+        "variableCollectionId": "VariableCollectionId:1:0",
+        "resolvedType": "FLOAT",
+        "description": "",
+        "valuesByMode": {
+          "1:0": 8
+        }
+      },
+      "VariableID:1:11": {
+        "id": "VariableID:1:11",
+        "name": "font-family/sans",
+        "variableCollectionId": "VariableCollectionId:1:0",
+        "resolvedType": "STRING",
+        "description": "",
+        "_note": "The source declares a three-family stack. This is what machinery/figma-plugin actually writes for it: the first family alone, because a Figma variable holds one string and binds it to an installed font by name. The narrowing rule lives in machinery/scripts/lib/projection.mjs and both the plugin and check-drift.mjs import it, so this value cannot drift out of step with the syncer without this fixture failing.",
+        "valuesByMode": {
+          "1:0": "Fixture Sans"
+        }
+      },
+      "VariableID:2:1": {
+        "id": "VariableID:2:1",
+        "name": "surface/default",
+        "variableCollectionId": "VariableCollectionId:2:0",
+        "resolvedType": "COLOR",
+        "description": "",
+        "valuesByMode": {
+          "2:0": {
+            "type": "VARIABLE_ALIAS",
+            "id": "VariableID:1:1"
+          },
+          "2:1": {
+            "type": "VARIABLE_ALIAS",
+            "id": "VariableID:1:7"
+          }
+        }
+      },
+      "VariableID:2:2": {
+        "id": "VariableID:2:2",
+        "name": "text/primary",
+        "variableCollectionId": "VariableCollectionId:2:0",
+        "resolvedType": "COLOR",
+        "description": "",
+        "valuesByMode": {
+          "2:0": {
+            "type": "VARIABLE_ALIAS",
+            "id": "VariableID:1:6"
+          },
+          "2:1": {
+            "type": "VARIABLE_ALIAS",
+            "id": "VariableID:1:2"
+          }
+        }
+      },
+      "VariableID:2:3": {
+        "id": "VariableID:2:3",
+        "name": "text/secondary",
+        "variableCollectionId": "VariableCollectionId:2:0",
+        "resolvedType": "COLOR",
+        "description": "",
+        "valuesByMode": {
+          "2:0": {
+            "type": "VARIABLE_ALIAS",
+            "id": "VariableID:1:5"
+          },
+          "2:1": {
+            "type": "VARIABLE_ALIAS",
+            "id": "VariableID:1:3"
+          }
+        }
+      },
+      "VariableID:2:4": {
+        "id": "VariableID:2:4",
+        "name": "text/on-action",
+        "variableCollectionId": "VariableCollectionId:4:0",
+        "resolvedType": "COLOR",
+        "description": "",
+        "valuesByMode": {
+          "4:0": {
+            "type": "VARIABLE_ALIAS",
+            "id": "VariableID:1:1"
+          }
+        }
+      },
+      "VariableID:2:5": {
+        "id": "VariableID:2:5",
+        "name": "action/primary",
+        "variableCollectionId": "VariableCollectionId:4:0",
+        "resolvedType": "COLOR",
+        "description": "",
+        "valuesByMode": {
+          "4:0": {
+            "type": "VARIABLE_ALIAS",
+            "id": "VariableID:1:8"
+          }
+        }
+      },
+      "VariableID:2:6": {
+        "id": "VariableID:2:6",
+        "name": "border/default",
+        "variableCollectionId": "VariableCollectionId:4:0",
+        "resolvedType": "COLOR",
+        "description": "",
+        "valuesByMode": {
+          "4:0": {
+            "type": "VARIABLE_ALIAS",
+            "id": "VariableID:1:4"
+          }
+        }
+      },
+      "VariableID:2:7": {
+        "id": "VariableID:2:7",
+        "name": "border/subtle",
+        "variableCollectionId": "VariableCollectionId:4:0",
+        "resolvedType": "COLOR",
+        "description": "Fixture only. Paired with surface.default in the decorative context, where it sits far below every WCAG threshold and the gate still passes. That is the assertion: decorative is not a low bar, it is no bar.",
+        "valuesByMode": {
+          "4:0": {
+            "type": "VARIABLE_ALIAS",
+            "id": "VariableID:1:2"
+          }
+        }
+      },
+      "VariableID:2:9": {
+        "id": "VariableID:2:9",
+        "name": "typeface/body",
+        "variableCollectionId": "VariableCollectionId:4:0",
+        "resolvedType": "STRING",
+        "description": "",
+        "valuesByMode": {
+          "4:0": {
+            "type": "VARIABLE_ALIAS",
+            "id": "VariableID:1:11"
+          }
+        }
+      },
+      "VariableID:3:1": {
+        "id": "VariableID:3:1",
+        "name": "spacing/inset",
+        "variableCollectionId": "VariableCollectionId:3:0",
+        "resolvedType": "FLOAT",
+        "description": "",
+        "valuesByMode": {
+          "3:0": {
+            "type": "VARIABLE_ALIAS",
+            "id": "VariableID:1:10"
+          }
+        },
+        "_defect": "alias-target-mismatch: one value now speaks for every combination, and the source does not say the same thing in all of them."
+      }
+    }
+  },
+  "_fixture": "aligned.json after a whole mode dimension stopped being modelled — the collection is invariant, one value for every combination. The line this fixture draws: an unclaimed mode is only a gap when some collection has taken the dimension on. Here none has, so the value is compared against every combination and the disagreement surfaces as a value finding, not as silence."
+}

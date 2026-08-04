@@ -61,7 +61,7 @@
     },
     "control": {
       "$value": "{neutral.500}",
-      "$description": "The boundary of an interactive control — an input, a checkbox, an unfilled button. Gated at the 1.4.11 non-text threshold, and it is the tightest gated pair in the whole system: neutral.500 on white is 3.03:1 against a 3.0 bar, 0.03 of headroom. neutral.500 exists at that value for exactly this reason and nothing lighter can hold this role on a white ground. Dark mode has room to spare at neutral.600 (4.29:1), so light is the binding case here as it is almost everywhere else."
+      "$description": "The boundary of an interactive control — an input, a checkbox, an unfilled button. Gated at the 1.4.11 non-text threshold. READ THE VALUE THAT SHIPS, NOT THE ONE DECLARED HERE: the base is neutral.500, but theme.light and theme.dark both override it to neutral.600, so what renders is 4.29:1 in both themes — 1.29 above the 3.0 bar, and identical in all four mode combinations, which is why the build hoists it to the root block. neutral.500 on white would be 3.03:1, and an earlier version of this description called that the tightest gated pair in the system on the strength of the base value alone. It is not: the tightest gated pair is text.secondary on surface.sunken in light + Move, at 4.76:1 against a 4.5 bar, 0.26 of headroom. The lesson is that a base value overridden in every mode is not a value the system has — it is a default nothing selects, and describing it as though it renders is the easiest way to be wrong about your own tokens. neutral.500 still exists as the documented floor for a non-text mark on white; this token simply does not sit on it."
     }
   }
 }

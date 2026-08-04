@@ -17,12 +17,17 @@ Also not here: Mizan's values. A script may enforce that no raw hex appears in t
 | File | Purpose |
 |---|---|
 | `lib/tokens.mjs` | Shared library: load DTCG documents, resolve `$type` inheritance and aliases, compose modes, and do WCAG colour maths. No CLI. |
+| `lib/projection.mjs` | The one projection rule the drift detector and the Figma sync plugin cannot state separately. Imported by both. No CLI. |
+| `lib/ws-server.mjs` | A minimal WebSocket server, loopback only. Written rather than depended on: Node ships a client and no server, and a dependency here travels into every Stage 7 fork. No CLI. |
+| `lib/bridge.mjs` | The read bridge's protocol, server side. Asks a running plugin one question and has no vocabulary for a second. No CLI. |
 | `check-schema.mjs` | Structural gate over a token set. |
 | `check-contrast.mjs` | WCAG gate over the declared foreground/background pairs, in every mode combination. |
-| `selftest.mjs` | Runs both gates against both fixture sets and asserts the specific defects that come back. |
+| `check-drift.mjs` | Governance rung 2: compares a Figma variables snapshot against the token source. |
+| `health-dashboard.mjs` | All three gates rendered as one self-contained HTML page. |
+| `selftest.mjs` | Runs the gates against the fixture sets and asserts the specific defects that come back. |
 | `dtcg-adapt.mjs` | **Temporary.** Degrades DTCG 2025.10 values into what Style Dictionary can read today. Deleted when it can read them itself. |
 | `build-tokens.mjs` | The token build: gates, then adapt, then Style Dictionary, for every mode combination. |
-| `__fixtures__/` | One valid token set and one deliberately broken one. See its README. |
+| `__fixtures__/` | One valid token set, one deliberately broken one, and two Figma snapshots of the valid one. See its README. |
 
 The gates are Node 22, plain ESM, zero dependencies — Node built-ins only, and that is a constraint worth keeping: a governance gate that cannot run because an install failed is not a gate. The **build** is the one exception: it depends on `style-dictionary`. That is a deliberate line. A gate must run everywhere; a build only has to run where things are built.
 
@@ -32,12 +37,15 @@ The gates are Node 22, plain ESM, zero dependencies — Node built-ins only, and
 npm run check           # schema, then contrast
 npm run check:schema
 npm run check:contrast
+npm run check:drift -- --snapshot <file>    # rung 2: Figma against the source
+npm run check:drift -- --bridge             # the same, read live from the plugin
+npm run health -- --snapshot <file>         # the same three gates, as a page
 npm run selftest        # proves the gates reject things
 npm run adapt:tokens    # the adapter alone, for inspecting what SD is handed
 npm run build:tokens    # gates, then adapt, then build every mode combination
 ```
 
-Both checks take `--root <dir>` (defaulting to `$TOKENS_ROOT`, then to the repository's token directory), `--json` for machine-readable output, and `--quiet` to suppress the passing summary. `check-contrast.mjs` additionally takes `--pairs <file>` and a repeatable `--mode <id>`.
+Every gate takes `--root <dir>` (defaulting to `$TOKENS_ROOT`, then to the repository's token directory), `--json` for machine-readable output, and `--quiet` to suppress the passing summary. `check-contrast.mjs` additionally takes `--pairs <file>` and a repeatable `--mode <id>`; `check-drift.mjs` takes `--snapshot <file>`, `--bridge`, or `--file-key <key>`.
 
 An empty token root is reported as such and exits 0. There is nothing to reject, and that is stated in the output rather than implied by a green tick.
 
@@ -122,13 +130,300 @@ A translucent foreground is composited over its background before the ratio is c
 
 `exceptions` in the pairs file waive a specific pairing, optionally in specific modes, and every entry requires a `reason`. An exception is printed in the output whether it passes or fails — a silent exception is not an exception, it is a hole, and the point of keeping the list is that it can be read and counted.
 
+### Mode scopes, and a behaviour change
+
+A pair or an exception may carry a `"modes"` list to narrow itself to part of the combination space. **It now means: for every dimension the list mentions, the combination's mode for that dimension must be one of the listed ones.** Or within a dimension, and within a dimension only; still and across dimensions.
+
+It used to be a plain conjunction — a combination had to contain *every* listed mode. A combination holds exactly one mode per dimension, so `["theme.light", "theme.dark"]` was unsatisfiable and matched **zero** combinations. The most natural way anybody would write "check this in both themes" was the one way to switch the check off, and the gate printed a smaller number of checks and the word *pass*. A misspelt mode id did the same thing.
+
+The change is narrower than it sounds. Where the old rule selected anything at all — a list naming at most one mode per dimension — the two rules agree exactly, `["theme.dark", "density.compact"]` included. They differ only where the old rule selected nothing, which was never a declaration anybody meant to write. Nothing that had a meaning changes meaning; the declarations that had none acquire the obvious one.
+
+Two errors sit behind it, because the rule is not what makes this safe:
+
+- **`pair-mode-unknown` / `exception-mode-unknown`** — a mode id the token set does not define. Validated as the file is read, so a typo is a defect in the declaration rather than a filter that quietly excludes everything.
+- **`pair-never-evaluated`** — a declared pair that was checked in no combination at all, for any reason. This is the invariant rather than the rule: whatever the scope grammar is today or becomes later, and whatever `--mode` narrowed the run to, this gate does not report a pass having skipped a pairing somebody declared. Declaring a pairing is asking for it to be checked, and the answer to that request is never silence.
+
+There is deliberately no equivalent error for an exception that matches nothing, and the asymmetry is the argument. A pair whose scope selects nothing fails **open** — the pairing goes unchecked and the build passes. An exception whose scope selects nothing fails **safe** — the pairing is checked against its full threshold and can still fail the build. Only the first is a hole.
+
 Exit 1 on any non-excepted failure. Output names the pair, the mode combination, the computed ratio, the threshold and both resolved hexes, so a CI log is readable without opening a file.
+
+## check-drift.mjs — governance rung 2
+
+Rung 1 checks the token source against itself. This checks **Figma against the
+token source**, and it is the gate that makes rule 1 enforceable rather than
+merely stated.
+
+**The direction is not negotiable and the output says so.** Figma is a display,
+never a source. Every finding carries a `remedy`, and every remedy runs outward
+— regenerate the variables from the JSON. There is no code path here that reads
+a Figma value into the token source, and there should never be one: that repair
+would make the display a source, and the next sync would silently undo it. The
+one finding whose fix is not a re-sync is `orphan-in-figma`, and it is not an
+exception to the direction — a variable the source never asked for is deleted in
+Figma, not imported.
+
+```
+node machinery/scripts/check-drift.mjs [--root <dir>] [--snapshot <file>]
+                                       [--file-key <key>] [--bridge]
+                                       [--bridge-port <n>] [--bridge-timeout <s>]
+                                       [--save-snapshot <file>]
+                                       [--json] [--quiet]
+```
+
+### Where the display comes from
+
+Three sources, and the offline one is first on purpose.
+
+**`--snapshot <file>`** — a saved Figma variables payload. This is what makes
+the detector testable with no credentials, in CI, and in `selftest.mjs`. A gate
+that only runs when somebody has a Figma token in their environment is a gate
+that does not run.
+
+**`--bridge`** — the live variables, read out of a running `machinery/figma-plugin/`
+over a WebSocket on the loopback interface. This is the route on every plan
+below Enterprise, because a plugin can read variables where the REST API cannot.
+The detector is the server and the plugin is the client, so the socket exists
+only while a read is running: there is no daemon and no port held between runs.
+`--bridge-port` and `--bridge-timeout` adjust it; the port defaults to 8791,
+which the plugin manifest also names.
+
+**It removes a copy-and-paste, not a person.** Figma Desktop still has to be
+open on the file, with the plugin running and its bridge switched on. Nothing
+here is unattended, and a run with nobody there fails on a timeout that says so
+rather than reporting a clean file. [Decision 016](../../decisions/016-build-the-read-bridge-rather-than-adopt-figma-console-mcp.md)
+is why this is ours rather than a dependency: the vocabulary on that socket is
+four words, none of which writes.
+
+**`--file-key <key>`** (or `$FIGMA_FILE_KEY`, with `$FIGMA_TOKEN`) — a live read
+of `GET /v1/files/<key>/variables/local`. Enterprise only, in practice — see the
+correction below. Figma's variables **write** API is Enterprise-gated too, which
+is why `machinery/figma-plugin/` exists.
+
+`--save-snapshot <file>` writes what came back, whichever of the three produced
+it, so a live run becomes tomorrow's offline fixture.
+
+**It refuses to write inside `--root`.** `lib/tokens.mjs` loads every `.json`
+under every subdirectory of the token root, so a snapshot saved there would be
+read back as *tokens* on the next run — rule 1 breached by a path nobody chose,
+and silently. The containment test resolves both paths rather than comparing
+strings, so a sibling directory whose name merely starts the same way is not
+caught by it.
+
+**Correction.** This section previously said reading was "the half this gate
+needs" and that an unavailable read endpoint would change nothing here. Both are
+wrong. Figma gates the variables REST API **in both directions** — `GET
+/v1/files/:key/variables/local` needs the `file_variables:read` scope *and* a
+Full seat in an Enterprise org. So below Enterprise the REST path is not merely
+inconvenient, it is unavailable.
+
+`--bridge` is the answer to that, and it is a narrow one. It restores a *live
+read* below Enterprise, so the photograph below can at least be taken on demand
+rather than remembered — but it does not restore an unattended one, because it
+runs through a plugin a person has to be sitting in front of.
+
+That is not a like-for-like substitute and this file should not imply it is. A
+snapshot is a photograph, not a window: it shows that the display agreed when it
+was taken, which is a weaker claim than that it agrees now. The case it cannot
+cover is the one the ladder most wants — a hand-edit nobody reported, found
+without anyone running a sync. The dashboard says so on its own face, and
+[decision 015](../../decisions/015-rung-2-has-a-plan-floor.md) records the floor
+and what degrades below it.
+
+Neither source given is an error, not a quiet pass. Reporting zero drift because
+there was nothing to compare against is the failure mode this gate exists to
+prevent.
+
+### The snapshot format
+
+Exactly the endpoint's payload, saved verbatim. Either the whole response or its
+`meta` object alone is accepted, so `curl … > snapshot.json` and a plugin export
+both work with no massaging.
+
+```json
+{ "meta": {
+  "variableCollections": {
+    "<collectionId>": { "id": "…", "name": "theme",
+                        "modes": [ { "modeId": "…", "name": "light" } ],
+                        "defaultModeId": "…" } },
+  "variables": {
+    "<variableId>": { "id": "…", "name": "text/primary",
+                      "variableCollectionId": "<collectionId>",
+                      "resolvedType": "COLOR" | "FLOAT" | "STRING" | "BOOLEAN",
+                      "description": "",
+                      "valuesByMode": {
+                        "<modeId>": { "r": 1, "g": 1, "b": 1, "a": 1 } } } } } }
+```
+
+A value is a literal, or `{ "type": "VARIABLE_ALIAS", "id": "<variableId>" }`.
+Unknown keys are ignored, which is what lets the fixtures carry a `_defect` note
+beside each planted edit.
+
+Two conventions turn that into something comparable, and both are rules rather
+than values:
+
+**Names.** Figma groups on `/`, DTCG paths join on `.`, so the variable
+`text/primary` is the token `text.primary`. Nothing else is stripped or
+rewritten. This is the exact inverse of the plugin's `figmaName`.
+
+**Modes.** A Figma collection carries modes; a token root carries mode
+*dimensions*. A collection whose name and mode names resolve to a known mode id
+— `<collection>.<mode>` first, then `<mode>` — is that dimension, and each of its
+modes speaks for every combination containing it. A collection with a single mode
+is invariant and is compared against every combination. A multi-mode collection
+with a mode that resolves to nothing is a mode Figma has and the source does not:
+warned about, and its values skipped, because there is no source value to compare
+them to.
+
+**And the reverse, which is the one that used to be silent.** A mode the *source*
+has and the file does not costs comparisons rather than causing them: fewer
+combinations are selected, `compareInMode` is called fewer times, and the run
+passes with a smaller number in it than it had yesterday. Delete a theme in Figma
+and half the displayed decisions stop being checked, with the gate still green.
+So every mode the source declares is now checked for somewhere to be compared,
+and `mode-missing-in-figma` is the finding when there is nowhere.
+
+The line that check draws is per *dimension*, not per collection, because an
+unclaimed mode is not always a gap. A collection with one mode is invariant **by
+design** — that convention is why the primitive layer does not sprout a copy of
+every theme. So the question is whether some collection has taken a dimension on:
+if one has, a mode of that dimension it does not carry is a gap; if none has, the
+file simply does not model that dimension, every value in it is compared against
+every combination, and a source that varies along it already reports a value
+finding. The difference being held apart is *a comparison that ran and disagreed*
+against *a comparison that never ran*.
+
+### What it reports
+
+| Code | Meaning | Fix |
+|---|---|---|
+| `missing-in-figma` | the source defines it, the file has no variable | re-sync outward |
+| `orphan-in-figma` | the file has a variable no token declares | delete it in Figma |
+| `mode-missing-in-figma` | the source declares a mode, the collection modelling its dimension has none | re-sync outward |
+| `value-mismatch` | the variable holds a different value, in some mode | re-sync outward |
+| `alias-flattened` | the token references, the variable holds a raw value | re-sync outward |
+| `alias-unexpected` | the token states a literal, the variable references | re-sync outward |
+| `alias-target-mismatch` | both reference, at different targets | re-sync outward |
+| `type-mismatch` | the resolved type is not what the token's `$type` projects to | delete and re-sync |
+| `description-drift` | the description was edited in the file | re-sync outward |
+
+Warns, without failing, on `figma-mode-unknown`. Lists, without failing, the
+tokens with no Figma variable form at all — Figma variables hold colour, number,
+string and boolean, so a `shadow` missing from the file is a fact about Figma
+rather than a disagreement.
+
+**`alias-flattened` is the one that matters.** Its Figma value is usually
+*correct*: somebody replaced `{color.neutral.100}` with the colour that alias
+resolves to, and nothing looks wrong. A detector that compared values alone would
+call it aligned. But the chain is the thing being protected — a flattened
+variable stops moving when its primitive moves, and the file drifts silently from
+that day forward. It is checked structurally, before any value comparison, and
+the selftest asserts specifically that the flattened value matched and the
+finding was raised anyway.
+
+Every disagreement is reported **per mode**, because a variable can be correct in
+light and hand-edited in dark — the same reason `check-contrast.mjs` runs across
+combinations rather than against base values. Where a token says the same thing
+in every combination, that is collapsed to one finding rather than repeated four
+times.
+
+### Kept in step with the sync plugin
+
+`machinery/figma-plugin/` writes the variables; this reads them back and asks
+whether they are still what was written. The two therefore have to agree on the
+same projection — the type table, the `px`-only dimension rule, the
+`[deprecated: …]` description prefix and the 1e-6 comparison tolerance are
+mirrored from `src/core/map.ts` and `src/core/plan.ts`.
+
+A detector more lenient than the syncer calls a file aligned that the syncer
+would still rewrite. A detector stricter than the syncer reports drift nobody can
+fix. Most of it is mirrored by hand, and deliberately so: the plugin's core is
+TypeScript that needs a build, and **a gate that needs a build step is not a
+gate**. If `map.ts` changes, `check-drift.mjs` changes with it — and the
+disagreement in the meantime is a finding somebody can read and fix.
+
+**One rule is not safe to mirror, and it is shared code instead.** Narrowing a
+DTCG font stack to its first family is *lossy*: `["A", "B", "sans-serif"]` becomes
+`"A"`, because a Figma variable holds one string and binds it to an installed font
+by name. Nothing on the Figma side can re-derive the stack, so if the writer and
+the reader ever chose differently there would be no finding anybody could clear —
+the detector reports drift, the sync runs, the file is rewritten, and the same
+drift comes back. Forever. The only way to make the build green would be to stop
+running the gate.
+
+So the narrowing lives in `lib/projection.mjs`, `check-drift.mjs` imports it, and
+`src/core/map.ts` imports the same file — the plugin's esbuild step bundles it, so
+the plugin still ships as one dependency-free file and the gate still runs with no
+build. `selftest.mjs` holds the arrangement in place four ways: the shared function
+does what it claims; the aligned fixture stores exactly what it produces, so a
+change on the detector's side stops that fixture being aligned; both files are
+asserted to *import* it and exactly one file under `machinery/` is allowed to
+define it; and where the plugin core has been built, its `mapValue` is run on a
+stack and must land on the same family and the same warning text.
+
+The general rule this is an instance of: **a projection that discards information
+is shared code; a projection that does not can be stated twice.**
+
+## health-dashboard.mjs — governance you can screenshot
+
+```
+node machinery/scripts/health-dashboard.mjs [--root <dir>] [--snapshot <file>]
+                                            [--file-key <key>] [--out <file>]
+                                            [--title <str>] [--strict] [--quiet]
+```
+
+One self-contained HTML file — inline CSS, no dependencies, no network, nothing
+fetched from anywhere. It runs the three gates as separate processes with
+`--json`, exactly as `selftest.mjs` runs them, and renders what came back. It
+**never re-implements a check**, so the page cannot claim anything the gates did
+not report.
+
+It shows the verdict, the three gate cards, the aligned/drifted/missing/orphaned
+counts, each drift class with source and Figma side by side and the fix beneath,
+every token in the set with its variable and status — aligned rows included,
+because a detector is only worth reading if you can see what it looked at — and
+then the contrast and schema results from rung 1.
+
+The direction is the loudest thing on it. There is one arrow, it points outward,
+and the page says in as many words that there is no arrow back.
+
+`--out` defaults to `.tokens-build/health.html`, which is gitignored: the page is
+build output, regenerated from the gates every time. `--title` has only a generic
+default, because a name is a brand decision — the root `npm run health` supplies
+this repository's.
+
+`--strict` adopts the gates' verdict as the exit code, for CI. Without it the
+script exits 0 whenever the page was written, because generating the report
+succeeded even when the news in it is bad, and the gates already own the build's
+exit code.
+
+**The page is styled by the system it reports on.** Its palette is not hardcoded
+and does not read the generated CSS: the roles are chosen from `pairs.json` —
+the ground the most pairings are declared against, the highest-contrast *neutral*
+foreground on it, a line from a non-text context, the most saturated other
+background as the accent — and then resolved through `lib/tokens.mjs` in every
+mode combination, which is also where the page's own mode switcher comes from.
+Nothing in the file names a token. Change a colour in the source and the next
+dashboard is that colour; the only colours belonging to the report itself are the
+pass and drift hues, because "this has drifted" is a claim the report makes
+rather than a decision the design system took.
 
 ## selftest.mjs
 
 Runs both gates against both fixture sets and asserts the valid set passes with no errors and no warnings, and that the broken set fails **with each expected error code**, including a contrast failure that appears in one mode and not the other.
 
 `decorative` is asserted the only way that means anything: the valid fixture declares a decorative pair sitting at about **1.14:1** in light — below every WCAG threshold, including the 3.0 a `ui` declaration would impose — and the assertions are that its threshold is `null`, that it is resolved in all four combinations, that each result carries a measured ratio, that it appears by name in the passing run's output, and that the gate still exits 0. A threshold that was merely lenient would pass an exit-code check; only the ratio and the printed line prove there is no bar at all.
+
+**Mode scopes are asserted as counts, not exit codes**, because every pairing in `pairs/mode-scopes.json` passes: an exit code there would prove nothing about which combinations were looked at, and which combinations were looked at is the entire subject. Four scopes, four numbers — 4, 2, 1 and 4 — so both halves are held at once: that a list naming both modes of one dimension now means both, and that narrowing across dimensions was not traded away to get it. `pairs/unknown-mode.json` carries one misspelt mode id on a pair and another on an exception, and asserts both are named while the sound pair in the same file is still checked everywhere. And `pair-never-evaluated` is asserted through `--mode`, which is the one way left to ask this gate to pass having checked a declared pairing nowhere.
+
+**Rung 2 is held to the same standard.** Every drift fixture is a snapshot of the *same* correct token set: `figma/aligned.json`, which must report zero drift, zero errors and zero warnings with all twenty tokens compared in all four combinations; and `figma/drifted.json`, which must report **each of the eight hand-edit drift codes by name**. `alias-flattened` is asserted three ways, because its exit code alone would prove nothing: that the flattened Figma value *equals* what the alias resolves to — so a value-only comparison would have called it aligned — that it is caught in the one Figma mode it was planted in, and that the untouched mode of the same variable reports nothing. The remedies are asserted too: no finding may tell anybody to take a Figma value back into the source.
+
+Two further snapshots hold the ninth code and the line beside it. `figma/mode-deleted.json` is the aligned file with one mode of a multi-mode collection removed — *every surviving value still agrees*, so the exit code cannot pass for any other reason, and the assertion is that the one finding is `mode-missing-in-figma` and names the source mode. `figma/dimension-flattened.json` is the aligned file with a whole dimension left unmodelled: it must report **no** missing mode, because a single-mode collection is invariant by design, and must still report the value finding the flattened dimension causes — in exactly the combinations where the source disagrees. Between them they assert both halves: that the silence is now caught, and that the convention is not mistaken for the defect.
+
+Every planted edit is attributable: repair one of them and exactly its own code stops being reported, which is what makes "the gate caught `description-drift`" a statement about the defect rather than about the pile.
+
+The font-stack narrowing gets its own block, described under [check-drift.mjs](#kept-in-step-with-the-sync-plugin) above. It is the only projection rule shared as code rather than mirrored as a comment, so it is the only one whose two consumers are asserted to be the *same* two consumers.
+
+The dashboard is asserted on the same terms. It writes a complete document, nothing in it is fetched from anywhere, every drift class appears on the page by its label, both sides of a value mismatch appear, its palette is the one resolved from the fixture's tokens rather than a hardcoded default, and `--strict` returns 1 on the drifted snapshot and 0 on the aligned one.
 
 A gate that has never rejected anything is an untested claim, and a gate asserted only on its exit code can pass for the wrong reason. `npm run selftest` is what makes the claim checkable.
 

@@ -1,0 +1,801 @@
+<!--
+  ui.html — the confirmation surface.
+
+  A plugin cannot read the filesystem, so the tokens have to arrive through
+  this window: a folder picked in a dialog, a bundle file, or pasted JSON. All
+  three produce the same shape and go to the same loader.
+
+  The order is fixed and is the whole point of the screen: load, then *see the
+  diff*, then confirm. Nothing is written before the diff has been rendered and
+  a second, explicit click has happened. A sync that writes without showing its
+  work is a sync nobody trusts, and this file is where that is enforced.
+
+  There are two actions, not one. Writing variables and drawing the proof sheet
+  that documents them are separate buttons with separate diffs and separate
+  confirmations, because they are separate decisions: somebody may want to sync
+  without regenerating documentation, or redraw the documentation without
+  touching a variable.
+
+  There is a third thing here that is not an action, because it changes
+  nothing: the **read bridge**. A plugin's main thread has no network — only
+  this iframe does — so if the drift detector is to read the variable table on
+  a plan where Figma's REST API is closed, the socket has to be opened here.
+
+  It is off until somebody switches it on, and while it is on this file is a
+  relay and nothing more. It never composes a protocol message: it asks the
+  main thread for one and forwards the bytes it is handed. Every word that can
+  travel over the socket is defined in `src/core/bridge.ts`, and there is no
+  word there for writing. See decision 016.
+
+  Plain HTML, CSS and JS. No framework, no build step, and no network except
+  the one socket above, to one port on the loopback interface.
+-->
+<meta charset="utf-8" />
+<style>
+  :root {
+    --ok: #1a7f37;
+    --warn: #9a6700;
+    --bad: #cf222e;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font: 11px/1.5 Inter, -apple-system, system-ui, sans-serif;
+    color: var(--figma-color-text, #1e1e1e);
+    background: var(--figma-color-bg, #fff);
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+  }
+  header, footer { padding: 12px 16px; flex: none; }
+  header { border-bottom: 1px solid var(--figma-color-border, #e6e6e6); }
+  footer {
+    border-top: 1px solid var(--figma-color-border, #e6e6e6);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  main { flex: 1; overflow-y: auto; padding: 12px 16px; }
+  h1 { font-size: 12px; margin: 0 0 2px; font-weight: 600; }
+  h2 {
+    font-size: 11px;
+    margin: 16px 0 6px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--figma-color-text-secondary, #666);
+  }
+  p.lede { margin: 0; color: var(--figma-color-text-secondary, #666); }
+  .sources { display: flex; gap: 8px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
+  button {
+    font: inherit;
+    font-weight: 500;
+    border-radius: 6px;
+    border: 1px solid var(--figma-color-border, #d9d9d9);
+    background: var(--figma-color-bg, #fff);
+    color: inherit;
+    padding: 6px 12px;
+    cursor: pointer;
+  }
+  button:disabled { opacity: 0.4; cursor: default; }
+  button.primary {
+    background: var(--figma-color-bg-brand, #0d99ff);
+    border-color: transparent;
+    color: var(--figma-color-text-onbrand, #fff);
+  }
+  button.danger { background: var(--bad); border-color: transparent; color: #fff; }
+  textarea {
+    width: 100%;
+    min-height: 90px;
+    font: 10px/1.45 var(--mono);
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid var(--figma-color-border, #d9d9d9);
+    background: var(--figma-color-bg-secondary, #f5f5f5);
+    color: inherit;
+    resize: vertical;
+  }
+  input[type="file"] { display: none; }
+  .muted { color: var(--figma-color-text-secondary, #666); }
+  .counts { display: flex; gap: 14px; flex-wrap: wrap; margin: 4px 0 0; }
+  .counts b { font-size: 15px; font-weight: 600; display: block; }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { text-align: left; padding: 3px 8px 3px 0; vertical-align: top; }
+  th { font-weight: 600; color: var(--figma-color-text-secondary, #666); }
+  ul { margin: 0; padding: 0; list-style: none; }
+  li { padding: 2px 0; font-family: var(--mono); font-size: 10px; word-break: break-word; }
+  li.add { color: var(--ok); }
+  li.change { color: var(--warn); }
+  li.problem { color: var(--bad); font-family: inherit; font-size: 11px; }
+  li.note { color: var(--figma-color-text-secondary, #666); font-size: 10px; }
+  details { margin-top: 4px; }
+  summary { cursor: pointer; color: var(--figma-color-text-secondary, #666); }
+  .banner {
+    padding: 8px 10px;
+    border-radius: 6px;
+    margin-bottom: 10px;
+    background: var(--figma-color-bg-secondary, #f5f5f5);
+  }
+  .banner.bad { background: rgba(207, 34, 46, 0.12); color: var(--bad); }
+  .banner.ok { background: rgba(26, 127, 55, 0.12); color: var(--ok); }
+  .grow { flex: 1; }
+</style>
+
+<header>
+  <h1>Token sync — one way, source to Figma</h1>
+  <p class="lede">
+    This writes variables from your token JSON, and draws a proof sheet that binds every one of them.
+    It never reads Figma back into the source, and it never deletes.
+  </p>
+  <div class="sources">
+    <button id="pick-folder">Choose token folder…</button>
+    <button id="pick-file">Choose bundle file…</button>
+    <button id="toggle-paste">Paste JSON</button>
+    <span class="muted grow" id="source-status">No source loaded.</span>
+  </div>
+  <div id="paste-area" hidden style="margin-top:8px">
+    <textarea id="paste" placeholder="Paste the output of `node bundle.mjs` here."></textarea>
+  </div>
+  <input type="file" id="folder-input" webkitdirectory directory multiple />
+  <input type="file" id="file-input" accept="application/json,.json" />
+  <div class="sources">
+    <button id="bridge-toggle">Start read bridge</button>
+    <span class="muted grow" id="bridge-status">Off. No socket is open.</span>
+  </div>
+</header>
+
+<main id="output">
+  <p class="muted">Load a token source, then preview. Nothing is written until you confirm a diff.</p>
+</main>
+
+<footer>
+  <button id="preview" disabled>Preview sync</button>
+  <button id="preview-sheet" disabled>Preview proof sheet</button>
+  <span class="grow muted" id="footer-note"></span>
+  <button id="apply" class="primary" disabled hidden>Apply…</button>
+  <span id="confirm" hidden>
+    <span class="muted" id="confirm-text"></span>
+    <button id="confirm-no">Cancel</button>
+    <button id="confirm-yes" class="danger">Write to this file</button>
+  </span>
+  <button id="close">Close</button>
+</footer>
+
+<script>
+  var bundle = null;
+  var plan = null;
+  /* Which of the two actions the pane is currently showing a diff for. */
+  var mode = 'sync';
+
+  var $ = function (id) { return document.getElementById(id); };
+  var output = $('output');
+
+  /* ---------------------------------------------------------------- *
+   * Loading a source. Three ways in, one shape out.
+   * ---------------------------------------------------------------- */
+
+  function setBundle(next, label) {
+    bundle = next;
+    plan = null;
+    var count = next && next.files ? Object.keys(next.files).length : 0;
+    $('source-status').textContent = count + ' document(s) — ' + label;
+    $('preview').disabled = count === 0;
+    $('preview-sheet').disabled = count === 0;
+    $('apply').hidden = true;
+    $('confirm').hidden = true;
+    output.innerHTML = '<p class="muted">Source loaded. Preview to see what would change.</p>';
+  }
+
+  /** Accepts a full bundle or a bare `{ "path": document }` map. */
+  function normalise(parsed) {
+    if (parsed && typeof parsed === 'object' && parsed.files && typeof parsed.files === 'object') return parsed;
+    if (parsed && typeof parsed === 'object') return { files: parsed };
+    throw new Error('Expected a JSON object.');
+  }
+
+  $('pick-folder').onclick = function () { $('folder-input').click(); };
+  $('pick-file').onclick = function () { $('file-input').click(); };
+  $('toggle-paste').onclick = function () {
+    var area = $('paste-area');
+    area.hidden = !area.hidden;
+    if (!area.hidden) $('paste').focus();
+  };
+
+  $('folder-input').onchange = function (event) {
+    var files = Array.prototype.slice.call(event.target.files).filter(function (file) {
+      return /\.json$/i.test(file.name);
+    });
+    if (files.length === 0) { fail('That folder contains no JSON documents.'); return; }
+    var out = {};
+    var pending = files.length;
+    files.forEach(function (file) {
+      var reader = new FileReader();
+      reader.onload = function () {
+        // webkitRelativePath is "<chosen folder>/primitive/color.json"; the
+        // chosen folder is the token root, so its own name is dropped.
+        var relative = (file.webkitRelativePath || file.name).split('/').slice(1).join('/');
+        try {
+          out[relative || file.name] = JSON.parse(String(reader.result));
+        } catch (error) {
+          fail('Cannot parse ' + relative + ': ' + error.message);
+        }
+        pending -= 1;
+        if (pending === 0) setBundle({ files: out }, 'folder');
+      };
+      reader.readAsText(file);
+    });
+  };
+
+  $('file-input').onchange = function (event) {
+    var file = event.target.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      try {
+        setBundle(normalise(JSON.parse(String(reader.result))), file.name);
+      } catch (error) {
+        fail('Cannot parse ' + file.name + ': ' + error.message);
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  $('paste').oninput = function () {
+    var text = $('paste').value.trim();
+    if (!text) return;
+    try {
+      setBundle(normalise(JSON.parse(text)), 'pasted JSON');
+    } catch (error) {
+      $('source-status').textContent = 'Not valid JSON yet.';
+      $('preview').disabled = true;
+    }
+  };
+
+  /* ---------------------------------------------------------------- *
+   * Preview, then confirm. In that order, always.
+   * ---------------------------------------------------------------- */
+
+  $('preview').onclick = function () {
+    mode = 'sync';
+    output.innerHTML = '<p class="muted">Reading the document…</p>';
+    parent.postMessage({ pluginMessage: { type: 'preview', bundle: bundle } }, '*');
+  };
+
+  $('preview-sheet').onclick = function () {
+    mode = 'sheet';
+    output.innerHTML = '<p class="muted">Reading the document…</p>';
+    parent.postMessage({ pluginMessage: { type: 'preview-sheet', bundle: bundle } }, '*');
+  };
+
+  $('apply').onclick = function () {
+    $('apply').hidden = true;
+    $('confirm').hidden = false;
+    $('confirm-text').textContent = plan.actions.length + ' change(s). ';
+    $('confirm-yes').textContent = mode === 'sheet' ? 'Draw the sheet' : 'Write to this file';
+  };
+
+  $('confirm-no').onclick = function () {
+    $('confirm').hidden = true;
+    $('apply').hidden = false;
+  };
+
+  $('confirm-yes').onclick = function () {
+    $('confirm').hidden = true;
+    $('footer-note').textContent = 'Writing…';
+    parent.postMessage({
+      pluginMessage: { type: mode === 'sheet' ? 'apply-sheet' : 'apply', signature: plan.signature }
+    }, '*');
+  };
+
+  $('close').onclick = function () {
+    parent.postMessage({ pluginMessage: { type: 'close' } }, '*');
+  };
+
+  /* ---------------------------------------------------------------- *
+   * The read bridge.
+   *
+   * Everything below is transport. It opens one socket, forwards what the
+   * main thread hands it, and decides nothing — deliberately, because this is
+   * the one file in the plugin that cannot be driven from the command line
+   * and therefore the one file whose behaviour cannot be asserted. So there
+   * is as little behaviour in it as the job allows.
+   *
+   * Two rules it keeps, and they are the reason the manifest's development-only
+   * network entry is defensible — `allowedDomains` never left `["none"]`:
+   *
+   *   It composes no protocol message. `hello` and `snapshot` both arrive
+   *   from `code.ts` as finished objects and are stringified unread. There is
+   *   no branch here that could invent a message the vocabulary does not have.
+   *
+   *   It obeys nothing off the wire. A frame is forwarded to the main thread
+   *   only when its `type` is exactly "snapshot-request". Anything else —
+   *   including something that looks like an instruction — is counted and
+   *   dropped. Text arriving on a socket is data, never a command.
+   *
+   * The port is a constant in four places: here, `src/core/bridge.ts`,
+   * `machinery/scripts/lib/bridge.mjs`, and the manifest's `devAllowedDomains`
+   * entry. A manifest cannot take a variable, and this file is
+   * loaded by Figma rather than bundled, so neither can import the number from
+   * anywhere. `machinery/scripts/selftest.mjs` parses it out of all four and
+   * asserts they agree, which is what stops a partial change producing a
+   * bridge that silently never connects.
+   *
+   * **The host has to be the word `localhost`, not `127.0.0.1`.** Figma
+   * refuses `ws://127.0.0.1:8791` in the manifest as "not a valid URL" — its
+   * validator wants a hostname, whatever the URL spec says — so the manifest
+   * permits `ws://localhost:8791` and this must dial the string the manifest
+   * permits. The server binds the loopback address itself; `localhost`
+   * resolves to it, and a browser trying the IPv6 loopback first falls back.
+   * ---------------------------------------------------------------- */
+
+  var BRIDGE_PORT = 8791;
+  var BRIDGE_HOST = 'localhost';
+  var BRIDGE_PROTOCOL = 'mizan-bridge@1';
+  var RETRY_MS = 2000;
+
+  var socket = null;
+  var bridgeOn = false;
+  var retryTimer = null;
+  var answered = 0;
+  var ignored = 0;
+
+  $('bridge-toggle').onclick = function () {
+    if (bridgeOn) { stopBridge('Off. No socket is open.'); return; }
+    bridgeOn = true;
+    $('bridge-toggle').textContent = 'Stop read bridge';
+    connect();
+  };
+
+  function stopBridge(status) {
+    bridgeOn = false;
+    if (retryTimer) { clearTimeout(retryTimer); retryTimer = null; }
+    if (socket) {
+      var open = socket;
+      socket = null;
+      open.onclose = null;
+      open.onerror = null;
+      try { open.close(); } catch (error) { /* already gone */ }
+    }
+    $('bridge-toggle').textContent = 'Start read bridge';
+    bridgeStatus(status);
+  }
+
+  function bridgeStatus(text) { $('bridge-status').textContent = text; }
+
+  /**
+   * Connect, and keep trying while the bridge is on.
+   *
+   * The detector starts its server, runs, and stops — so for most of this
+   * plugin's life there is nothing to connect to, and a failed connection is
+   * the normal state rather than an error worth shouting about.
+   */
+  function connect() {
+    if (!bridgeOn) return;
+    bridgeStatus('Waiting for a reader on ' + BRIDGE_HOST + ':' + BRIDGE_PORT + '…');
+    try {
+      socket = new WebSocket('ws://' + BRIDGE_HOST + ':' + BRIDGE_PORT);
+    } catch (error) {
+      socket = null;
+      scheduleRetry();
+      return;
+    }
+
+    socket.onopen = function () {
+      bridgeStatus('Connected. Waiting to be asked for the variable table.');
+      parent.postMessage({ pluginMessage: { type: 'bridge-hello' } }, '*');
+    };
+
+    socket.onmessage = function (event) {
+      var frame = null;
+      try {
+        frame = JSON.parse(String(event.data));
+      } catch (error) {
+        frame = null;
+      }
+      /* The one thing this end answers. Note what is missing: an `else` that
+       * does something. */
+      if (frame && frame.protocol === BRIDGE_PROTOCOL && frame.type === 'snapshot-request'
+        && typeof frame.id === 'string') {
+        bridgeStatus('Reading the variable table…');
+        parent.postMessage({ pluginMessage: { type: 'bridge-read', id: frame.id } }, '*');
+        return;
+      }
+      ignored += 1;
+      bridgeStatus('Connected. ' + ignored + ' frame(s) ignored — this end answers one question only.');
+    };
+
+    socket.onclose = function () {
+      socket = null;
+      scheduleRetry();
+    };
+
+    /* A refused connection is the *normal* case — the detector's server only
+     * exists while a read is running — and browsers do not agree on whether
+     * that fires close, error, or both. Retrying from either, with a guard
+     * against scheduling twice, is the only version that reconnects on every
+     * engine. Retrying from close alone leaves the bridge dead after the first
+     * refusal on the ones that fire error only. */
+    socket.onerror = function () {
+      socket = null;
+      scheduleRetry();
+    };
+  }
+
+  function scheduleRetry() {
+    if (!bridgeOn || retryTimer) return;
+    bridgeStatus('No reader on ' + BRIDGE_HOST + ':' + BRIDGE_PORT + '. Retrying…');
+    retryTimer = setTimeout(function () {
+      retryTimer = null;
+      connect();
+    }, RETRY_MS);
+  }
+
+  /** Forward a finished message from the main thread. Nothing is composed here. */
+  function sendOverBridge(message) {
+    if (!socket || socket.readyState !== 1) return;
+    socket.send(JSON.stringify(message));
+    if (message.type === 'snapshot') {
+      answered += 1;
+      bridgeStatus('Sent the variable table. ' + answered + ' read(s) answered, nothing written.');
+    } else if (message.type === 'error') {
+      bridgeStatus('Could not read the variables: ' + message.message);
+    }
+  }
+
+  window.onmessage = function (event) {
+    var message = event.data.pluginMessage;
+    if (!message) return;
+    if (message.type === 'bridge-reply') { sendOverBridge(message.message); return; }
+    if (message.type === 'plan') { plan = message.plan; render(message.plan, null); return; }
+    if (message.type === 'stale') { plan = message.plan; render(message.plan, { kind: 'bad', text: message.message }); return; }
+    if (message.type === 'applied') {
+      plan = message.plan;
+      var text = message.applied + ' change(s) written. ' +
+        (message.remaining === 0
+          ? 'Re-planned afterwards: nothing left to do, which is what idempotent means.'
+          : message.remaining + ' change(s) still outstanding — see below.');
+      if (message.failures.length > 0) {
+        text += ' ' + message.failures.length + ' failure(s): ' + message.failures.map(function (f) { return f.message; }).join('; ');
+      }
+      render(message.plan, { kind: message.failures.length ? 'bad' : 'ok', text: text });
+      return;
+    }
+    if (message.type === 'sheet-plan') { plan = message.plan; renderSheet(message.plan, null); return; }
+    if (message.type === 'sheet-stale') {
+      plan = message.plan;
+      renderSheet(message.plan, { kind: 'bad', text: message.message });
+      return;
+    }
+    if (message.type === 'sheet-applied') {
+      plan = message.plan;
+      var sheetText = message.applied + ' change(s) written. ' +
+        (message.remaining === 0
+          ? 'Re-planned afterwards: nothing left to do, which is what idempotent means.'
+          : message.remaining + ' change(s) still outstanding — see below.');
+      if (message.failures.length > 0) {
+        sheetText += ' ' + message.failures.length + ' failure(s): '
+          + message.failures.map(function (f) { return f.message; }).join('; ');
+      }
+      renderSheet(message.plan, { kind: message.failures.length ? 'bad' : 'ok', text: sheetText });
+      return;
+    }
+    if (message.type === 'error') { fail(message.message); }
+  };
+
+  function fail(text) {
+    $('footer-note').textContent = '';
+    output.innerHTML = '<div class="banner bad"></div>';
+    output.firstChild.textContent = text;
+  }
+
+  /* ---------------------------------------------------------------- *
+   * The diff
+   * ---------------------------------------------------------------- */
+
+  function element(tag, className, text) {
+    var node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  }
+
+  function section(title, nodes) {
+    if (nodes.length === 0) return null;
+    var wrapper = document.createDocumentFragment();
+    wrapper.appendChild(element('h2', null, title));
+    var list = element('ul');
+    nodes.forEach(function (node) { list.appendChild(node); });
+    wrapper.appendChild(list);
+    return wrapper;
+  }
+
+  function describeValue(value) {
+    if (!value) return '(unset)';
+    if (value.kind === 'COLOR') {
+      var hex = ['r', 'g', 'b'].map(function (channel) {
+        var byte = Math.round(Math.max(0, Math.min(1, value.value[channel])) * 255);
+        return (byte < 16 ? '0' : '') + byte.toString(16);
+      }).join('');
+      return value.value.a === 1 ? '#' + hex : '#' + hex + ' @ ' + value.value.a;
+    }
+    if (value.kind === 'ALIAS') return '\u2192 ' + value.collection + '/' + value.name;
+    if (value.kind === 'UNKNOWN') return '(' + value.note + ')';
+    return JSON.stringify(value.value);
+  }
+
+  function describeAction(action) {
+    switch (action.op) {
+      case 'create-collection': return '+ collection "' + action.collection + '" (first mode "' + action.firstMode + '")';
+      case 'create-mode': return '+ mode "' + action.mode + '" in "' + action.collection + '"';
+      case 'rename-mode': return '~ mode "' + action.from + '" → "' + action.to + '" in "' + action.collection + '"';
+      case 'create-variable': return '+ ' + action.collection + '/' + action.name + ' (' + action.type + ')';
+      case 'set-description': return '~ ' + action.collection + '/' + action.name + ' description';
+      case 'set-value':
+        return '~ ' + action.collection + '/' + action.name + ' [' + action.mode + '] '
+          + describeValue(action.from) + ' \u2192 ' + describeValue(action.to);
+      default: return JSON.stringify(action);
+    }
+  }
+
+  function describeSheetAction(action) {
+    var where = action.path && action.path.length ? action.path.join(' / ') : '(page)';
+    switch (action.op) {
+      case 'create-page': return '+ page "' + action.page + '"';
+      case 'create-node': return '+ ' + action.kind + ' ' + where;
+      case 'set-prop':
+        return '~ ' + where + ' ' + action.prop + ' '
+          + (action.from === null ? '(unset)' : String(action.from)) + ' → ' + String(action.to);
+      case 'set-text': return '~ ' + where + ' text → ' + JSON.stringify(action.to);
+      case 'bind': return '~ ' + where + ' ' + action.field + ' → ' + action.to.collection + '/' + action.to.name;
+      case 'set-explicit-mode':
+        return '~ ' + where + ' mode [' + action.collection + '] → ' + action.to;
+      default: return JSON.stringify(action);
+    }
+  }
+
+  /* ---------------------------------------------------------------- *
+   * The proof sheet's diff.
+   *
+   * The interesting column is not the node count, it is *what each variable
+   * is bound to*: a sheet where a variable is described in text rather than
+   * bound proves nothing, so the table below is the thing worth reading.
+   * ---------------------------------------------------------------- */
+
+  function renderSheet(plan, banner) {
+    output.innerHTML = '';
+    $('footer-note').textContent = '';
+
+    if (banner) {
+      var note = element('div', 'banner ' + banner.kind);
+      note.textContent = banner.text;
+      output.appendChild(note);
+    }
+
+    var counts = element('div', 'counts');
+    [
+      ['variables documented', plan.stats.variablesDocumented],
+      ['nodes', plan.stats.nodesPlanned],
+      ['to create', plan.stats.creates],
+      ['to update', plan.stats.updates],
+      ['not projected', plan.skipped.length],
+      ['orphans', plan.orphans.length],
+      ['errors', plan.errors.length]
+    ].forEach(function (pair) {
+      var box = element('div');
+      box.appendChild(element('b', null, String(pair[1])));
+      box.appendChild(element('span', 'muted', pair[0]));
+      counts.appendChild(box);
+    });
+    output.appendChild(counts);
+
+    if (plan.errors.length > 0) {
+      output.appendChild(element('h2', null, 'Errors — nothing will be drawn'));
+      var errors = element('ul');
+      plan.errors.forEach(function (problem) {
+        errors.appendChild(element('li', 'problem', problem.code + ': ' + problem.message));
+      });
+      output.appendChild(errors);
+    }
+
+    output.appendChild(element('h2', null, 'Frames — one per mode combination'));
+    var frames = element('ul');
+    plan.combinations.forEach(function (combination) {
+      var modes = Object.keys(combination.modes).map(function (collection) {
+        return collection + ' = ' + combination.modes[collection];
+      }).join(', ');
+      frames.appendChild(element('li', 'note', combination.label + ' — explicit modes: ' + modes));
+    });
+    output.appendChild(frames);
+
+    output.appendChild(element('h2', null, 'What each variable is bound to'));
+    var table = element('table');
+    var head = element('tr');
+    ['$type', 'Figma', 'node', 'bound property', 'variables', 'why'].forEach(function (label) {
+      head.appendChild(element('th', null, label));
+    });
+    table.appendChild(head);
+    var rows = {};
+    plan.specimens.forEach(function (specimen) {
+      var key = specimen.dtcgType + '|' + specimen.type + '|' + specimen.kind + '|' + specimen.field;
+      if (!rows[key]) rows[key] = { specimen: specimen, count: 0 };
+      rows[key].count += 1;
+    });
+    Object.keys(rows).forEach(function (key) {
+      var row = element('tr');
+      var specimen = rows[key].specimen;
+      row.appendChild(element('td', 'muted', String(specimen.dtcgType)));
+      row.appendChild(element('td', 'muted', specimen.type));
+      row.appendChild(element('td', null, specimen.kind));
+      row.appendChild(element('td', null, specimen.field));
+      row.appendChild(element('td', null, String(rows[key].count)));
+      row.appendChild(element('td', 'muted', specimen.reason));
+      table.appendChild(row);
+    });
+    output.appendChild(table);
+
+    appendSheetSection('Not documented (' + plan.skipped.length + ')', plan.skipped.map(function (skip) {
+      return element('li', 'note', skip.token + ' (' + skip.type + ') — ' + skip.reason);
+    }));
+
+    appendSheetSection('Orphans (' + plan.orphans.length + ')', plan.orphans.map(function (orphan) {
+      return element('li', 'note', orphan.path.join(' / ') + ' — ' + orphan.note);
+    }));
+
+    var additions = plan.actions.filter(function (a) { return a.op.indexOf('create') === 0; });
+    var changes = plan.actions.filter(function (a) { return a.op.indexOf('create') !== 0; });
+    appendSheetCapped('Will create (' + additions.length + ')', additions, 'add');
+    appendSheetCapped('Will change (' + changes.length + ')', changes, 'change');
+
+    var writable = plan.errors.length === 0 && plan.actions.length > 0;
+    $('apply').hidden = !writable;
+    $('apply').disabled = !writable;
+    $('confirm').hidden = true;
+    if (plan.errors.length > 0) {
+      $('footer-note').textContent = 'Fix the source — or run the sync first — and preview again.';
+    } else if (plan.actions.length === 0) {
+      $('footer-note').textContent = 'The sheet is already up to date — nothing to draw.';
+    } else {
+      $('footer-note').textContent = plan.actions.length + ' change(s) ready.';
+    }
+
+    function appendSheetSection(title, items) {
+      var built = section(title, items);
+      if (built) output.appendChild(built);
+    }
+
+    function appendSheetCapped(title, actions, className) {
+      if (actions.length === 0) return;
+      output.appendChild(element('h2', null, title));
+      var visible = actions.slice(0, 40);
+      var list = element('ul');
+      visible.forEach(function (a) { list.appendChild(element('li', className, describeSheetAction(a))); });
+      output.appendChild(list);
+      if (actions.length > visible.length) {
+        var details = element('details');
+        details.appendChild(element('summary', null, 'show the remaining ' + (actions.length - visible.length)));
+        var rest = element('ul');
+        actions.slice(40).forEach(function (a) { rest.appendChild(element('li', className, describeSheetAction(a))); });
+        details.appendChild(rest);
+        output.appendChild(details);
+      }
+    }
+  }
+
+  function render(plan, banner) {
+    output.innerHTML = '';
+    $('footer-note').textContent = '';
+
+    if (banner) {
+      var note = element('div', 'banner ' + banner.kind);
+      note.textContent = banner.text;
+      output.appendChild(note);
+    }
+
+    var counts = element('div', 'counts');
+    [
+      ['tokens read', plan.stats.tokensRead],
+      ['variables', plan.stats.variablesPlanned],
+      ['to create', plan.stats.creates],
+      ['to update', plan.stats.updates],
+      ['skipped', plan.skipped.length],
+      ['orphans', plan.orphans.length],
+      ['errors', plan.errors.length]
+    ].forEach(function (pair) {
+      var box = element('div');
+      box.appendChild(element('b', null, String(pair[1])));
+      box.appendChild(element('span', 'muted', pair[0]));
+      counts.appendChild(box);
+    });
+    output.appendChild(counts);
+
+    if (plan.errors.length > 0) {
+      output.appendChild(element('h2', null, 'Errors — nothing will be written'));
+      var errors = element('ul');
+      plan.errors.forEach(function (problem) {
+        errors.appendChild(element('li', 'problem', problem.code + ': ' + (problem.token ? problem.token + ' — ' : '') + problem.message));
+      });
+      output.appendChild(errors);
+    }
+
+    output.appendChild(element('h2', null, 'Collections'));
+    var table = element('table');
+    var head = element('tr');
+    ['collection', 'from', 'modes', 'variables', 'status'].forEach(function (label) {
+      head.appendChild(element('th', null, label));
+    });
+    table.appendChild(head);
+    plan.collections.forEach(function (collection) {
+      var row = element('tr');
+      row.appendChild(element('td', null, collection.name));
+      row.appendChild(element('td', 'muted', collection.origin === 'dimension' ? 'mode dimension' : 'token layer'));
+      row.appendChild(element('td', 'muted', collection.modes.join(', ')));
+      row.appendChild(element('td', null, String(collection.variableCount)));
+      row.appendChild(element('td', 'muted', collection.exists ? 'exists' : 'will be created'));
+      table.appendChild(row);
+    });
+    output.appendChild(table);
+
+    var additions = plan.actions.filter(function (a) { return a.op.indexOf('create') === 0; });
+    var changes = plan.actions.filter(function (a) { return a.op.indexOf('create') !== 0; });
+
+    appendCapped('Will create (' + additions.length + ')', additions, 'add');
+    appendCapped('Will change (' + changes.length + ')', changes, 'change');
+
+    var skipped = plan.skipped.map(function (skip) {
+      return element('li', 'note', skip.token + ' (' + skip.type + ') — ' + skip.reason);
+    });
+    appendSection('Not projected (' + plan.skipped.length + ')', skipped);
+
+    var warnings = plan.warnings.map(function (warning) {
+      return element('li', 'note', warning.code + ': ' + warning.message);
+    });
+    appendSection('Warnings (' + plan.warnings.length + ')', warnings);
+
+    var orphans = plan.orphans.map(function (orphan) {
+      return element('li', 'note', orphan.collection + '/' + orphan.name + ' — ' + orphan.note + ' (reported, not deleted)');
+    });
+    appendSection('Orphans (' + plan.orphans.length + ')', orphans);
+
+    if (plan.untouched.length > 0) {
+      appendSection('Left alone (' + plan.untouched.length + ')', plan.untouched.map(function (name) {
+        return element('li', 'note', name + ' — no counterpart in the token source; not managed by this plugin');
+      }));
+    }
+
+    var writable = plan.errors.length === 0 && plan.actions.length > 0;
+    $('apply').hidden = !writable;
+    $('apply').disabled = !writable;
+    $('confirm').hidden = true;
+    if (plan.errors.length > 0) {
+      $('footer-note').textContent = 'Fix the source and preview again.';
+    } else if (plan.actions.length === 0) {
+      $('footer-note').textContent = 'Already in sync — nothing to write.';
+    } else {
+      $('footer-note').textContent = plan.actions.length + ' change(s) ready.';
+    }
+
+    function appendSection(title, items) {
+      var built = section(title, items);
+      if (built) output.appendChild(built);
+    }
+
+    /** Long lists collapse: a diff nobody scrolls through is not a diff. */
+    function appendCapped(title, actions, className) {
+      if (actions.length === 0) return;
+      output.appendChild(element('h2', null, title));
+      var visible = actions.slice(0, 40);
+      var list = element('ul');
+      visible.forEach(function (action) { list.appendChild(element('li', className, describeAction(action))); });
+      output.appendChild(list);
+      if (actions.length > visible.length) {
+        var details = element('details');
+        details.appendChild(element('summary', null, 'show the remaining ' + (actions.length - visible.length)));
+        var rest = element('ul');
+        actions.slice(40).forEach(function (action) { rest.appendChild(element('li', className, describeAction(action))); });
+        details.appendChild(rest);
+        output.appendChild(details);
+      }
+    }
+  }
+</script>

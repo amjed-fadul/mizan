@@ -1,0 +1,7 @@
+{
+  "$description": "A token overridden by two mode dimensions at once. There is no Figma structure that expresses it, and this fixture exists so the plugin's refusal is a tested behaviour rather than a claim in a comment.",
+  "dimensions": [
+    { "name": "theme",   "modes": ["theme.light", "theme.dark"] },
+    { "name": "product", "modes": ["product.one", "product.two"] }
+  ]
+}

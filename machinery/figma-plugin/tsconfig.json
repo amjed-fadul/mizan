@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "target": "es2017",
+    "lib": ["ES2017"],
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    // machinery/scripts/lib/projection.mjs is plain ESM that this plugin and
+    // machinery/scripts/check-drift.mjs both import — the gate cannot depend on
+    // a TypeScript build, so the shared rule is authored in JS and typed by its
+    // JSDoc. Not checkJs: that file is the gates' code and the gates' tests own
+    // it; this only lets the plugin see its types.
+    "allowJs": true,
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "noEmit": true,
+    "typeRoots": ["./node_modules/@types", "./node_modules/@figma"],
+    "types": ["plugin-typings"]
+  },
+  "include": ["src/**/*.ts"]
+}

@@ -10,7 +10,7 @@
 
 Market and Move share a company, a brand, and a stylesheet ancestor — and almost nothing else. Two years of independent work have produced **three competing token vocabularies, four spacing rhythms, four button implementations and 33 distinct colours**, of which 21 pairs are close enough that no user can tell them apart while every developer must choose between them daily.
 
-The cost is not aesthetic. **Six screens currently fail basic accessibility**: 30 interactive elements cannot be reached by keyboard at all, which means a keyboard user cannot select a ride, remove a cart item, or filter the catalogue. Three call-to-action buttons — including "Buy Now" and "Call Driver" — reference a CSS class that does not exist and render as unstyled text. And the product already ships Arabic content into a hard-coded left-to-right layout with no Arabic font, which for a Gulf business is not a localisation gap but a live defect.
+The cost is not aesthetic. **Six screens currently fail basic accessibility**: 24 interactive elements cannot be reached by keyboard at all, which means a keyboard user cannot select a ride, remove a cart item, or filter the catalogue. Three call-to-action buttons — including "Buy Now" and "Call Driver" — reference a CSS class that does not exist and render as unstyled text. And the product already ships Arabic content into a hard-coded left-to-right layout with no Arabic font, which for a Gulf business is not a localisation gap but a live defect.
 
 Doing nothing has a compounding cost. Every new screen picks one of three vocabularies, and the choice is arbitrary, so drift accelerates. My recommendation is to fix the foundation first — tokens and the accessibility floor — before either team builds anything new, and to explicitly **not** unify the things that are legitimately different between a grocery app and a ride-booking app.
 
@@ -23,6 +23,18 @@ All 21 source files under `legacy/src` plus `legacy/index.html` were examined. C
 Three parallel read-only passes covered design values and component APIs, Arabic/RTL readiness, and accessibility. The inventory sections below are mechanical and reproducible. **The recommendations in §7 and §8 are judgment and should be read as such.**
 
 Not examined: build tooling, dependency health beyond the note in §4, backend contracts, analytics.
+
+### Corrections, made 2026-08-04 by re-deriving the counts from `legacy/src`
+
+Three of the numbers in the original did not reproduce. They are corrected in place; what changed is recorded here, because an audit that quietly restates its own figures is not evidence of anything.
+
+- **Keyboard-unreachable elements: 30 → 24, across 4 of 6 screens rather than 5.** Method: every `onClick` in `legacy/src/**/*.tsx` (27 occurrences), minus real `<button>` elements, minus prop declarations, minus handlers passed *into* the three button components — leaving **6** `<div onClick>` code sites, all of them keyboard-inert. Each was then multiplied by the length of the array it is mapped over in the default state: `RideCard` × 4 `RIDE_OPTIONS`, the filter chip × 6 `FILTERS`, the quick-view overlay × 8 `PRODUCTS`, "Remove" × 4 `INITIAL_LINES`, and two unlooped sites ("Reset" on booking, "Report an issue" on trip) × 1. That is 4 + 6 + 8 + 4 + 1 + 1 = **24**. The 30 could not be reconstructed under any reading tried: not 6 code sites, not 14 (the worst single screen, `/market`), and not 28 (24 plus the four `cursor: pointer` badges on Product Detail that have no `onClick` at all and are therefore dead to mouse and keyboard alike).
+- **Code sites: 8 → 6.** Same derivation. This is the number §8 sequences the work against, and it was the one worth getting right — the whole argument there is that the count of *defects* matters less than the count of *places*.
+- **§3.4's claim that no newer radius reaches the screen.** `.mv-card` is 8px, unoverridden, and live. Detail in that section.
+
+**Re-derived and standing:** §3.1's headline **33 distinct colour values** — the union of every hex literal in the three stylesheets (29) with the four that appear only in inline `style={{}}` and have no token anywhere (`#2e2e2e`, `#767676`, `#c0392b`, `#eaeaea`) is exactly 33. §3.6's **3 of 12 components never imported** — `ProductCard`, `ProductCardCompact` and `ProductCardPromo`, confirmed by grepping every import path against every component file. That figure matters because §3.4 above turns on which components are dead and which are not.
+
+**Not re-derived, and therefore not vouched for here:** §3.1's 35-properties-to-28-values decomposition, the ΔE00 figures, the spacing rhythms in §3.2, the typography counts in §3.3, and §6's 129 pairings / 48 failures. They are unchanged because nothing contradicted them, which is not the same as having checked them.
 
 ---
 
@@ -82,7 +94,9 @@ The same semantic role is sized differently per product:
 
 ### 3.4 Radii and elevation
 
-**Four radii, three of them for the same "card" role** — 4px, 6px, 8px across six card recipes. Every 6px and 8px card that actually renders is overridden back to 4px by an inline style, so the newer radii survive only in components that are never imported.
+**Four radii, three of them for the same "card" role** — 4px, 6px, 8px across six card recipes, plus `50%` for the three circles. Every 6px card that actually renders is overridden back to 4px by an inline style, and so is one of the two 8px ones (`.mv-panel`, `TripScreen.tsx:43`, under a comment reading *don't touch, breaks the layout*).
+
+**The exception is `.mv-card`, and it is the interesting one.** It is 8px, it carries no inline override, and `RideCard` — the component that applies it — is imported by `BookingScreen` and rendered four times on `/move`. So one card recipe genuinely renders at a radius no other card in either product uses, on the ride-selection screen, and it is the only place the newer radii reach the screen at all. The pattern is therefore not "the newer radii exist only in dead code": it is that **the inline override is applied wherever someone noticed and nowhere else**, which is a worse fact than uniform dead code, because the surviving 8px is indistinguishable from a deliberate choice.
 
 **Three box-shadow recipes for one role**, one per stylesheet — plus a fourth treatment, a card with no shadow at all. Note that `0 2px 6px/0.10` is simultaneously Market's *hover* elevation for one card and its *resting* elevation for another: the same shadow means two different states depending on which card you're looking at.
 
@@ -119,7 +133,7 @@ Severity reflects user impact and the teams' ability to ship, not how much the c
 
 | # | Finding | Severity | Reach | Cost if unaddressed |
 |---|---|---|---|---|
-| 1 | **30 interactive elements are keyboard-unreachable.** Ride selection, cart removal and catalogue filtering are impossible without a mouse | **Critical** | 5 of 6 screens | Core tasks unavailable to keyboard and screen-reader users; legal exposure |
+| 1 | **24 interactive elements are keyboard-unreachable.** Ride selection, cart removal and catalogue filtering are impossible without a mouse | **Critical** | 4 of 6 screens | Core tasks unavailable to keyboard and screen-reader users; legal exposure |
 | 2 | **`.btn-cta` is defined in no stylesheet.** "Buy Now", "Add All to Cart", "Call Driver" render as unstyled text with no fill or border | **Critical** | 3 screens | The highest-intent action on the product page reads as the least important element beside it |
 | 3 | **Arabic ships under `lang="en"` with no `dir` and no Arabic font** | **Critical** | 3 Market screens | Screen readers pronounce Arabic with English phonemes; rendering differs per OS |
 | 4 | **Mixed Arabic/Latin strings scramble.** `شاي أحمر Lipton - 100 كيس` renders as `كيس Lipton - 100 شاي أحمر` — the pack count detaches from its unit and binds to the brand | **Critical** | catalogue-wide | Product information is factually wrong to an Arabic reader |
@@ -165,7 +179,7 @@ Currency has **four formats across 21 call sites** and no `Intl` anywhere, so th
 
 **129 foreground/background pairings were computed. 48 fail.**
 
-The critical finding is not contrast but **keyboard access**. Thirty elements use `<div onClick>` with no `tabIndex`, no `role` and no key handler. They are not in the tab order, `Enter` and `Space` do nothing, and a screen reader announces them as inert text. Three of them are the *only* way to perform their task:
+The critical finding is not contrast but **keyboard access**. Twenty-four elements use `<div onClick>` with no `tabIndex`, no `role` and no key handler. They are not in the tab order, `Enter` and `Space` do nothing, and a screen reader announces them as inert text. `tabIndex`, `role`, `onKeyDown`, `onKeyPress` and `onKeyUp` have **zero occurrences** in `legacy/src`, so this is uniform rather than patchy. Three of them are the *only* way to perform their task:
 
 - `RideCard` is the ride selector — a keyboard user cannot change from the Economy default
 - The cart's "Remove" is the only removal path, and the quantity stepper floors at 1
@@ -175,7 +189,7 @@ The constraint that shapes the fix: **this team has no accessibility specialist 
 
 - The failing colour tier is **5 custom properties**
 - Every failing border is **4 custom properties**
-- All 30 keyboard failures trace to **8 code sites**, the highest-count ones being single elements rendered in loops
+- All 24 keyboard failures trace to **6 code sites**, the highest-count ones being single elements rendered in loops — three sites account for 18 of the 24
 - Focus styles, `aria-live`, `alt` and `lang` are *absences* — zero occurrences, so there is no inconsistent prior art to reconcile
 
 That is the encouraging part of this audit: the accessibility floor is mostly a token problem and a component problem, both of which a design system fixes structurally rather than screen by screen.
@@ -231,7 +245,7 @@ Constrained by four to six hours a week and two product teams with limited engin
 
 **First — the accessibility floor and the token foundation, together.** They are the same work. Five custom properties fix the failing text tier; four fix every border. Doing tokens *without* fixing contrast means encoding the failures into the new system permanently. This is the one sequencing mistake that cannot be undone cheaply.
 
-**Second — the keyboard failures.** Eight code sites, three of which block a core task outright. Highest user impact per hour of any work in this audit.
+**Second — the keyboard failures.** Six code sites, three of which block a core task outright — ride selection, cart removal and catalogue filtering, 14 of the 24 broken targets between them. Highest user impact per hour of any work in this audit.
 
 **Third — the RTL rule layer, before any new screen is built.** Not the migration — the *rules*, and the lint that enforces them. Every screen built between now and then adds physical properties to undo. The migration itself is mechanical and can follow.
 

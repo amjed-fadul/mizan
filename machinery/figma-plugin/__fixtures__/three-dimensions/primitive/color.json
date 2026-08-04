@@ -1,0 +1,28 @@
+{
+  "grey": {
+    "$type": "color",
+    "0": {
+      "$value": { "colorSpace": "srgb", "components": [1, 1, 1], "alpha": 1, "hex": "#ffffff" },
+      "$description": "White."
+    },
+    "500": {
+      "$value": { "colorSpace": "srgb", "components": [0.5, 0.5, 0.5], "alpha": 1, "hex": "#808080" },
+      "$description": "Mid grey."
+    },
+    "900": {
+      "$value": { "colorSpace": "srgb", "components": [0.1, 0.1, 0.1], "alpha": 1, "hex": "#1a1a1a" },
+      "$description": "Near black."
+    }
+  },
+  "accent": {
+    "$type": "color",
+    "a": {
+      "$value": { "colorSpace": "srgb", "components": [0, 0.4, 0.2], "alpha": 1, "hex": "#006633" },
+      "$description": "First product's accent."
+    },
+    "b": {
+      "$value": { "colorSpace": "srgb", "components": [0, 0.2, 0.6], "alpha": 1, "hex": "#003399" },
+      "$description": "Second product's accent."
+    }
+  }
+}

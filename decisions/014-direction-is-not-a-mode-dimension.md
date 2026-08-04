@@ -26,7 +26,11 @@ Should text direction be one of the token system's mode dimensions?
 
 Option 1 is what the roadmap assumed, and it is what a system built on *physical* properties would need — if spacing were expressed as `margin-left`, the RTL value would genuinely differ and a mode would be the way to express it.
 
-Its cost under the actual architecture is that it buys nothing and spends a dimension. Adding it alongside script would put the matrix at sixteen combinations against a ceiling of ten, which is not a tight fit but an impossible one.
+Its cost under the actual architecture is that it buys nothing and spends a dimension.
+
+> **Correction.** An earlier draft added: *"Adding it alongside script would put the matrix at sixteen combinations against a ceiling of ten, which is not a tight fit but an impossible one."* That claim does not hold. Figma's ten-mode limit is per **collection**, and the sync plugin maps one collection per dimension — so each collection carries two modes regardless of how many dimensions exist, and sixteen combinations are never materialised. See the correction in [013](./013-script-is-a-mode-not-a-parallel-scale.md).
+>
+> **The decision is unaffected.** It never rested on the ceiling. It rests on the fact that no token takes a different value in RTL, which is verified and unchanged. The ceiling was a supporting argument that turned out to be false, and a conclusion that survives losing one of its arguments is worth more than one that needed all of them.
 
 Option 2 is free but depends on the logical-property rule actually holding. If a physical property ever ships, direction silently becomes a dimension the system does not have.
 
@@ -44,7 +48,7 @@ The confusion in the original line is worth naming, because it is a common one: 
 
 ## Consequences
 
-- The mode budget is four combinations now, eight once script lands, against a ceiling of ten. Comfortable rather than tight.
+- The combination count is four now and eight once script lands. **There is no budget being spent.** This consequence originally read "against a ceiling of ten. Comfortable rather than tight", which is the same retracted arithmetic the correction under Trade-offs above disposes of, restated one section later — under collection-per-dimension each dimension is a collection holding two modes, and the combinations are never materialised as modes at all. Found while sweeping the ceiling claim out of the repository; it is recorded rather than silently deleted because **a correction placed at the argument it falsifies does not reach the consequence that repeats it**, and this file is the second of two entries where exactly that happened.
 - **The logical-property rule is now load-bearing** rather than stylistic. If a physical property ships, the system has no mechanism to correct it, because the dimension that would have expressed the correction deliberately does not exist. This raises the value of the lint rule in Stage 6 considerably.
 - The Figma library needs no direction modes, so the collection structure maps to theme and product only.
 - Testing direction means flipping `dir` and looking, not switching a mode. That is a different verification habit and worth stating in the preview and in the eventual Figma docs.
