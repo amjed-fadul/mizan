@@ -1,0 +1,375 @@
+/*
+  Input — the second component, and the first test of whether the vocabulary
+  Button established generalises or was designed around Button.
+
+  It is the same rule as Button.css: nothing in this file is a value. Every
+  colour, space, radius and type value is a custom property generated from
+  content/tokens/ by `npm run build:tokens`, and a hex or a px written down here
+  is the same defect as an edited generated file arriving by hand.
+
+  Two things this file inherits rather than invents, which is the whole point of
+  it existing second:
+
+  - The three size steps read `control.{sm,md,lg}.*`, the same semantics Button
+    reads. A field and its submit button at the same step are the same height in
+    both products, and neither component knows which product it is in.
+  - The focus indicator is the same two-tone construction decision 019 settled
+    and Button already draws. It is repeated here rather than shared, and the
+    duplication is named at the bottom of this file rather than pretended away.
+
+  Two written numbers, both named at the point they are written, which is the
+  discipline Button.css states and this file inherits:
+
+  - The 1px control edge, the same literal Button carries and for the same
+    reason — there is still no border-width scale in content/tokens/, and
+    decision 023 states why the invalid state changes the edge's COLOUR rather
+    than its width. Reaching for space.25 would be a 2px edge chosen because a
+    spacing token happened to be nearby.
+  - `--mz-input-supporting-scale`, the 0.875 ratio the label, hint and error
+    are set at. Argued where it is defined, and the first thing in this library
+    that wants the component token layer nobody has built.
+*/
+
+/* ---------------------------------------------------------------- the field */
+
+.mz-input {
+  /*
+    The wrapper is a grid rather than a block so that the label, field, hint and
+    error stack in source order with one gap rule between them. Source order is
+    reading order in both directions, and there is nothing directional here at
+    all — this axis is the block axis, which `dir` does not touch.
+  */
+  display: grid;
+  gap: var(--space-50);
+
+  /*
+    A field does not fill its container by default, for the same reason Button
+    does not: content/rules/rtl-arabic.md §6 says a component does not take a
+    width, and defaulting to 100% would be this file deciding the layout of
+    every form it is dropped into. `.mz-input--full-width` is the opt-in, and it
+    says "as wide as where you put me" rather than a number.
+  */
+  inline-size: fit-content;
+
+  font-family: var(--font-family-sans);
+
+  /*
+    The one written number in this file after the 1px edge, named here because
+    it is used three times — by the label, the hint and the error — and three
+    copies of an unexplained 0.875 is how a magic number survives review.
+
+    It is a RATIO rather than a step off the type ramp, and that is the whole
+    argument. A label given `font-size.300` would stay 14px while its field
+    grew to Move's 16 at the same step, so the label would drift away from the
+    control it names, in one product only, silently. An em is measured against
+    the type beside it and therefore scales with it — the same reasoning
+    decision 022 used to replace the busy indicator's three hard-coded
+    diameters with one em.
+
+    0.875 is 14/16: one step down at the ramp's most-used pair. It is not
+    reachable as a token because the ramp's steps are not evenly spaced, so no
+    single ratio expresses "one step down" everywhere on it. If a component
+    token layer is ever built, this is one of the first things that belongs in
+    it — decision 022 named that missing layer for the same kind of value.
+  */
+  --mz-input-supporting-scale: 0.875;
+
+  /*
+    letter-spacing: 0, always, and it is a token rather than the initial value.
+    content/rules/rtl-arabic.md §2: Arabic is cursive and joined, tracking
+    breaks the joins, and a global letter-spacing inherited from a page is
+    exactly the defect the Stage 1 audit found reaching every Arabic product
+    title. Declaring it here means this component cannot inherit one.
+  */
+  letter-spacing: var(--letter-spacing-none);
+}
+
+.mz-input--full-width {
+  inline-size: 100%;
+}
+
+/* ---------------------------------------------------------------- the label */
+
+.mz-input__label {
+  color: var(--text-primary);
+  font-weight: var(--font-weight-medium);
+
+  /*
+    The label sets one step below the field's own type at every step. It is not
+    given a size of its own from the ramp, because a label that stayed 14px
+    while its field grew to Move's 16 would drift from the control it names.
+    `em` here is a ratio against the step the field resolved to, which is the
+    same trick decision 022 settled for the busy indicator's diameter: a value
+    measured against the type beside it scales with the type beside it, in any
+    product and at any step this system gains later.
+  */
+  font-size: calc(1em * var(--mz-input-supporting-scale));
+
+  /*
+    Arabic line-height, not Latin. §2: Arabic needs more vertical room at the
+    same size — ascenders, descenders and diacritics — and مُخفَّض reaches above
+    the font's own declared ascent. A label is the shortest text in this
+    component and therefore the one most likely to be given a tight leading and
+    clipped.
+  */
+  line-height: var(--line-height-normal);
+}
+
+.mz-input__required {
+  color: var(--text-error);
+
+  /*
+    A gap the marker owns, so the asterisk never touches the last letter of the
+    label. Written as a logical margin: in Arabic the label ends on the left and
+    the marker follows it there, with no rule in this file mentioning either
+    side.
+  */
+  margin-inline-start: var(--space-25);
+}
+
+/* ---------------------------------------------------------------- the input */
+
+.mz-input__field {
+  /*
+    border-box for the same reason Button uses it: min-block-size below is a
+    statement about the hit target, and a tap target is measured from the
+    outside of the control by everybody who measures one.
+  */
+  box-sizing: border-box;
+
+  inline-size: 100%;
+
+  background-color: var(--surface-default);
+  color: var(--text-primary);
+
+  border-radius: var(--radius-100);
+  border-style: solid;
+
+  /*
+    1px, and it is the one number in this file that is written rather than
+    resolved — the same literal Button.css carries and for the same reason.
+    There is no border-width scale in content/tokens/; `border.control` and
+    `border.error` are colours, not widths. Decision 023 records that this is
+    now the second component to route around the missing scale, which makes it
+    a pattern rather than an incident.
+  */
+  border-width: 1px;
+  border-color: var(--border-control);
+
+  font-family: inherit;
+  font-weight: var(--font-weight-regular);
+
+  /*
+    The Arabic leading again, and here it is load-bearing rather than careful.
+    §6 measured إتمام الشراء painting 16.5px of ink against "Checkout"'s 12.0,
+    and مُخفَّض reaching 16.4px above a baseline whose declared ascent is 15.0.
+    A field whose height was fitted to Latin ink cuts the tops off diacritics,
+    and §2 is why a lost mark is a different word rather than a cosmetic loss.
+    So the height comes from padding and this, never from a fixed value.
+  */
+  line-height: var(--line-height-normal);
+  letter-spacing: var(--letter-spacing-none);
+
+  /*
+    A transition on the two properties that change, named rather than `all`.
+    Both are paints on the control's own box, so neither can cause a layout —
+    the rule decision 021 set for Button applies unchanged.
+
+    easing.entrance, which is the curve Button already uses for its hover
+    colour, and its argument carries over verbatim: at 100ms the shape of a
+    colour curve is not perceptible, what is perceptible is whether the change
+    starts at once, and two curves for two colour crossfades in one library
+    would imply a distinction nobody can see. easing.move would have been the
+    defensible-sounding alternative — the border is present at both ends — and
+    it is refused for that reason rather than on its merits.
+
+    Not wrapped in `@media (hover: hover)` the way Button's is. Button's list
+    is guarded because everything in it is hover-driven; this one also carries
+    the invalid edge appearing and the read-only edge dropping back, which are
+    state changes a touch user sees just as often as a pointer user does.
+  */
+  transition:
+    border-color var(--duration-100) var(--easing-entrance),
+    background-color var(--duration-100) var(--easing-entrance);
+}
+
+/*
+  The placeholder is dimmer than the value and is still a declared pair.
+  text.secondary on surface.default is gated at 4.5 in pairs.json, so a
+  placeholder cannot be the one piece of text in this component that nothing
+  checked. It is deliberately NOT lighter than that: a placeholder holds an
+  example of the value (§6), and an example nobody can read is not one.
+*/
+.mz-input__field::placeholder {
+  color: var(--text-secondary);
+
+  /*
+    The placeholder does not fade or move as the field is used. §6 refuses the
+    common pattern of an Arabic placeholder that is right-aligned until typing
+    starts and then flips: a field that jumps as the first character lands is
+    the defect rather than the fix.
+  */
+  opacity: 1;
+}
+
+.mz-input__field:hover:not(:disabled):not([readonly]) {
+  border-color: var(--text-primary);
+}
+
+/* --------------------------------------------------------------- the states */
+
+/*
+  Invalid. The edge only — the message and aria-invalid are in the component,
+  and decision 023 is explicit that no one of the three carries the state alone.
+  A colour-blind user reads the message; a screen-reader user gets aria-invalid;
+  a sighted user sees all three.
+*/
+.mz-input--invalid .mz-input__field {
+  border-color: var(--border-error);
+}
+
+.mz-input--invalid .mz-input__field:hover:not(:disabled):not([readonly]) {
+  /*
+    Hover does not overwrite the error edge. A field that stops looking invalid
+    because a pointer passed over it has traded a state for a hover effect.
+  */
+  border-color: var(--border-error);
+}
+
+/*
+  Read-only is not disabled and does not look like it. The value stays
+  selectable and reachable by keyboard; what changes is that the edge stops
+  claiming to be an editable control, so it drops to the divider token.
+*/
+.mz-input__field:read-only {
+  background-color: var(--surface-sunken);
+  border-color: var(--border-default);
+}
+
+/*
+  Disabled, drawn with a declared pair — text.secondary on surface.sunken,
+  gated at 4.5 in pairs.json — and never with an opacity. v0 uses
+  `opacity: 0.5` on its disabled controls, which renders a colour no token
+  declares and therefore a contrast ratio the gate cannot see.
+*/
+.mz-input__field:disabled {
+  background-color: var(--surface-sunken);
+  color: var(--text-secondary);
+  border-color: transparent;
+  cursor: not-allowed;
+}
+
+.mz-input__field:disabled::placeholder {
+  color: var(--text-secondary);
+}
+
+/* ---------------------------------------------------------------- the focus */
+
+/*
+  The two-tone indicator from decision 019, drawn exactly as Button draws it: a
+  band of focus.ring flanked by focus.ring-contrast on both sides, so that the
+  indicator clears 3.0 against whatever it lands on even when one of its two
+  tones vanishes into the ground. On surface.sunken the light band is at 1.12:1
+  and declared as an exception in pairs.json — that is the mechanism working,
+  not a hole: each tone is allowed to disappear somewhere, and a pair of tones
+  that both had to clear 3.0 everywhere is a pair that could not exist.
+
+  :focus-visible rather than :focus, so a pointer click does not paint a ring a
+  mouse user did not ask for while a keyboard user still gets one.
+
+  Written on the field and not on the wrapper. The wrapper holds the label and
+  the messages, and a ring around all four would be an indicator claiming a
+  target much larger than the thing that actually has focus.
+*/
+.mz-input__field:focus-visible {
+  outline: var(--space-25) solid var(--focus-ring);
+  outline-offset: var(--space-25);
+  box-shadow: 0 0 0 var(--space-100) var(--focus-ring-contrast);
+}
+
+/* ------------------------------------------------------- hint and the error */
+
+.mz-input__hint {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: calc(1em * var(--mz-input-supporting-scale));
+  line-height: var(--line-height-normal);
+}
+
+.mz-input__error {
+  margin: 0;
+  color: var(--text-error);
+  font-size: calc(1em * var(--mz-input-supporting-scale));
+  line-height: var(--line-height-normal);
+
+  /*
+    Medium rather than regular. The error is the one line in this component a
+    user is looking for when something has gone wrong, and weight is the
+    de-emphasis axis decision 009 moved hierarchy onto when it deleted the third
+    neutral text tier — so it is the axis available here too.
+  */
+  font-weight: var(--font-weight-medium);
+}
+
+/* ------------------------------------------------------------- the geometry */
+
+/*
+  The three steps, reading the same control.* semantics Button reads. This is
+  the second consumer of decision 022's work and the test of whether it
+  generalised: there is no [data-product] selector here, no branch, and no
+  product named anywhere in this file — the same step resolves to a different
+  control in each product because the mode files say so, not because this file
+  knows.
+
+  min-inline-size is deliberately NOT applied to the field. Button needs an
+  inline floor because a two-character Arabic label in a button-shaped slab
+  reads as a label that failed to load; a text field is already `inline-size:
+  100%` of a wrapper that is either fit-content or full-width, so its inline
+  extent is a layout question rather than a label-length one. The BLOCK floor
+  is what the tap target needs and it is applied at every step.
+*/
+.mz-input--sm .mz-input__field {
+  padding-inline: var(--control-sm-padding-inline);
+  padding-block: var(--control-sm-padding-block);
+  font-size: var(--control-sm-font-size);
+  min-block-size: var(--control-sm-min-block);
+}
+
+.mz-input--md .mz-input__field {
+  padding-inline: var(--control-md-padding-inline);
+  padding-block: var(--control-md-padding-block);
+  font-size: var(--control-md-font-size);
+  min-block-size: var(--control-md-min-block);
+}
+
+.mz-input--lg .mz-input__field {
+  padding-inline: var(--control-lg-padding-inline);
+  padding-block: var(--control-lg-padding-block);
+  font-size: var(--control-lg-font-size);
+  min-block-size: var(--control-lg-min-block);
+}
+
+/* -------------------------------------------------------- reduced motion */
+
+/*
+  The colour transitions are kept and nothing here is removed, which is the
+  same answer decision 021 gave for Button's hover: reduced motion asks for
+  fewer and gentler, not zero, and a border colour crossfading over 100ms is
+  neither vestibular nor attention-grabbing. The blanket
+  `animation-duration: 0.01ms` override is refused for the reason 021 states —
+  it cannot tell a slide from a spinner. This block exists to say the question
+  was asked rather than to change anything.
+*/
+
+/* ------------------------------------------------------ on the duplication */
+
+/*
+  The focus block above is byte-for-byte Button's. That is knowingly duplicated
+  rather than extracted, and the reason is that there is nowhere correct to put
+  it yet: a shared `.mz-focusable` class would be a third thing to import and to
+  keep in step, and a CSS custom property cannot carry a whole box-shadow plus
+  outline construction without becoming less readable than the four lines it
+  replaces. The honest trigger for extracting it is the third component that
+  needs it — two occurrences is a coincidence and three is a pattern — and at
+  that point the extraction is mechanical because all three are identical.
+*/

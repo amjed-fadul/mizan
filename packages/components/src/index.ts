@@ -1,15 +1,19 @@
 /**
  * @mizan/components — Mizan's component library.
  *
- * One component so far. The library exists at all because decision 020 settled
- * that v0's four button implementations become one, and a consolidated
- * component needs somewhere to live that is neither the token build output nor
- * the preview app.
+ * Two components. The library exists at all because decision 020 settled that
+ * v0's four button implementations become one, and a consolidated component
+ * needs somewhere to live that is neither the token build output nor the
+ * preview app. Input is the second, and it is the test of whether the
+ * vocabulary Button established generalises: it reads the same
+ * `control.{sm,md,lg}.*` steps decision 022 made per-product, and it needed one
+ * name the token layer did not have — decision 023 added `text.error` and
+ * `border.error` for it.
  *
- * Consumers import the token stylesheet once, and then the component:
+ * Consumers import the token stylesheet once, and then the components:
  *
  *   import '@mizan/tokens/tokens.css'
- *   import { Button } from '@mizan/components'
+ *   import { Button, Input } from '@mizan/components'
  *
  * A component brings its own CSS with it — Button.tsx imports Button.css — so
  * there is no way to render one without its styles. The *token* stylesheet is a
@@ -20,3 +24,5 @@
  */
 export { Button } from './Button'
 export type { ButtonProps, ButtonSize, ButtonVariant } from './Button'
+export { Input } from './Input'
+export type { InputProps, InputSize, InputType, InputValueDirection } from './Input'
