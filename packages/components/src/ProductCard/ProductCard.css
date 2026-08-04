@@ -165,9 +165,12 @@
     trigger. It is left here so this commit adds a component rather than
     refactoring three others, and both card READMEs record it.
   */
-  outline: var(--space-25) solid var(--focus-ring);
-  outline-offset: var(--space-25);
-  box-shadow: 0 0 0 var(--space-100) var(--focus-ring-contrast);
+  /*
+    The indicator is in ../styles/focus.css via `mz-focus-ring`. What stays is
+    the radius: this is an inline link inside a heading, not a rounded box, and
+    the shared rule deliberately sets no radius so that every consumer keeps its
+    own corners.
+  */
   border-radius: var(--radius-0);
 }
 

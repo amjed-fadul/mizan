@@ -14,8 +14,10 @@
     reads. A field and its submit button at the same step are the same height in
     both products, and neither component knows which product it is in.
   - The focus indicator is the same two-tone construction decision 019 settled
-    and Button already draws. It is repeated here rather than shared, and the
-    duplication is named at the bottom of this file rather than pretended away.
+    and Button already draws. It now lives once in ../styles/focus.css and is
+    reached by a class; this file was where the trigger for extracting it was
+    written down, and the extraction happened one component later than that
+    trigger said it should.
 
   Two written numbers, both named at the point they are written, which is the
   discipline Button.css states and this file inherits:
@@ -266,26 +268,15 @@
 /* ---------------------------------------------------------------- the focus */
 
 /*
-  The two-tone indicator from decision 019, drawn exactly as Button draws it: a
-  band of focus.ring flanked by focus.ring-contrast on both sides, so that the
-  indicator clears 3.0 against whatever it lands on even when one of its two
-  tones vanishes into the ground. On surface.sunken the light band is at 1.12:1
-  and declared as an exception in pairs.json — that is the mechanism working,
-  not a hole: each tone is allowed to disappear somewhere, and a pair of tones
-  that both had to clear 3.0 everywhere is a pair that could not exist.
+  The indicator lives in ../styles/focus.css and is reached by the
+  `mz-focus-ring` class on the field. Decision 019's two tones, defined once for
+  the whole library.
 
-  :focus-visible rather than :focus, so a pointer click does not paint a ring a
-  mouse user did not ask for while a keyboard user still gets one.
-
-  Written on the field and not on the wrapper. The wrapper holds the label and
-  the messages, and a ring around all four would be an indicator claiming a
-  target much larger than the thing that actually has focus.
+  What is Input's own decision, and stays recorded here: the class goes on the
+  FIELD and not on the wrapper. The wrapper holds the label, the hint and the
+  error, and a ring around all four would be an indicator claiming a target much
+  larger than the thing that actually has focus.
 */
-.mz-input__field:focus-visible {
-  outline: var(--space-25) solid var(--focus-ring);
-  outline-offset: var(--space-25);
-  box-shadow: 0 0 0 var(--space-100) var(--focus-ring-contrast);
-}
 
 /* ------------------------------------------------------- hint and the error */
 
@@ -364,12 +355,13 @@
 /* ------------------------------------------------------ on the duplication */
 
 /*
-  The focus block above is byte-for-byte Button's. That is knowingly duplicated
-  rather than extracted, and the reason is that there is nowhere correct to put
-  it yet: a shared `.mz-focusable` class would be a third thing to import and to
-  keep in step, and a CSS custom property cannot carry a whole box-shadow plus
-  outline construction without becoming less readable than the four lines it
-  replaces. The honest trigger for extracting it is the third component that
-  needs it — two occurrences is a coincidence and three is a pattern — and at
-  that point the extraction is mechanical because all three are identical.
+  This file used to end by arguing that the focus block was knowingly duplicated
+  rather than extracted, and it set the trigger: two occurrences is a
+  coincidence and three is a pattern.
+
+  The trigger fired at RideCard and was not acted on, and ProductCard made four.
+  It is extracted now, into ../styles/focus.css, and the note is left here
+  rather than deleted because the useful part was never the argument for
+  waiting — it was the rule. The rule was right. What went wrong is that a rule
+  with no gate behind it is a thing you can walk past twice.
 */

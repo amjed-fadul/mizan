@@ -135,24 +135,16 @@
 }
 
 /*
-  The focus indicator, drawn on the CARD from the state of the input inside it.
-  Two tones, decision 019, the same construction Button and Input use.
+  The indicator lives in ../styles/focus.css, reached by `mz-focus-ring-within`
+  — the variant for an element that shows focus taken by a descendant.
 
-  This is now the third identical copy of this block, which is the trigger
-  Input.css named for extracting it — two occurrences is a coincidence, three is
-  a pattern. It is left duplicated in this commit deliberately so the extraction
-  is its own change with its own reasoning rather than a thing that happened
-  while a card was being written, and both READMEs record that it is owed.
-
-  :focus-visible on the input rather than :focus, so a pointer click on the card
-  does not paint a ring a mouse user did not ask for.
+  That variant exists because of this component. RideCard's real focus lands on
+  a radio that is visually hidden inside the card, so the ring has to be drawn
+  on the card rather than on the thing that has focus. It is not a special case
+  to be smoothed away: it is the correct construction for any control whose
+  focusable element is not the thing a user sees, which is why it got a name
+  instead of an exception.
 */
-.mz-ride-card:has(.mz-ride-card__input:focus-visible) {
-  outline: var(--space-25) solid var(--focus-ring);
-  outline-offset: var(--space-25);
-  box-shadow: 0 0 0 var(--space-100) var(--focus-ring-contrast);
-}
-
 .mz-ride-card--disabled {
   background-color: var(--surface-sunken);
   color: var(--text-secondary);

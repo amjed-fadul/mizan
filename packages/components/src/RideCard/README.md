@@ -96,7 +96,7 @@ There is no `[dir='rtl']` selector anywhere.
 
 ## What is owed
 
-**The focus indicator is duplicated for the third time.** `Input.css` named the trigger for extracting it — *two occurrences is a coincidence, three is a pattern* — and this is the third. It is left duplicated here so that adding a component is not also a refactor of three others; the extraction is now overdue and is its own change.
+~~**The focus indicator is duplicated for the third time.**~~ **Extracted.** It now lives once, in [`../styles/focus.css`](../styles/focus.css), reached by the `mz-focus-ring-within` class — the variant for an element that shows focus taken by a *descendant*. That variant exists because of this component: the real focus lands on a radio that is visually hidden inside the card, so the ring has to be drawn on the card. It got a name rather than an exception, because it is the correct construction for any control whose focusable element is not the thing a user sees.
 
 **`RideCardGroup` has no contract.** The contract generator takes one props type per file, and this file exports two. The group is documented here and in the stories, but nothing machine-checks its API. The honest fix is either a second source file or a generator that handles more than one exported props type, and neither is this component's to decide.
 

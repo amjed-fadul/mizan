@@ -1346,13 +1346,28 @@ assert(alignedContracts.payload?.contracts?.[0]?.props === 7,
   'contracts: every prop the fixture component declares was compared',
   JSON.stringify(alignedContracts.payload?.contracts));
 
-// The token list is derived from the stylesheet beside the component rather
-// than typed out beside it, so the count is a property of two files agreeing.
-// Nine is what Widget.css references and the fixture token set defines; the
-// tenth reference is the declared absence below.
-assert(alignedContracts.payload?.contracts?.[0]?.tokens === 9,
+// The token list is derived from the stylesheets the component IMPORTS rather
+// than typed out beside it, so the count is a property of several files
+// agreeing. Ten is what Widget.css and shared.css reference between them and
+// the fixture token set defines; one further reference is the declared absence
+// below.
+assert(alignedContracts.payload?.contracts?.[0]?.tokens === 10,
   'contracts: the token list was read out of the component stylesheet',
   JSON.stringify(alignedContracts.payload?.contracts));
+
+/* The second stylesheet, and the reason this fixture has one.
+ *
+ * `border.default` is referenced only by shared.css — never by Widget.css —
+ * so it can reach the contract by one route only: the generator following the
+ * component's own CSS imports rather than guessing one file from the source's
+ * name. That guess was the rule until the real library extracted its focus
+ * indicator into a shared sheet, at which point four contracts silently lost
+ * two tokens each while the components went on rendering them. A contract that
+ * reports less than the component uses looks exactly like a correct one. */
+const alignedTokens = JSON.parse(readFileSync(join(CONTRACTS, 'aligned', 'widget.json'), 'utf8')).tokens;
+assert(alignedTokens.includes('border.default'),
+  'contracts: a token only a SECOND imported stylesheet references still reaches the contract',
+  JSON.stringify(alignedTokens));
 
 const alignedContract = JSON.parse(readFileSync(join(CONTRACTS, 'aligned', 'widget.json'), 'utf8'));
 assert(alignedContract.tokens_absent?.[0]?.property === '--motion-fast',

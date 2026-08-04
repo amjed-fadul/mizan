@@ -114,7 +114,7 @@
       "Keep every option for one journey inside one group. Two groups on a screen are two independent choices, which is a different question from the one the screen is asking."
     ]
   },
-  "stylesheet": "packages/components/src/RideCard/RideCard.css",
+  "stylesheet": "packages/components/src/styles/focus.css, packages/components/src/RideCard/RideCard.css",
   "tokens": [
     "action.primary",
     "border.control",

@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { Button } from '../Button'
+import '../styles/focus.css'
 import './ProductCard.css'
 
 /**
@@ -214,7 +215,7 @@ export function ProductCard({
             which is the more common failure — and the fix, if a screen needs
             it, is a heading-level context rather than a prop on every card.
           */}
-          <a className="mz-product-card__link" href={href}>
+          <a className="mz-product-card__link mz-focus-ring" href={href}>
             {name}
           </a>
         </h3>

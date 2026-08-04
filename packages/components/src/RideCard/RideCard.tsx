@@ -1,5 +1,6 @@
 import { Children, cloneElement, isValidElement, useId } from 'react'
 import type { ChangeEvent, ReactNode } from 'react'
+import '../styles/focus.css'
 import './RideCard.css'
 
 /**
@@ -178,7 +179,7 @@ export function RideCard({
   const id = useId()
   const surgeId = `${id}-surge`
 
-  const className = ['mz-ride-card', disabled ? 'mz-ride-card--disabled' : null]
+  const className = ['mz-ride-card', 'mz-focus-ring-within', disabled ? 'mz-ride-card--disabled' : null]
     .filter(Boolean)
     .join(' ')
 

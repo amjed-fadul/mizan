@@ -77,7 +77,7 @@ jobs:
     env:
       CHECK_FLOOR: 44
       TAP_TARGET_FLOOR: 12
-      SELFTEST_FLOOR: 211
+      SELFTEST_FLOOR: 212
       DRY_RUN_FLOOR: 187
 
     steps:
@@ -106,7 +106,7 @@ jobs:
 
       # The second install, and the first of the two things that make a green
       # run a lie if you skip it. Without this, esbuild is absent, the plugin
-      # cannot be built, and `selftest` drops from 211 assertions to 187 — it
+      # cannot be built, and `selftest` drops from 212 assertions to 188 — it
       # says so in its output rather than passing quietly, but a CI log nobody
       # reads is exactly where a printed note goes to die. The floor below is
       # what actually catches it.

@@ -117,7 +117,7 @@
       "Ensure the heading level is right for the page. The card renders an h3 and a screen that puts it under an h1 has skipped a level."
     ]
   },
-  "stylesheet": "packages/components/src/ProductCard/ProductCard.css",
+  "stylesheet": "packages/components/src/styles/focus.css, packages/components/src/ProductCard/ProductCard.css",
   "tokens": [
     "border.default",
     "commerce.discount",

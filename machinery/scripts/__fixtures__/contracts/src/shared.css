@@ -1,0 +1,17 @@
+/*
+  A second stylesheet, imported by Widget.tsx alongside its own.
+
+  It exists to prove one thing the contract generator got wrong once: a
+  component's tokens are the union of every stylesheet it imports, not the
+  contents of the one file sitting beside its source. When the real library
+  extracted its focus indicator into a shared sheet, four contracts silently
+  dropped two tokens each — the components had not stopped using them, the
+  generator had stopped being able to see them.
+
+  `border.default` appears here and NOWHERE in Widget.css, so it can only reach
+  the contract through the second import. If it disappears from the expected
+  token list, the generator has gone back to reading one file.
+*/
+.fixture-widget__rule {
+  border-color: var(--border-default);
+}

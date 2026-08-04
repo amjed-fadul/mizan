@@ -93,7 +93,7 @@ It is not required by the type, because a card may legitimately show no old pric
 
 ## What is owed
 
-**The focus indicator is duplicated for the fourth time**, on the link. `Input.css` set the trigger at three. The extraction is overdue and is its own change rather than something that happens while a card is being written.
+~~**The focus indicator is duplicated for the fourth time.**~~ **Extracted** to [`../styles/focus.css`](../styles/focus.css) and reached by `mz-focus-ring` on the link. What stays local is the `border-radius: var(--radius-0)`: the shared rule deliberately sets no radius, so every consumer keeps its own corners, and an inline link inside a heading is not a rounded box.
 
 **A quantity stepper.** The roadmap's description of this card includes one, and it is deliberately absent: a stepper is a third interactive target and a component in its own right. It should be built before it is embedded here.
 
