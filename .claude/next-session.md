@@ -12,44 +12,17 @@ Read `CLAUDE.md` first. Never lower a threshold to make something pass. Never ti
 
 Fix each, and add an assertion that **fails before the fix and passes after**. Run it against the unfixed code first and record what you saw.
 
-### A1 — a mode deleted in Figma is not drift
+### ~~A1 — a mode deleted in Figma is not drift~~ — **done** in `6d73cae`
 
-`machinery/scripts/check-drift.mjs`, `mapModes` and `combinationsFor`.
-
-It warns `figma-mode-unknown` for a mode Figma *has* that the source *lacks*. The reverse produces nothing: a mode the source has that Figma lacks just yields fewer combinations, and those values are never compared.
-
-Reproduced — copy `machinery/scripts/__fixtures__/figma/aligned.json`, delete the `dark` mode from the `theme` collection and its 3 values, then:
-
-```
-node machinery/scripts/check-drift.mjs --root machinery/scripts/__fixtures__/valid --snapshot <mutated>
-```
-
-```
-baseline : 20 token(s) aligned across 80 comparison(s). Result: pass.
-mutated  : 20 token(s) aligned across 74 comparison(s). Result: pass.   exit 0
-```
-
-Half the dark theme vanishes and rung 2 reports green. The only trace is `80 → 74`, which `--quiet` hides.
-
-**Fix:** after `mapModes`, assert every id in `set.modes` is claimed by some collection mode. New drift class `mode-missing-in-figma`, with the outward remedy every other class carries.
+New drift class `mode-missing-in-figma`, and the line drawn per *dimension* rather than per collection: a collection that maps onto a dimension has taken it on, so a mode of that dimension it does not carry is a gap; a dimension no collection maps onto is not modelled at all, every value is compared against every combination along it, and a source that varies reports a value finding instead. `figma/mode-deleted.json` and `figma/dimension-flattened.json` assert both halves. selftest 144 → 154.
 
 ### ~~A2 — two token paths projecting to one Figma name are permanently non-idempotent~~
 
 **Done** in `522ca46`. Two checks at two layers: `token-model.ts` now calls `SEGMENT_PATTERN` — it was exported and enforced nowhere, and the plugin is a second entry point into the same token root that `check-schema.mjs` cannot vouch for — so a `/` inside a segment is a `naming-pattern` error at load. `plan.ts` gains `checkDistinctNames` over the desired set, keyed on `(collection, name)`, shaped on `sheet.ts`'s `checkSiblingNames`, naming both token paths and the single Figma name. Both are errors, not warnings: the failure is a gate nobody can ever clear. `dry-run` 178 → 187, five of the nine verified failing against the unfixed source. Nothing to do here.
 
-### A3 — a pair's `modes` list can silence the pair entirely
+### ~~A3 — a pair's `modes` list can silence the pair entirely~~ — **done** in `d3a8c00`
 
-`machinery/scripts/check-contrast.mjs` (~line 265). A combination holds one mode per dimension, so `"modes": ["theme.light","theme.dark"]` — which reads as "check both" — matches **zero** combinations. So does any typo. Skipped everywhere, no error, no warning.
-
-```
-no modes key         -> Result: fail. 4 failing pair(s)
-"modes":["theme.lite"]                       -> 0 check(s). pass. exit 0
-"modes":["theme.light","theme.dark"]         -> 0 check(s). pass. exit 0
-```
-
-Latent — today's `pairs.json` uses no `modes` key.
-
-**Fix:** count evaluations per pair and error on any declared pair evaluated in zero combinations. Validate every id in `pair.modes` and `exception.modes` against `set.modes`.
+**Behaviour change, stated loudly in the code, the README and the commit.** A `modes` list now means: for every dimension it mentions, the combination's mode for that dimension must be one of the listed ones — or within a dimension, and across them. Picked over a plain or because it changes nothing that had a meaning: a list naming at most one mode per dimension is a conjunction exactly as before, and the two rules differ only where the old one selected nothing. Behind it, `pair-mode-unknown`, `exception-mode-unknown`, and `pair-never-evaluated` — the invariant that this gate never reports a pass having skipped a declared pairing, whatever the scope grammar becomes. No reachability error for an exception: a pair with an empty scope fails open, an exception with one fails safe. selftest 154 → 164.
 
 ---
 
