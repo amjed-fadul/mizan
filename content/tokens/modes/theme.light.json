@@ -10,12 +10,14 @@
     "primary": { "$value": "{neutral.900}" },
     "on-action": { "$value": "{neutral.0}" },
     "secondary-market": { "$value": "{neutral.700}" },
-    "secondary-move": { "$value": "{neutral.650}" }
+    "secondary-move": { "$value": "{neutral.650}" },
+    "error": { "$value": "{red.600}" }
   },
 
   "border": {
     "default": { "$value": "{neutral.300}" },
-    "control": { "$value": "{neutral.600}" }
+    "control": { "$value": "{neutral.600}" },
+    "error": { "$value": "{red.600}" }
   },
 
   "commerce": {

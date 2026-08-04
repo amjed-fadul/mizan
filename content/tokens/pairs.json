@@ -68,6 +68,36 @@
       "$description": "The boundary of an interactive control. Checked separately from border.default because a control edge carries more meaning than a divider and may not inherit the same value."
     },
     {
+      "foreground": "border.control",
+      "background": "surface.sunken",
+      "context": "ui",
+      "$description": "The same control edge on the tinted ground — a field inside a card body, a control in a well. It renders today and was undeclared until decision 023: Button's own stylesheet draws border.control against surface.sunken and nothing checked the result, which is the plainest form of the hole this file exists to close. It passes, at 3.83:1 in light and 3.84:1 in dark against a 3.0 bar, and that it passes is the argument for declaring it rather than against — 0.83 of headroom on the tighter of the two grounds is the number somebody needs to see before nudging border.control a step lighter to soften a form."
+    },
+    {
+      "foreground": "text.error",
+      "background": "surface.default",
+      "context": "text",
+      "$description": "The error message on the page ground. A sentence a user reads to find out what to fix, so it takes the full 4.5 text threshold and not the indicator one — this is the half of the invalid state that says what is wrong, and a message nobody can read is a control with no error state at all. red.600 in light and red.300 in dark, the ramp's own light-grounds/dark-grounds split."
+    },
+    {
+      "foreground": "text.error",
+      "background": "surface.sunken",
+      "context": "text",
+      "$description": "The same message inside a tinted panel, which is where a form most often sits. Declared separately from surface.default for the reason every foreground in this file is: sunken is the tighter of the two grounds in both themes, so it is the binding case, and a red that reads on the page can still be the one that fails in the card the form lives in."
+    },
+    {
+      "foreground": "border.error",
+      "background": "surface.default",
+      "context": "ui",
+      "$description": "The edge of a control whose value was not accepted. Gated at 3.0 rather than the 4.5 its twin text.error carries, and that difference is the entire reason decision 023 made them two names for one value: a single name would have had to be declared at one threshold and would have been wrong at the other. An edge identifies a control and its state, which is precisely what 1.4.11 governs."
+    },
+    {
+      "foreground": "border.error",
+      "background": "surface.sunken",
+      "context": "ui",
+      "$description": "The invalid edge on the tinted ground, declared on the same terms as border.control on surface.sunken directly above — a form inside a card is the ordinary case, not the exotic one, and the invalid state has to survive the ground the form is actually drawn on."
+    },
+    {
       "foreground": "commerce.discount",
       "background": "surface.default",
       "context": "text",

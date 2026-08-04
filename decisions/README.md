@@ -48,3 +48,4 @@ Entries are numbered sequentially in the order decisions actually happen. Number
 | [020](./020-the-button-consolidation.md) | Four buttons become one, and the vocabulary the shared API refuses to carry | 4 |
 | [021](./021-the-motion-scale-and-where-a-spinner-does-not-go.md) | The motion scale, the cycle that is not a tier, and reduced motion as a rule rather than a mode | 4 |
 | [022](./022-control-geometry-resolves-by-product.md) | Control geometry resolves by product, and the tap target is not a token | 4 |
+| [023](./023-the-error-semantic-is-two-tokens.md) | The error semantic is two tokens, and neither of them is the red that already exists | 4 |
