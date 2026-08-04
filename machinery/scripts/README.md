@@ -130,6 +130,21 @@ A translucent foreground is composited over its background before the ratio is c
 
 `exceptions` in the pairs file waive a specific pairing, optionally in specific modes, and every entry requires a `reason`. An exception is printed in the output whether it passes or fails — a silent exception is not an exception, it is a hole, and the point of keeping the list is that it can be read and counted.
 
+### Mode scopes, and a behaviour change
+
+A pair or an exception may carry a `"modes"` list to narrow itself to part of the combination space. **It now means: for every dimension the list mentions, the combination's mode for that dimension must be one of the listed ones.** Or within a dimension, and within a dimension only; still and across dimensions.
+
+It used to be a plain conjunction — a combination had to contain *every* listed mode. A combination holds exactly one mode per dimension, so `["theme.light", "theme.dark"]` was unsatisfiable and matched **zero** combinations. The most natural way anybody would write "check this in both themes" was the one way to switch the check off, and the gate printed a smaller number of checks and the word *pass*. A misspelt mode id did the same thing.
+
+The change is narrower than it sounds. Where the old rule selected anything at all — a list naming at most one mode per dimension — the two rules agree exactly, `["theme.dark", "density.compact"]` included. They differ only where the old rule selected nothing, which was never a declaration anybody meant to write. Nothing that had a meaning changes meaning; the declarations that had none acquire the obvious one.
+
+Two errors sit behind it, because the rule is not what makes this safe:
+
+- **`pair-mode-unknown` / `exception-mode-unknown`** — a mode id the token set does not define. Validated as the file is read, so a typo is a defect in the declaration rather than a filter that quietly excludes everything.
+- **`pair-never-evaluated`** — a declared pair that was checked in no combination at all, for any reason. This is the invariant rather than the rule: whatever the scope grammar is today or becomes later, and whatever `--mode` narrowed the run to, this gate does not report a pass having skipped a pairing somebody declared. Declaring a pairing is asking for it to be checked, and the answer to that request is never silence.
+
+There is deliberately no equivalent error for an exception that matches nothing, and the asymmetry is the argument. A pair whose scope selects nothing fails **open** — the pairing goes unchecked and the build passes. An exception whose scope selects nothing fails **safe** — the pairing is checked against its full threshold and can still fail the build. Only the first is a hole.
+
 Exit 1 on any non-excepted failure. Output names the pair, the mode combination, the computed ratio, the threshold and both resolved hexes, so a CI log is readable without opening a file.
 
 ## check-drift.mjs — governance rung 2
@@ -397,6 +412,8 @@ rather than a decision the design system took.
 Runs both gates against both fixture sets and asserts the valid set passes with no errors and no warnings, and that the broken set fails **with each expected error code**, including a contrast failure that appears in one mode and not the other.
 
 `decorative` is asserted the only way that means anything: the valid fixture declares a decorative pair sitting at about **1.14:1** in light — below every WCAG threshold, including the 3.0 a `ui` declaration would impose — and the assertions are that its threshold is `null`, that it is resolved in all four combinations, that each result carries a measured ratio, that it appears by name in the passing run's output, and that the gate still exits 0. A threshold that was merely lenient would pass an exit-code check; only the ratio and the printed line prove there is no bar at all.
+
+**Mode scopes are asserted as counts, not exit codes**, because every pairing in `pairs/mode-scopes.json` passes: an exit code there would prove nothing about which combinations were looked at, and which combinations were looked at is the entire subject. Four scopes, four numbers — 4, 2, 1 and 4 — so both halves are held at once: that a list naming both modes of one dimension now means both, and that narrowing across dimensions was not traded away to get it. `pairs/unknown-mode.json` carries one misspelt mode id on a pair and another on an exception, and asserts both are named while the sound pair in the same file is still checked everywhere. And `pair-never-evaluated` is asserted through `--mode`, which is the one way left to ask this gate to pass having checked a declared pairing nowhere.
 
 **Rung 2 is held to the same standard.** Every drift fixture is a snapshot of the *same* correct token set: `figma/aligned.json`, which must report zero drift, zero errors and zero warnings with all twenty tokens compared in all four combinations; and `figma/drifted.json`, which must report **each of the eight hand-edit drift codes by name**. `alias-flattened` is asserted three ways, because its exit code alone would prove nothing: that the flattened Figma value *equals* what the alias resolves to — so a value-only comparison would have called it aligned — that it is caught in the one Figma mode it was planted in, and that the untouched mode of the same variable reports nothing. The remedies are asserted too: no finding may tell anybody to take a Figma value back into the source.
 

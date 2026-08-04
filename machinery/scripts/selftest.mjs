@@ -56,6 +56,8 @@ const VALID = join(FIXTURES, 'valid');
 const BROKEN = join(FIXTURES, 'broken');
 const FIGMA_ALIGNED = join(FIXTURES, 'figma', 'aligned.json');
 const FIGMA_DRIFTED = join(FIXTURES, 'figma', 'drifted.json');
+const PAIRS_MODE_SCOPES = join(FIXTURES, 'pairs', 'mode-scopes.json');
+const PAIRS_UNKNOWN_MODE = join(FIXTURES, 'pairs', 'unknown-mode.json');
 const FIGMA_MODE_DELETED = join(FIXTURES, 'figma', 'mode-deleted.json');
 const FIGMA_DIMENSION_FLATTENED = join(FIXTURES, 'figma', 'dimension-flattened.json');
 
@@ -234,6 +236,71 @@ assert(
   'broken fixture: the failure line names the pair, the mode, the ratio and the threshold',
   brokenHuman.stdout,
 );
+
+/* ------------------------------------------------------------------ *
+ * A pair's mode scope, which could switch the pair off.
+ *
+ * `"modes"` narrows a pairing to part of the combination space. It used to be a
+ * plain conjunction — a combination had to contain every listed mode — and a
+ * combination holds exactly one mode per dimension, so
+ * `["theme.light", "theme.dark"]` matched nothing whatsoever. The most natural
+ * way to write "check this in both themes" was the one way to switch the check
+ * off, and the gate reported a smaller number of checks and passed. So did a
+ * misspelt mode id.
+ *
+ * The rule is now per dimension: or within one, and across them. The assertions
+ * below are counts rather than exit codes on purpose — every pairing in the
+ * scope fixture passes, so an exit code proves nothing at all about which
+ * combinations were looked at, which is the entire subject.
+ * ------------------------------------------------------------------ */
+
+process.stdout.write('\nPair scopes: a "modes" list narrows a pairing, and may never silence one\n');
+
+const scopes = run('check-contrast.mjs', ['--root', VALID, '--pairs', PAIRS_MODE_SCOPES]);
+const checkedIn = (foreground) => (scopes.payload?.results ?? []).filter((r) => r.foreground === foreground).length;
+
+assert(scopes.status === 0 && scopes.payload?.checks === 11,
+  'pair scopes: four differently scoped pairings are checked in 4 + 2 + 1 + 4 combinations',
+  `exit ${scopes.status}; ${scopes.payload?.checks} check(s); ${JSON.stringify(scopes.payload?.errors)}`);
+
+assert(checkedIn('text.primary') === 4,
+  'pair scopes: both modes of one dimension means both — the declaration that used to match nothing now matches everything it names',
+  `checked in ${checkedIn('text.primary')} combination(s)`);
+assert(checkedIn('text.secondary') === 2,
+  'pair scopes: one mode of one dimension still means that mode, in every combination containing it',
+  `checked in ${checkedIn('text.secondary')} combination(s)`);
+assert(checkedIn('text.on-action') === 1,
+  'pair scopes: one mode of each of two dimensions is still an and — narrowing across dimensions was not traded away for the other reading',
+  `checked in ${checkedIn('text.on-action')} combination(s)`);
+assert(checkedIn('border.default') === 4,
+  'pair scopes: and no list at all is still every combination',
+  `checked in ${checkedIn('border.default')} combination(s)`);
+
+const unknownMode = run('check-contrast.mjs', ['--root', VALID, '--pairs', PAIRS_UNKNOWN_MODE]);
+const unknownCodes = codes(unknownMode.payload?.errors);
+assert(unknownMode.status === 1 && unknownCodes.has('pair-mode-unknown'),
+  'pair scopes: a mode id the token set does not define is an error on the declaration, not a filter that quietly excludes everything',
+  `exit ${unknownMode.status}; ${[...unknownCodes].join(', ') || '(no errors)'}`);
+assert(unknownCodes.has('exception-mode-unknown'),
+  'pair scopes: and the same on an exception — a waiver that has silently stopped applying is still a decision that left without saying so',
+  `codes seen: ${[...unknownCodes].join(', ') || '(none)'}`);
+assert((unknownMode.payload?.results ?? []).length === 4,
+  'pair scopes: while the sound pair in the same file is still checked in all four combinations — one bad id does not take the run with it',
+  JSON.stringify((unknownMode.payload?.results ?? []).map((r) => r.modeLabel)));
+
+/* The backstop, which holds however the scope rules are written. `--mode` is a
+ * narrowing of the run rather than of the declaration, so it is the one way left
+ * to ask this gate to pass having checked a declared pairing nowhere. */
+const narrowed = run('check-contrast.mjs', [
+  '--root', VALID, '--pairs', PAIRS_MODE_SCOPES, '--mode', 'density.comfortable', '--mode', 'theme.light',
+]);
+const neverEvaluated = (narrowed.payload?.errors ?? []).filter((e) => e.code === 'pair-never-evaluated');
+assert(narrowed.status === 1 && neverEvaluated.length === 2,
+  'pair scopes: a declared pairing evaluated in no combination fails the run — a pairing nobody looked at is not a pairing that passed',
+  `exit ${narrowed.status}; ${JSON.stringify((narrowed.payload?.errors ?? []).map((e) => e.code))}`);
+assert(neverEvaluated.every((error) => /restricts itself to/.test(error.message) && /--mode/.test(error.message)),
+  'pair scopes: and the error names both ways it can happen, because from inside the run they look identical',
+  JSON.stringify(neverEvaluated.map((e) => e.message)));
 
 /* ------------------------------------------------------------------ *
  * Rung 2: the drift detector, against the same valid token set.

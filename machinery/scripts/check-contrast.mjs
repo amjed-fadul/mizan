@@ -15,6 +15,14 @@
  * category exists so that a pairing WCAG does not govern can still be declared
  * and tracked, instead of being either wrongly gated or left undeclared.
  *
+ * A pair or an exception may carry a `"modes"` list to narrow itself to part of
+ * the combination space. It means "for every dimension this list mentions, the
+ * combination's mode for that dimension must be one of these" — see `modeScope`,
+ * which also records what that used to mean and why it changed. Whatever the
+ * list says, a declared pair that ends up evaluated in no combination at all is
+ * an error: an undeclared pairing is an unchecked pairing, and so is a declared
+ * one nothing ever looked at.
+ *
  * Usage:
  *   node machinery/scripts/check-contrast.mjs [--root <dir>] [--pairs <file>]
  *                                             [--mode <id>]... [--json] [--quiet]
@@ -53,10 +61,83 @@ import {
 } from './lib/tokens.mjs';
 
 /* ------------------------------------------------------------------ *
+ * Mode scopes
+ * ------------------------------------------------------------------ */
+
+/**
+ * What a `"modes"` list on a pair or an exception means.
+ *
+ * BEHAVIOUR CHANGE, and it is worth reading before trusting an old pairs file.
+ * This used to be a plain conjunction: a combination matched when it contained
+ * *every* listed mode. A combination holds exactly one mode per dimension, so
+ * `["theme.light", "theme.dark"]` — which reads to anybody as "check this in
+ * both themes" — matched nothing at all. The pair was skipped in every
+ * combination, the gate reported "0 check(s)" and passed, and the most natural
+ * thing a person could write was the one thing that silently switched the check
+ * off. A typo did the same.
+ *
+ * It now means: **for every dimension the list mentions, the combination's mode
+ * for that dimension must be one of the listed ones.** Or within a dimension,
+ * and within a dimension only; still and across dimensions. So
+ * `["theme.light", "theme.dark"]` is both themes, `["theme.dark"]` is the dark
+ * ones, and `["theme.dark", "density.compact"]` is the single combination that
+ * is both — which is what it meant before.
+ *
+ * That last part is the reason this is a safe change rather than a reinterpreted
+ * one. Where the old rule selected anything at all, the two rules agree exactly:
+ * a list naming at most one mode per dimension is a conjunction either way. They
+ * differ only where the old rule selected *nothing*, which was never a
+ * declaration anybody meant to write. No existing pairing changes meaning; the
+ * ones that had no meaning acquire the obvious one.
+ *
+ * A list is validated against the token set as it is read, so a mode id that
+ * does not exist is an error at the declaration rather than a filter that
+ * quietly excludes everything.
+ */
+function modeScope(list, set, where, code, pairsPath, diagnostics) {
+  if (list === null) return null;
+  const byDimension = new Map();
+  let valid = true;
+
+  for (const id of list) {
+    const mode = set.modes.get(id);
+    if (mode === undefined || mode.dimension === undefined) {
+      // A mode with no dimension has already been reported by the loader; an id
+      // the set has never heard of has not, and is reported here.
+      if (mode === undefined) {
+        diagnostics.error(
+          code,
+          `${where} restricts itself to mode ${JSON.stringify(id)}, which this token set does not define. `
+          + `Known modes: ${[...set.modes.keys()].join(', ') || '(none)'}. `
+          + 'An unrecognised mode used to exclude every combination, which switched the check off rather than narrowing it.',
+          { file: pairsPath, mode: id },
+        );
+      }
+      valid = false;
+      continue;
+    }
+    if (!byDimension.has(mode.dimension)) byDimension.set(mode.dimension, new Set());
+    byDimension.get(mode.dimension).add(id);
+  }
+
+  return { list, byDimension, valid };
+}
+
+/** Does a combination fall inside a declared scope? A null scope is everywhere. */
+function scopeIncludes(scope, combo) {
+  if (scope === null) return true;
+  if (!scope.valid) return false;
+  for (const ids of scope.byDimension.values()) {
+    if (!combo.some((mode) => ids.has(mode))) return false;
+  }
+  return true;
+}
+
+/* ------------------------------------------------------------------ *
  * Pairs file
  * ------------------------------------------------------------------ */
 
-function loadPairs(pairsPath, diagnostics) {
+function loadPairs(pairsPath, set, diagnostics) {
   const data = readJson(pairsPath, diagnostics, 'invalid-pairs-file');
   if (data === null) return { pairs: [], exceptions: [] };
   if (!isPlainObject(data)) {
@@ -90,12 +171,18 @@ function loadPairs(pairsPath, diagnostics) {
         );
         return;
       }
+      const modes = Array.isArray(pair.modes) ? pair.modes : null;
       pairs.push({
         foreground,
         background,
         context,
         description: pair.$description,
-        modes: Array.isArray(pair.modes) ? pair.modes : null,
+        modes,
+        scope: modeScope(
+          modes, set,
+          `${where} (${foreground} on ${background})`,
+          'pair-mode-unknown', pairsPath, diagnostics,
+        ),
       });
     });
   }
@@ -124,11 +211,17 @@ function loadPairs(pairsPath, diagnostics) {
         );
         return;
       }
+      const modes = Array.isArray(exception.modes) ? exception.modes : null;
       exceptions.push({
         foreground,
         background,
         reason: reason.trim(),
-        modes: Array.isArray(exception.modes) ? exception.modes : null,
+        modes,
+        scope: modeScope(
+          modes, set,
+          `${where} (${foreground} on ${background})`,
+          'exception-mode-unknown', pairsPath, diagnostics,
+        ),
       });
     });
   }
@@ -136,11 +229,21 @@ function loadPairs(pairsPath, diagnostics) {
   return { pairs, exceptions, description: data.$description };
 }
 
-/** An exception applies when the tokens match and every listed mode is active. */
+/**
+ * An exception applies when the tokens match and the combination is in scope.
+ *
+ * The same scope rule as a pair, deliberately: two spellings of one word in one
+ * file is how a file stops being readable. There is no reachability error for an
+ * exception, though, and the asymmetry is the point. A pair whose scope selects
+ * nothing fails *open* — the pairing goes unchecked and the build passes. An
+ * exception whose scope selects nothing fails *safe* — the pairing is checked
+ * against its full threshold and can still fail the build. Only the first is a
+ * hole, so only the first is an error.
+ */
 function matchException(exceptions, pair, combo) {
   return exceptions.find((exception) => exception.foreground === pair.foreground
     && exception.background === pair.background
-    && (exception.modes === null || exception.modes.every((mode) => combo.includes(mode))));
+    && scopeIncludes(exception.scope, combo));
 }
 
 /* ------------------------------------------------------------------ *
@@ -253,16 +356,18 @@ function main(argv) {
     return report({ args, set, pairsPath, results: [], exceptions: [], diagnostics, empty: false });
   }
 
-  const { pairs, exceptions } = loadPairs(pairsPath, diagnostics);
+  const { pairs, exceptions } = loadPairs(pairsPath, set, diagnostics);
 
   const combinations = args.mode.length > 0 ? [args.mode] : set.combinations;
   const results = [];
+  const evaluations = new Map(pairs.map((pair) => [pair, 0]));
 
   for (const combo of combinations) {
     const composed = composeModes(set, combo, diagnostics);
     const resolved = resolveTokens(composed, diagnostics, combinationLabel(combo));
     for (const pair of pairs) {
-      if (pair.modes && !pair.modes.every((mode) => combo.includes(mode))) continue;
+      if (!scopeIncludes(pair.scope, combo)) continue;
+      evaluations.set(pair, evaluations.get(pair) + 1);
       const result = evaluatePair(pair, combo, resolved, pairsPath, diagnostics);
       const exception = matchException(exceptions, pair, combo);
       if (exception) {
@@ -271,6 +376,29 @@ function main(argv) {
       }
       results.push(result);
     }
+  }
+
+  /* A declared pair that was never evaluated is the failure this gate is least
+   * able to notice from its own output: it prints a smaller number of checks and
+   * the word "pass". Every other defect in this file announces itself as a ratio
+   * that did not clear a bar. This one announces itself as nothing.
+   *
+   * So it is counted rather than reasoned about. Whatever the scope rules are
+   * today or become later, and whatever `--mode` was asked to narrow the run to,
+   * the invariant holds: this gate does not report a pass having skipped a
+   * pairing somebody declared. Declaring a pairing is asking for it to be
+   * checked, and the answer to that request is never silence. */
+  for (const [pair, count] of evaluations) {
+    if (count > 0) continue;
+    if (pair.scope !== null && !pair.scope.valid) continue; // already reported, by name
+    diagnostics.error(
+      'pair-never-evaluated',
+      `Pair "${pair.foreground} on ${pair.background}" was not checked in a single mode combination. `
+      + `It restricts itself to ${JSON.stringify(pair.modes ?? [])}, and this run covered `
+      + `${combinations.map(combinationLabel).join(', ') || '(nothing)'}. `
+      + 'A declared pairing that is never evaluated is an unchecked pairing reported as a passing one — either the restriction excludes every combination the token set has, or --mode narrowed the run past it.',
+      { file: pairsPath },
+    );
   }
 
   return report({ args, set, pairsPath, results, exceptions, diagnostics, empty: false });

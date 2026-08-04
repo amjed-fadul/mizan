@@ -28,6 +28,25 @@ them both discovery paths are exercised.
 
 Do not fix `broken/`. Its defects are the test.
 
+## `pairs/` — declarations, not values
+
+Two alternative pairs files for `check-contrast.mjs`, both pointed at `valid/`
+with `--pairs`. They live outside both token roots on purpose: every `.json`
+under a subdirectory of a root is loaded as a token document, so a pairs fixture
+filed inside one would be read back as tokens.
+
+Nothing in either is about arithmetic — every pairing they name is one of
+`valid/pairs.json`'s, and the ratios are the ones already asserted elsewhere.
+What they exercise is the *declaration*: which combinations a pairing is checked
+in, and what happens when the answer is none.
+
+- `mode-scopes.json` — four pairings, four different `"modes"` scopes, all
+  passing. The assertions are counts (4, 2, 1, 4) rather than an exit code,
+  because with everything passing an exit code says nothing about what was
+  looked at.
+- `unknown-mode.json` — a mode id misspelt on a pair and another on an
+  exception. Do not correct the spellings; they are the test.
+
 ## `figma/` — the display side
 
 Four Figma variable snapshots of the **same** `valid/` token set, for
