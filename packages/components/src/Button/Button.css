@@ -87,31 +87,40 @@
 /* ---------------------------------------------------------------- the sizes */
 
 /*
-  The three sizes select steps of the spacing scale. They do not introduce one.
+  DECIDED, AND NO LONGER OWED. This section used to select steps of the spacing
+  ramp directly and record, as a visible temporary regression, that both
+  products' buttons were therefore the same size at the same step. Decision 022
+  landed control geometry as a semantic that resolves by product, so each step
+  now names `control.<step>.<axis>` and the mode decides what it measures.
 
-  DECIDED AND OWED, on 013's terms. Decision 020 settles that `size` names the
-  *step* and the product mode decides what the step resolves to — the shape 007
-  and 008 already settled for text.secondary. The token layer does not carry it
-  yet: product.market.json and product.move.json differ by exactly three tokens
-  between them and all three are colour, and dimension.json holds a space ramp
-  and a radius ramp with no semantic layer above them. So what follows is one
-  geometry per step for both products, which is a visible temporary regression
-  against v0 rather than a quiet one, and the entry that owes the fix says so.
+  What changed here is only which names are written. Market's fifteen values are
+  byte for byte the fifteen this file shipped before — `control.md.padding-inline`
+  resolves to `space.200` in Market, which is what the declaration said — so
+  nothing in Market moves, and that is the proof the swap was a rename rather
+  than a redesign. Move is where the values differ, and it differs without this
+  file knowing that Move exists.
+
+  That last clause is the whole point rather than a nicety. There is no
+  [data-product] selector here, no branch, and no product named anywhere in this
+  component. A control that had to know which product it was in to size itself
+  would be the crack decision 007 exists to prevent, and it would arrive looking
+  like one small conditional.
 
   The rule NOT to write here, because reading it off the product brief is the
-  mistake 020 caught: Move is not the smaller of the two. `.mv-action` is 17px
-  type with 14px/22px padding against `.mk-btn--md`'s 15px with 10px/18px —
-  Move's single button is larger than Market's medium and lands near Market's
-  large. Move is compact in how much it puts on a screen and generous in the one
-  thing you have to hit at a curb with one thumb. Per-product resolution decided
-  per step against the role is the rule; "Move's md is smaller" is not, and it
-  is not encoded anywhere in this file.
+  mistake 020 caught and 022 encoded: Move is not the smaller of the two.
+  `.mv-action` is 17px type with 14px/22px padding against `.mk-btn--md`'s 15px
+  with 10px/18px — Move's single button is larger than Market's medium and lands
+  on Market's large. Move is compact in how much it puts on a screen and
+  generous in the one thing you have to hit at a curb with one thumb.
+  Per-product resolution decided per step against the role is the rule; "Move's
+  md is smaller" is not, and it is not encoded anywhere in this file — it is not
+  encoded here even by accident now, because the numbers are not here at all.
 */
 
 .mz-button--sm {
-  padding-inline: var(--space-150);
-  padding-block: var(--space-100);
-  font-size: var(--font-size-200);
+  padding-inline: var(--control-sm-padding-inline);
+  padding-block: var(--control-sm-padding-block);
+  font-size: var(--control-sm-font-size);
 
   /*
     sm is a step, not a product. It does not clear 44×44 and is not meant to,
@@ -126,47 +135,59 @@
     gives: تم sets 15.1px against "Done"'s 38.3, so a two-character Arabic label
     in a button-shaped slab reads as a label that failed to load. The floor is
     what stops that, and it is also what stops the busy indicator — which shares
-    the label's grid cell — from being the widest thing in the control.
+    the label's grid cell — from being the widest thing in the control. That
+    second clause is a constraint on the indicator's diameter, and it is what
+    decides the diameter further down: sm's floor leaves 14px of content box
+    between the paddings, so a ring of one em at sm's 13px type fits inside it
+    with a pixel to spare and a larger one would push the control past its own
+    floor. `sm` is the binding case for that in both products, because `sm` is
+    the one step 022 gives both products identically.
   */
-  min-block-size: var(--space-400);
-  min-inline-size: var(--space-500);
+  min-block-size: var(--control-sm-min-block);
+  min-inline-size: var(--control-sm-min-inline);
 }
 
 /*
-  md's pair is exactly the pair packages/tokens/docs/button.md writes in its own
-  reference CSS — space.200 inline, space.150 block — which is the geometry the
-  token layer already described for a button before one existed.
+  md is the pair packages/tokens/docs/button.md writes in its own reference CSS
+  — space.200 inline, space.150 block — which is the geometry the token layer
+  described for a button before one existed. It is now reached by name rather
+  than by value, and in Move it resolves a rung up: `.mv-action` was Move's only
+  button, and it is Move's `md` rather than Move's large.
 */
 .mz-button--md {
-  padding-inline: var(--space-200);
-  padding-block: var(--space-150);
-  font-size: var(--font-size-300);
+  padding-inline: var(--control-md-padding-inline);
+  padding-block: var(--control-md-padding-block);
+  font-size: var(--control-md-font-size);
 
   /*
-    44×44 CSS px is the floor md and lg guarantee. The spacing scale has no 44
-    step, and composing one out of two steps — space.400 + space.150 — would be
-    a fourth spacing value that exists only in this file. So md takes the next
-    step that clears the floor, space.600 at 48px, and the README records that
-    the 44 itself wants a `size.tap-target` semantic the token layer does not
-    have. Natural height at md is 43.5px, so this min is load-bearing rather
-    than decorative: remove it and the control misses the bar by half a pixel.
+    44×44 CSS px is the floor md and lg guarantee, and it is a floor from WCAG
+    rather than a token. The spacing ramp has no 44 step; composing one out of
+    two steps would be a fourth spacing value existing in one file, and a
+    `size.tap-target` name would have to hold 48, which is a token whose name
+    and value disagree. So the floor is `control.md.min-block` at 48, and 48 ≥ 44
+    is arithmetic that decision 022 says is owed a gate and does not yet have
+    one. It is load-bearing in Market and not in Move: Market's natural height
+    at this step is 43.5px, so removing it misses the bar by half a pixel, while
+    Move's is 54 and the floor never binds. One declaration, two different jobs,
+    decided by the mode rather than by this file.
   */
-  min-block-size: var(--space-600);
-  min-inline-size: var(--space-600);
+  min-block-size: var(--control-md-min-block);
+  min-inline-size: var(--control-md-min-inline);
 }
 
 /*
-  lg is the step v0's `.mv-action` lands nearest — 53.5px of rendered height
-  against this step's 54. Until product density resolves through the mode, a
-  Move screen that wants the geometry it had names the step at the call site.
-  That naming is the regression the entry above owes, made visible.
+  lg is the step with the least evidence behind it, and 022 says so plainly:
+  Market's is `.mk-btn--lg`, measured, and Move has no large button in v0 at all
+  — its one button became Move's `md`, so Move's `lg` is one rung up by
+  extension. It exists because the API has three steps and every semantic has to
+  resolve in all four mode combinations, not because a Move screen asked for it.
 */
 .mz-button--lg {
-  padding-inline: var(--space-300);
-  padding-block: var(--space-200);
-  font-size: var(--font-size-400);
-  min-block-size: var(--space-600);
-  min-inline-size: var(--space-600);
+  padding-inline: var(--control-lg-padding-inline);
+  padding-block: var(--control-lg-padding-block);
+  font-size: var(--control-lg-font-size);
+  min-block-size: var(--control-lg-min-block);
+  min-inline-size: var(--control-lg-min-inline);
 }
 
 /* ------------------------------------------------------------- the variants */
@@ -540,9 +561,64 @@
 .mz-button__busy {
   grid-area: stack;
   flex: none;
+
+  /*
+    Measured from the outside, for the reason the control is: box-sizing does
+    not inherit, so without this the em below is the content box and the drawn
+    ring is one em plus twice the stroke. A diameter is the outside of a circle
+    to everybody who measures one, and the arithmetic that bounds the diameter
+    below is arithmetic about the drawn ring rather than about a box inside it.
+  */
+  box-sizing: border-box;
+
   border-radius: var(--radius-full);
   border-style: solid;
+
+  /*
+    The stroke does not scale and the diameter does. A ring's stroke is a
+    hairline-class value like the control edge — it reads as a stroke at 2px on
+    a 13px ring and at 2px on an 18px one, and scaling it would make Move's
+    indicator a thicker ring rather than a bigger one. space.25 is a token, so
+    this is a named value rather than a written number, unlike the border width
+    at the top of the file.
+  */
   border-width: var(--space-25);
+
+  /*
+    THE DIAMETER IS ONE EM, AND THE em IS THE POINT.
+
+    This used to be three declarations — space.150 at sm, space.200 at md,
+    space.250 at lg — and they were three values chosen one at a time rather
+    than a rule: 12/13, 16/14 and 20/16 against their own type sizes, which is
+    not a ratio, it is three ratios. That survived only while one geometry
+    served both products. Decision 022 made `control.md.font-size` resolve to
+    14px in Market and 16px in Move, so a per-step pixel diameter meant Move's
+    control grew and the ring inside it did not. The token agent declined to fix
+    it from the token side and was right to: a busy indicator's diameter is a
+    component part, and naming one in a layer meant to describe any control is
+    how a semantic layer starts holding component vocabulary.
+
+    So the diameter is stated as a relation instead of a value. One em is the
+    type size the label beside it is set at, and the indicator stands in that
+    label's place in the same grid cell — the ring is the size of the thing it
+    replaces. It follows the product, follows the step, and follows any fourth
+    step somebody adds later, with nothing to keep in step by hand.
+
+    One em rather than some larger multiple, and the bound is arithmetic rather
+    than taste. `sm` is the binding case and the same in both products: 40px
+    inline floor, 12px of padding each side, 1px of border each side, leaving
+    14px of content box. At sm's 13px type a one-em ring is 13px and fits;
+    anything above about 1.08em makes the indicator the widest thing in the
+    control and pushes it past the floor the §6 argument put there. The comment
+    on sm's floor above states the same constraint from the other end.
+
+    It is not affected by the Arabic optical correction, and must not be: that
+    correction is on .mz-button__label, so 1em here is the step's own size in
+    both scripts. The correction is about how glyphs sit on a line, and a circle
+    has no glyphs.
+  */
+  inline-size: 1em;
+  block-size: 1em;
 
   /*
     currentColor, so the indicator is whatever the variant's declared label
@@ -602,20 +678,12 @@
   }
 }
 
-.mz-button--sm .mz-button__busy {
-  inline-size: var(--space-150);
-  block-size: var(--space-150);
-}
-
-.mz-button--md .mz-button__busy {
-  inline-size: var(--space-200);
-  block-size: var(--space-200);
-}
-
-.mz-button--lg .mz-button__busy {
-  inline-size: var(--space-250);
-  block-size: var(--space-250);
-}
+/*
+  The three per-step diameter rules that used to sit here are gone. They are the
+  declaration above, once, in em. Nothing replaces them and nothing should: a
+  per-step override is how the drift decision 022 exposed got in, and the next
+  one would arrive the same way.
+*/
 
 /* -------------------------------------------------------- the script subtree */
 
