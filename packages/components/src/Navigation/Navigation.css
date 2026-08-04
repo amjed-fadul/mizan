@@ -1,0 +1,156 @@
+/*
+  Navigation — the seventh and last component of Stage 4.
+
+  Same rule as every other stylesheet here: nothing in this file is a value.
+
+  This is the component where the inline axis actually matters. Everything in
+  List was block-axis, which `dir` does not touch; a navigation row is laid out
+  along the reading direction, its separator sits between items on that axis,
+  and the current-page marker is drawn under them. Every one of those is a place
+  a physical `left` or `right` would produce a half-flipped bar — which
+  content/rules/rtl-arabic.md §1 records as reading worse than one that did not
+  flip at all.
+
+  One written number, the 1px separator and marker, for the seventh time.
+  Still no border-width scale, and this is the last component of the stage to
+  route around its absence.
+*/
+
+.mz-nav {
+  font-family: var(--font-family-sans);
+
+  /*
+    letter-spacing 0, declared rather than inherited, for the reason §2 gives:
+    a global tracking on a page reaches every Arabic label inside this bar and
+    breaks the joins between letters. A navigation is short text, which is
+    exactly where tracking is most often applied for effect.
+  */
+  letter-spacing: var(--letter-spacing-none);
+}
+
+.mz-nav__list {
+  /*
+    The markers go, so role="list" is written in the TSX. Second occurrence of
+    that pair in this library after List; both files say the trigger for pulling
+    it into one place is a third.
+  */
+  list-style: none;
+  margin: 0;
+  padding: 0;
+
+  /*
+    Flex rather than grid, because the items are content-sized and the row has
+    to wrap. §6 measured Arabic labels running to 117 per cent of their English
+    counterparts on some strings — "أضف إلى السلة" against "Add to cart" — so a
+    bar that fits on one line in English is a bar that wraps in Arabic, and one
+    that refused to wrap would clip a destination instead.
+
+    Flex flips with the document on its own. There is no rule here naming a
+    side, and none is needed: the whole reason the audit's half-flipped screens
+    read as broken is that their authors mixed a flex row with physical
+    properties inside it.
+  */
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-100) var(--space-200);
+}
+
+.mz-nav__link {
+  /*
+    A real anchor, styled as itself rather than as a button. It navigates, so it
+    is an <a> — the same rule Button's spec states from the other side, where a
+    control that changes the address is a link wearing the wrong element and
+    loses the middle-click, the copy-link and the open-in-new-tab that came free.
+  */
+  display: inline-block;
+  color: var(--text-secondary);
+  font-size: var(--font-size-300);
+  line-height: var(--line-height-normal);
+  text-decoration: none;
+
+  /*
+    Block padding only. Inline padding would fight the row's own gap and make
+    the space between two destinations depend on which two they are; the gap
+    owns the horizontal rhythm and the padding owns the target height.
+  */
+  padding-block: var(--space-100);
+
+  transition: color var(--duration-100) var(--easing-entrance);
+}
+
+.mz-nav__link:hover {
+  color: var(--text-primary);
+  /*
+    The underline offset is the Arabic rule rather than a refinement. §2: Arabic
+    carries dots below the baseline — ب, ي and ج all do — and a default
+    underline is drawn straight through them, so the reader sees letters whose
+    dots have fused with a line. Pushing the line clear at roughly a quarter em
+    restores one continuous underline that touches nothing.
+
+    text-decoration-skip-ink is deliberately NOT set to none, and is deliberately
+    not relied on either: `auto` is already the initial value, and on an Arabic
+    string it fires several times per word, so a link arrives as four or five
+    dashes with the dots sitting in the gaps. The offset is what actually fixes
+    it. This 0.25em is the same value ProductCard writes, and it is the second
+    place in the library the token layer owes a name to.
+  */
+  text-decoration: underline;
+  text-underline-offset: 0.25em;
+}
+
+/*
+  The current page.
+
+  Two signals, never one. The colour lifts to text.primary AND a rule is drawn
+  under the item — because colour alone fails WCAG 1.4.1 for a user who cannot
+  distinguish these two neutrals, and because the same pair of tokens is what
+  the hover state uses, so colour alone would make "where I am" and "where my
+  pointer is" the same appearance.
+
+  aria-current="page" is the third signal and it is the one that reaches
+  assistive technology. The attribute is on the anchor, in the TSX.
+*/
+.mz-nav__link[aria-current='page'] {
+  color: var(--text-primary);
+  font-weight: var(--font-weight-medium);
+
+  /*
+    A border on the BLOCK end — under the label in both directions, because the
+    block axis is the one `dir` leaves alone. This is deliberately not an
+    inline-start marker: a bar on the reading-start edge of a horizontal item
+    would sit above it in a vertical arrangement, and the day this bar becomes a
+    sidebar that rule would need rewriting rather than reading.
+  */
+  border-block-end: 1px solid var(--action-primary);
+}
+
+/*
+  The separator, replacing v0's literal `|`.
+
+  A border-inline-start on every item after the first: a box decoration rather
+  than content, so it is not in the accessibility tree and is not announced; and
+  on the inline axis, so it moves to the other side of the item in Arabic with
+  nothing in this file naming a side.
+
+  The pipe character it replaces is the opposite on both counts — it is content,
+  and it is a Unicode-neutral character, so it reorders with its surroundings
+  under the bidirectional algorithm rather than staying between two things.
+*/
+.mz-nav--separators .mz-nav__item + .mz-nav__item {
+  border-inline-start: 1px solid var(--border-default);
+  padding-inline-start: var(--space-200);
+}
+
+.mz-nav__item {
+  display: flex;
+  align-items: center;
+}
+
+/* ---------------------------------------------------------- reduced motion */
+
+/*
+  The colour transition is kept, on decision 021's terms: reduced motion asks
+  for fewer and gentler rather than zero, and a 100ms colour crossfade on hover
+  is neither vestibular nor attention-grabbing. Nothing here moves. This block
+  exists so the next reader knows the question was asked.
+*/

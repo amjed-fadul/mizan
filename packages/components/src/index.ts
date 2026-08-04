@@ -11,7 +11,7 @@
  *
  * `ProductCard` and `RideCard` are the third and fourth, and they are two
  * rather than one on purpose. Decision 024 refused the merge on a structural
- * argument: a radio may not contain a button, so Market's container — a link
+ * argument: a card whose whole surface selects it cannot also contain an independently operable button, so Market's container — a link
  * and an action, two tab stops — and Move's control — one option in an
  * exclusive choice, one tab stop — cannot be one component with a variant.
  * That refusal is what lets each of them name its own product's tokens, which a
@@ -40,6 +40,9 @@ export type { InputProps, InputSize, InputType, InputValueDirection } from './In
 
 export { List, ListItem } from './List'
 export type { ListProps, ListItemProps } from './List'
+
+export { Navigation, NavigationItem } from './Navigation'
+export type { NavigationProps, NavigationItemProps } from './Navigation'
 
 export { ProductCard } from './ProductCard'
 export type { ProductCardProps, StockLevel } from './ProductCard'
