@@ -187,7 +187,7 @@ export function unionValues(typeText) {
 /**
  * String unions declared in this file under a name — `type Variant = 'a' | 'b'`.
  *
- * A prop typed `variant?: ButtonVariant` states its type as a name, and the
+ * A prop typed `tone?: ToneName` states its type as a name, and the
  * closed set of strings behind that name is the thing a Figma variant property
  * mirrors. Following the alias one step, in the same file, keeps the members
  * derivable without following imports across the tree — and it keeps them
