@@ -1,0 +1,10 @@
+{
+  "length": {
+    "$type": "dimension",
+    "$description": "Literal lengths, chosen for the arithmetic they produce against the 44 and 24 bars rather than for any real scale. big clears 44, tight falls under it, small clears 24 but not 44, and rem is a length in the wrong unit for a target-size floor.",
+    "big": { "$value": { "value": 48, "unit": "px" } },
+    "tight": { "$value": { "value": 40, "unit": "px" } },
+    "small": { "$value": { "value": 32, "unit": "px" } },
+    "rem": { "$value": { "value": 3, "unit": "rem" } }
+  }
+}

@@ -60,6 +60,13 @@ const PAIRS_MODE_SCOPES = join(FIXTURES, 'pairs', 'mode-scopes.json');
 const PAIRS_UNKNOWN_MODE = join(FIXTURES, 'pairs', 'unknown-mode.json');
 const FIGMA_MODE_DELETED = join(FIXTURES, 'figma', 'mode-deleted.json');
 const FIGMA_DIMENSION_FLATTENED = join(FIXTURES, 'figma', 'dimension-flattened.json');
+const TARGETS_ROOT = join(FIXTURES, 'targets', 'tokens');
+const TARGETS_ALIGNED = join(FIXTURES, 'targets', 'aligned.json');
+const TARGETS_MODE_DEPENDENT = join(FIXTURES, 'targets', 'mode-dependent.json');
+const TARGETS_NOT_DIMENSION = join(FIXTURES, 'targets', 'not-dimension.json');
+const TARGETS_NOT_PX = join(FIXTURES, 'targets', 'not-px.json');
+const TARGETS_BAD_CONTEXT = join(FIXTURES, 'targets', 'bad-context.json');
+const TARGETS_MISSING = join(FIXTURES, 'targets', 'no-such-file.json');
 
 const args = parseArgs(process.argv.slice(2), { flags: ['verbose'] });
 
@@ -317,6 +324,63 @@ assert(narrowed.status === 1 && neverEvaluated.length === 2,
 assert(neverEvaluated.every((error) => /restricts itself to/.test(error.message) && /--mode/.test(error.message)),
   'pair scopes: and the error names both ways it can happen, because from inside the run they look identical',
   JSON.stringify(neverEvaluated.map((e) => e.message)));
+
+/* ------------------------------------------------------------------ *
+ * The tap-target gate, which decision 022 said was owed and could not be a
+ * token.
+ *
+ * A dimension token states a geometry; it cannot state that the geometry must
+ * stay at or above a threshold, because a floor is a relation and a token is a
+ * value. So the threshold lives in check-tap-target.mjs and targets.json
+ * declares what to hold to it — the same split decision 010 drew for contrast.
+ *
+ * The fixture root carries one product dimension so a floor can resolve to 48 in
+ * one mode and 40 in another, because the claim that matters is not "48 ≥ 44"
+ * — arithmetic proves that — but that the gate reads the floor in *every*
+ * combination and catches the one where a mode drops it under the bar. That is
+ * the failure a gate resolving the base value and stopping would miss, and it is
+ * exactly the failure 022 flagged as load-bearing at one step in one product.
+ * ------------------------------------------------------------------ */
+
+process.stdout.write('\nTap targets: a control step is held to a size bar in every mode combination\n');
+
+const targetsAligned = run('check-tap-target.mjs', ['--root', TARGETS_ROOT, '--targets', TARGETS_ALIGNED]);
+assert(targetsAligned.status === 0 && targetsAligned.payload?.checks === 4 && (targetsAligned.payload?.errors ?? []).length === 0,
+  'tap targets: a footprint set that clears every floor in every combination is accepted — two steps across two modes is four checks',
+  `exit ${targetsAligned.status}; ${targetsAligned.payload?.checks} check(s); ${JSON.stringify(targetsAligned.payload?.errors)}`);
+assert(targetsAligned.payload?.thresholds?.pointer === 44 && targetsAligned.payload?.thresholds?.inline === 24,
+  'tap targets: the two bars are the WCAG criteria themselves — 2.5.5 Enhanced at 44 for a standalone action, 2.5.8 Minimum at 24 for a step used only where a large target is not required',
+  JSON.stringify(targetsAligned.payload?.thresholds));
+
+const targetsMode = run('check-tap-target.mjs', ['--root', TARGETS_ROOT, '--targets', TARGETS_MODE_DEPENDENT]);
+const roomy = (targetsMode.payload?.results ?? []).find((r) => /roomy/.test(r.modeLabel));
+const tight = (targetsMode.payload?.results ?? []).find((r) => /tight/.test(r.modeLabel));
+assert(targetsMode.status === 1 && roomy?.status === 'pass' && tight?.status === 'fail',
+  'tap targets: the same step passes where a mode resolves its floor to 48 and fails where another mode drops it to 40 — the floor is read per combination, not once',
+  `exit ${targetsMode.status}; roomy ${roomy?.status}, tight ${tight?.status}`);
+assert(tight?.smallestAxis === 'block' && tight?.smallestPx === 40 && tight?.threshold === 44,
+  'tap targets: and the failing combination names the binding axis and the pixel it failed at, not merely that it failed — 40px block against a 44 bar',
+  `${tight?.smallestAxis} ${tight?.smallestPx} vs ${tight?.threshold}`);
+
+const targetsNotDimension = run('check-tap-target.mjs', ['--root', TARGETS_ROOT, '--targets', TARGETS_NOT_DIMENSION]);
+assert(targetsNotDimension.status === 1 && codes(targetsNotDimension.payload?.errors).has('target-token-not-dimension'),
+  'tap targets: a floor that points at a colour is rejected — a tap target is a length, and the wrong $type is a category error rather than something to coerce',
+  `exit ${targetsNotDimension.status}; ${[...codes(targetsNotDimension.payload?.errors)].join(', ') || '(none)'}`);
+
+const targetsNotPx = run('check-tap-target.mjs', ['--root', TARGETS_ROOT, '--targets', TARGETS_NOT_PX]);
+assert(targetsNotPx.status === 1 && codes(targetsNotPx.payload?.errors).has('target-token-not-px'),
+  'tap targets: a floor in rem is rejected — a bar in CSS px cannot be met by a length that scales with the font, so the unit is checked rather than the number coerced',
+  `exit ${targetsNotPx.status}; ${[...codes(targetsNotPx.payload?.errors)].join(', ') || '(none)'}`);
+
+const targetsBadContext = run('check-tap-target.mjs', ['--root', TARGETS_ROOT, '--targets', TARGETS_BAD_CONTEXT]);
+assert(targetsBadContext.status === 1 && codes(targetsBadContext.payload?.errors).has('invalid-target-context'),
+  'tap targets: a context the gate does not define is an error on the declaration — a context selects the bar, and an unrecognised one has none',
+  `exit ${targetsBadContext.status}; ${[...codes(targetsBadContext.payload?.errors)].join(', ') || '(none)'}`);
+
+const targetsMissing = run('check-tap-target.mjs', ['--root', TARGETS_ROOT, '--targets', TARGETS_MISSING]);
+assert(targetsMissing.status === 1 && codes(targetsMissing.payload?.errors).has('targets-file-missing'),
+  'tap targets: and no targets file at all is an error, not an empty pass — an undeclared footprint is an unchecked one',
+  `exit ${targetsMissing.status}; ${[...codes(targetsMissing.payload?.errors)].join(', ') || '(none)'}`);
 
 /* ------------------------------------------------------------------ *
  * Rung 2: the drift detector, against the same valid token set.
@@ -1470,6 +1534,8 @@ if (failures.length === 0) {
     + 'rung 2 proven to accept a Figma snapshot that agrees and to catch each way one can disagree; '
     + 'the contract gate proven to accept a component contract that is still true and to name each way '
     + 'one stops being true, including the edit no comparison against a source could ever catch; '
+    + 'the tap-target gate proven to hold a control step to a size bar in every mode combination — '
+    + 'accepting a footprint that clears it everywhere and catching the one a mode drops under it; '
     + 'and the read bridge proven read-only by construction — one port agreed across four files, '
     + 'a vocabulary of four words none of which is a verb, and a round trip over a real socket.\n'
     + (skipped.length === 0

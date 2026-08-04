@@ -1,5 +1,5 @@
 {
-  "status": "draft",
+  "status": "stable",
   "purpose": "The one control that performs an action. It replaces the four button implementations Mizan v0 grew behind three contradictory APIs, and carries one variant vocabulary that describes appearance only.",
   "responsibilities": [
     "Render a native <button> with an explicit HTML type, always.",

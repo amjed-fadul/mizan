@@ -1,0 +1,12 @@
+{
+  "$description": "A footprint whose block floor is a length in rem. A target-size bar is in CSS px; a rem floor cannot be compared to it without a font size, so the gate must reject the unit rather than read the number.",
+  "targets": [
+    {
+      "step": "control.wrongunit",
+      "block": "length.rem",
+      "inline": "control.stable.min-inline",
+      "context": "pointer",
+      "$description": "block is 3rem — a dimension of the right $type in the wrong unit. inline is px, so the block error stands alone."
+    }
+  ]
+}

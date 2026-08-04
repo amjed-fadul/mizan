@@ -24,6 +24,7 @@ Also not here: Mizan's values. A script may enforce that no raw hex appears in t
 | `lib/contract.mjs` | The component contract: the JSON Schema subset it is validated against, the assembly that draws the derived/authored line, and the comparison that holds it. No CLI. |
 | `check-schema.mjs` | Structural gate over a token set. |
 | `check-contrast.mjs` | WCAG gate over the declared foreground/background pairs, in every mode combination. |
+| `check-tap-target.mjs` | WCAG target-size gate: every declared control footprint clears its floor in every mode combination. |
 | `check-drift.mjs` | Governance rung 2: compares a Figma variables snapshot against the token source. |
 | `gen-contract.mjs` | Writes a component's contract from its source and its authored half. Written once, run per component. |
 | `check-contracts.mjs` | Gate over the contracts: is each one still what the generator would write today? |
@@ -38,9 +39,10 @@ The gates are Node 22, plain ESM, zero dependencies — Node built-ins only, and
 ## Running them
 
 ```
-npm run check           # schema, then contrast
+npm run check           # schema, then contrast, then tap-target
 npm run check:schema
 npm run check:contrast
+npm run check:tap-target                    # every declared control footprint against its size floor
 npm run check:drift -- --snapshot <file>    # rung 2: Figma against the source
 npm run check:drift -- --bridge             # the same, read live from the plugin
 npm run check:contracts                     # every component contract, against its component
@@ -52,7 +54,7 @@ npm run adapt:tokens    # the adapter alone, for inspecting what SD is handed
 npm run build:tokens    # gates, then adapt, then build every mode combination
 ```
 
-Every gate takes `--root <dir>` (defaulting to `$TOKENS_ROOT`, then to the repository's token directory), `--json` for machine-readable output, and `--quiet` to suppress the passing summary. `check-contrast.mjs` additionally takes `--pairs <file>` and a repeatable `--mode <id>`; `check-drift.mjs` takes `--snapshot <file>`, `--bridge`, or `--file-key <key>`.
+Every gate takes `--root <dir>` (defaulting to `$TOKENS_ROOT`, then to the repository's token directory), `--json` for machine-readable output, and `--quiet` to suppress the passing summary. `check-contrast.mjs` additionally takes `--pairs <file>` and a repeatable `--mode <id>`; `check-tap-target.mjs` takes `--targets <file>` and the same repeatable `--mode <id>`; `check-drift.mjs` takes `--snapshot <file>`, `--bridge`, or `--file-key <key>`.
 
 An empty token root is reported as such and exits 0. There is nothing to reject, and that is stated in the output rather than implied by a green tick.
 
@@ -67,6 +69,7 @@ Structure, never values. The layout below is machinery's contract; everything in
 <root>/modes/*.json         per-mode overrides of existing token paths
 <root>/modes.json           optional mode manifest
 <root>/pairs.json           declared foreground/background pairings
+<root>/targets.json         declared control footprints and their size floors
 ```
 
 Format is DTCG 2025.10. A token is any object with `$value`; anything else with members is a group. `$type` inherits from the nearest ancestor group **within the same file** — files are separate documents, so a group type declared in one file does not reach tokens in another. Token paths come from the JSON structure alone: neither the filename nor the layer directory appears in a path, so two files may extend the same group and a duplicate path across files is an error.

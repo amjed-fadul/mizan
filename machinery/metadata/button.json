@@ -1,7 +1,7 @@
 {
   "$schema": "./component-contract.schema.json",
   "name": "Button",
-  "status": "draft",
+  "status": "stable",
   "source": "packages/components/src/Button/Button.tsx",
   "propsType": "ButtonProps",
   "extends": [],

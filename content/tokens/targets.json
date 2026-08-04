@@ -1,0 +1,26 @@
+{
+  "$description": "Every control step that claims to be hittable, with the two floors that express its footprint and the WCAG success criterion each floor answers to. machinery/scripts/check-tap-target.mjs resolves both floors in every mode combination and fails the build when a step falls below its bar. This is the declaration half of the gate decision 022 said was owed: the token layer can state that control.md.min-block is 48, but not that 48 must stay at or above 44, because a floor is a relation between a value and a threshold and a token is only the value. So the geometry is a token and the bar is the gate, the same split decision 010 drew for contrast. An undeclared footprint is an unchecked footprint: a control step listed in control.* but absent here is a step nothing holds to a target size, which is the silent hole this gate exists to close. The context 'inline' is not an escape hatch but a different, real bar — SC 2.5.8's 24, which a step earns only where 2.5.8 itself does not require a large target, and every use of it has to argue that in its own $description. See decisions/022-control-geometry-resolves-by-product.md.",
+  "targets": [
+    {
+      "step": "control.sm",
+      "block": "control.sm.min-block",
+      "inline": "control.sm.min-inline",
+      "context": "inline",
+      "$description": "sm is a step, not a small variant of a primary action, and it is held to SC 2.5.8's 24×24 minimum rather than the 44 the other two clear. It passes that minimum with room — 32px block, 40px inline, identical in both products because 022 gives both products the same sm — and it is allowed below the enhanced bar only in the two situations 2.5.8 itself carves out of its own requirement: inline within a run of text, and where an equivalent full-size control for the same action exists elsewhere on the screen. Button.css documents sm as available only in those two places, and this is the machine-checkable other half of that sentence. If either floor is ever trimmed under 24 — the 40px inline has eight pixels of headroom, the 32px block has eight above the 24 bar — this gate fails, because a step that stopped clearing even the minimum would be a small control nobody could argue was legitimate anywhere."
+    },
+    {
+      "step": "control.md",
+      "block": "control.md.min-block",
+      "inline": "control.md.min-inline",
+      "context": "pointer",
+      "$description": "md is the default action, and the binding case for this whole gate. Both floors resolve to 48 — space.600 — in every mode combination, so it clears the 44 enhanced bar by four pixels everywhere. That headroom is not the same size in both products, and the gate does not care, but a reader should: 022 records that Market's md at this step has a natural height of 43.5px, so the 48 floor is load-bearing in Market — remove it and Market's md misses 44 by half a pixel — while Move's natural height is 54 and the floor never binds. One declaration, two jobs, and this gate is what catches the edit that trims Market's padding-block a rung and breaks the target with nothing else to notice."
+    },
+    {
+      "step": "control.lg",
+      "block": "control.lg.min-block",
+      "inline": "control.lg.min-inline",
+      "context": "pointer",
+      "$description": "lg is the largest step and clears 44 with the most room — its floors are 48 like md's, and its natural height is larger than md's at every step in both products, so the floor here is a guarantee that never binds rather than one that does. It is declared at the same bar as md because it is the same kind of thing: a control step a screen uses as a standalone action, which is exactly what SC 2.5.5's 44 governs. 022 notes lg is the step with the least evidence behind it in Move, defined by extension rather than by a measured v0 button; nothing about the target-size floor depends on that, because 44 is a floor a larger control clears more easily, not less."
+    }
+  ]
+}

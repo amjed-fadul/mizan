@@ -76,7 +76,8 @@ jobs:
     # a script's output that the script itself cannot assert about its own run.
     env:
       CHECK_FLOOR: 44
-      SELFTEST_FLOOR: 203
+      TAP_TARGET_FLOOR: 12
+      SELFTEST_FLOOR: 211
       DRY_RUN_FLOOR: 187
 
     steps:
@@ -105,7 +106,7 @@ jobs:
 
       # The second install, and the first of the two things that make a green
       # run a lie if you skip it. Without this, esbuild is absent, the plugin
-      # cannot be built, and `selftest` drops from 164 assertions to 140 — it
+      # cannot be built, and `selftest` drops from 211 assertions to 187 — it
       # says so in its output rather than passing quietly, but a CI log nobody
       # reads is exactly where a printed note goes to die. The floor below is
       # what actually catches it.
@@ -130,13 +131,30 @@ jobs:
       # and the build after both, because a build that consumed a token set no
       # gate had accepted would be reporting on nothing.
 
-      - name: 'Gate 1/6 — npm run check (schema + contrast)'
+      # `npm run check` runs three gates in sequence — schema, contrast,
+      # tap-target — and each prints its own Result line into one log. Two of
+      # those lines carry a count that is a coverage floor, and they are floored
+      # separately below: contrast's "N check(s) passed" and tap-target's
+      # "N footprint check(s)". Schema has no count of its own to floor. The two
+      # greps are anchored to each gate's distinct wording, so neither can pick
+      # up the other's number, and both take the last matching line.
+      - name: 'Gate 1/6 — npm run check (schema + contrast + tap-target)'
         run: |
           npm run check 2>&1 | tee "$RUNNER_TEMP/check.log"
           count=$(sed -nE 's/^Result: pass\. ([0-9]+) check\(s\) passed.*/\1/p' "$RUNNER_TEMP/check.log" | tail -n 1)
           echo "check: ${count:-no} check(s) reported, floor $CHECK_FLOOR"
           if [ -z "$count" ] || [ "$count" -lt "$CHECK_FLOOR" ]; then
             echo "::error title=Gate 1: check count regressed::npm run check reported ${count:-no} check(s); the floor is $CHECK_FLOOR. An assertion count is a floor and is never lowered to make something pass — see the env block in .github/workflows/gates.yml."
+            exit 1
+          fi
+          # The tap-target footprint count. A declared footprint deleted from
+          # targets.json is not a value regressing — the gate still passes on
+          # what is left — it is coverage dropping silently, which is the exact
+          # failure this repository refuses. So its count is a floor too.
+          targets=$(sed -nE 's/^Result: pass\. ([0-9]+) footprint check\(s\).*/\1/p' "$RUNNER_TEMP/check.log" | tail -n 1)
+          echo "tap-target: ${targets:-no} footprint check(s) reported, floor $TAP_TARGET_FLOOR"
+          if [ -z "$targets" ] || [ "$targets" -lt "$TAP_TARGET_FLOOR" ]; then
+            echo "::error title=Gate 1: tap-target count regressed::npm run check:tap-target reported ${targets:-no} footprint check(s); the floor is $TAP_TARGET_FLOOR. A dropped count means a control footprint stopped being checked — an undeclared footprint is an unchecked one. Floors go up with work, never down to pass."
             exit 1
           fi
 

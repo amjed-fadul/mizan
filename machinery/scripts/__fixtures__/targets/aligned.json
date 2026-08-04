@@ -1,0 +1,19 @@
+{
+  "$description": "Every footprint clears its floor in every combination. The gate must accept this and exit 0.",
+  "targets": [
+    {
+      "step": "control.small",
+      "block": "control.small.min-block",
+      "inline": "control.small.min-inline",
+      "context": "inline",
+      "$description": "32×32, above the 24 minimum in both combinations."
+    },
+    {
+      "step": "control.stable",
+      "block": "control.stable.min-block",
+      "inline": "control.stable.min-inline",
+      "context": "pointer",
+      "$description": "48×48, above the 44 enhanced bar in both combinations."
+    }
+  ]
+}

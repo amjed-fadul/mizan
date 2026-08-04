@@ -36,6 +36,9 @@ export const MODES_MANIFEST = 'modes.json';
 /** Default filename for the declared foreground/background pairs. */
 export const PAIRS_FILE = 'pairs.json';
 
+/** Default filename for the declared control footprints the tap-target gate reads. */
+export const TARGETS_FILE = 'targets.json';
+
 /** The layer that holds literal values. Nothing here is expected to alias. */
 export const PRIMITIVE_LAYER = 'primitive';
 

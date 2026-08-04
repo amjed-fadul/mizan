@@ -1,0 +1,7 @@
+{
+  "ink": {
+    "$type": "color",
+    "$description": "One colour, here only so a target can be pointed at a non-dimension token and the gate proven to reject it. A tap target is a length; a colour is not one.",
+    "$value": { "colorSpace": "srgb", "components": [0.1, 0.1, 0.1], "alpha": 1, "hex": "#1a1a1a" }
+  }
+}
