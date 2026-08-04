@@ -15,10 +15,64 @@ type DeclaredPair = {
   $description: string
 }
 
+type DeclaredException = {
+  foreground: string
+  background: string
+  reason: string
+  modes?: string[]
+}
+
 // content/tokens/pairs.json is read directly rather than copied. It is the
 // editing surface for this declaration (CLAUDE.md rule 1), and a preview that
 // kept its own list of pairings would be able to disagree with the build gate.
-const PAIRS = (pairsSource as { pairs: DeclaredPair[] }).pairs
+const SOURCE = pairsSource as { pairs: DeclaredPair[]; exceptions?: DeclaredException[] }
+const PAIRS = SOURCE.pairs
+const EXCEPTIONS = SOURCE.exceptions ?? []
+
+/**
+ * A mode scope, read the way check-contrast.mjs reads one: for every dimension
+ * the list mentions, this combination's mode for that dimension must be one of
+ * the listed ones. Or within a dimension, and within a dimension only.
+ *
+ * The script's own comment records why: as a plain conjunction across
+ * dimensions, ["theme.light", "theme.dark"] — which reads to anybody as "both
+ * themes" — matched nothing at all and silently switched the check off. The two
+ * files have to agree on this or the page and the gate would disagree about
+ * which combinations an exception covers, which is the same defect as
+ * disagreeing about a ratio.
+ */
+function scopeIncludes(modes: string[] | undefined, c: Combination): boolean {
+  if (!modes) return true
+  const byDimension = new Map<string, Set<string>>()
+  for (const id of modes) {
+    const dimension = id.slice(0, id.indexOf('.'))
+    if (!byDimension.has(dimension)) byDimension.set(dimension, new Set())
+    byDimension.get(dimension)!.add(id)
+  }
+  for (const [dimension, ids] of byDimension) {
+    const selected = dimension === 'theme' ? `theme.${c.theme}`
+      : dimension === 'product' ? `product.${c.product}`
+        : null
+    if (selected === null || !ids.has(selected)) return false
+  }
+  return true
+}
+
+function exceptionFor(pair: DeclaredPair, c: Combination): DeclaredException | undefined {
+  return EXCEPTIONS.find((e) => e.foreground === pair.foreground
+    && e.background === pair.background
+    && scopeIncludes(e.modes, c))
+}
+
+/** Every distinct reason in effect on this pair, in any of the four combinations. */
+function reasonsFor(pair: DeclaredPair): string[] {
+  const seen = new Set<string>()
+  for (const c of COMBINATIONS) {
+    const exception = exceptionFor(pair, c)
+    if (exception) seen.add(exception.reason)
+  }
+  return [...seen]
+}
 
 function contextLabel(context: PairContext, lang: Lang): string {
   switch (context) {
@@ -36,6 +90,7 @@ function contextLabel(context: PairContext, lang: Lang): string {
 function verdictLabel(value: Verdict, lang: Lang): string {
   if (value === 'pass') return s(ui.pairs.pass, lang)
   if (value === 'fail') return s(ui.pairs.fail, lang)
+  if (value === 'excepted') return s(ui.pairs.excepted, lang)
   return s(ui.pairs.reported, lang)
 }
 
@@ -135,11 +190,29 @@ function PairCard({ pair, lang }: { pair: DeclaredPair; lang: Lang }) {
               <span className="mz-cell__ratio">
                 <bdi>{ratio === null ? '—' : `${formatRatio(ratio)}:1`}</bdi>
               </span>
-              {ratio !== null && <VerdictBadge value={verdict(ratio, context)} lang={lang} />}
+              {ratio !== null && (
+                <VerdictBadge
+                  value={verdict(ratio, context, exceptionFor(pair, c) !== undefined)}
+                  lang={lang}
+                />
+              )}
             </li>
           )
         })}
       </ul>
+
+      {/* The reason, in full, on the card the exception applies to. An exception
+          the reader has to go and find in a JSON file is a silent one, and
+          pairs.json says what a silent exception is. */}
+      {reasonsFor(pair).map((reason) => (
+        <p key={reason} className="mz-pair__exception">
+          <span className="mz-tag mz-tag--strong">
+            <Run text={s(ui.pairs.excepted, lang)} ambient={lang} />
+          </span>
+          {' '}
+          <Run text={reason} ambient="en" />
+        </p>
+      ))}
     </li>
   )
 }

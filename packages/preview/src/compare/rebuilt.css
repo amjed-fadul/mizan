@@ -2,7 +2,7 @@
   The same screen, rebuilt.
 
   Every colour is a var() from packages/tokens/css/tokens.css, so every pairing
-  drawn here is one of the twelve declared in content/tokens/pairs.json and
+  drawn here is one of the fifteen declared in content/tokens/pairs.json and
   gated by the build. Every inline-axis property is logical, so the layout
   mirrors when `dir` changes and nothing needs a second stylesheet.
 

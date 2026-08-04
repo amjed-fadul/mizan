@@ -90,6 +90,7 @@ export const ui = {
     pass: { en: 'Pass', ar: 'مطابق' } satisfies Str,
     fail: { en: 'Fail', ar: 'غير مطابق' } satisfies Str,
     reported: { en: 'Reported', ar: 'مُبلَّغ عنه' } satisfies Str,
+    excepted: { en: 'Excepted', ar: 'مُستثنى' } satisfies Str,
     current: { en: 'current', ar: 'الحالي' } satisfies Str,
     verdictNote: {
       en: 'The verdicts are stated in words, not in colour. Mizan has no success or danger semantic — commerce.discount means a saving and mobility.safety means a cancelled trip — and borrowing one of them to mean "fail" is the category error this whole page argues against.',
