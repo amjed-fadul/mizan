@@ -1,0 +1,86 @@
+# storybook.yml — publish the component library where a designer can open it.
+#
+# Stage 4's ship deliverable is a URL, not a repository. Everything the library
+# knows about itself is already written down — seven API specs, seven contracts,
+# fifty-eight stories — and until this file existed all of it was reachable only
+# by cloning the repo and running a dev server, which is not a thing a designer
+# does and not a thing a hiring manager does either.
+#
+# It deploys the build and nothing else. It runs no gate: gates.yml owns that,
+# and a second workflow re-running checks would be a second place to keep them
+# in step. What it does do is refuse to publish a build that did not compile —
+# `build:storybook` fails the job on a type error or a broken import, so a green
+# deploy means the stories at least built.
+#
+# The token stylesheet is NOT rebuilt here. packages/tokens/ is committed build
+# output, and rebuilding it in a deploy job would let a published site show
+# values that no gate had accepted — the exact inversion build-tokens.mjs refuses
+# by running the gates before it generates anything.
+
+name: storybook
+
+on:
+  push:
+    branches: [main]
+  # So a broken deploy can be retried without an empty commit.
+  workflow_dispatch:
+
+# The two permissions Pages needs and nothing else. `contents: read` because
+# this workflow reads the tree and never writes to it.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deploy at a time, and never cancel one in flight: a cancelled deploy can
+# leave the site serving a half-uploaded artifact, which is worse than serving
+# yesterday's build for another minute.
+concurrency:
+  group: storybook
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: build the static Storybook
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Node 22 for the same reason gates.yml pins it: package.json's engines
+      # says >=22. Only the root lockfile is cached — the Figma plugin has its
+      # own and is not part of this build.
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      # The build reads packages/tokens/css/tokens.css through the @mizan/tokens
+      # workspace link, which `npm ci` created. Nothing is generated here.
+      - name: Build
+        run: npm run build:storybook
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: packages/components/storybook-static
+
+  deploy:
+    name: publish
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
