@@ -326,7 +326,16 @@ export interface SheetPlan {
   actions: SheetAction[];
   errors: Problem[];
   warnings: Problem[];
-  /** Variables the sync skips. The sheet skips them for the same reason. */
+  /**
+   * Everything the token root holds that this page does not draw, and why.
+   *
+   * Two sources, one list. The sync's own skips come first — a composite type is
+   * a Figma style rather than a variable, so there is no variable to bind. Then
+   * the sheet's own: a variable that exists and is correct but names a font this
+   * Figma has no face for, which is a fact about the running application and not
+   * about the token. A reader asking why something is absent should have one
+   * list to read rather than two to reconcile.
+   */
   skipped: Skip[];
   orphans: SheetOrphan[];
   /**
@@ -338,6 +347,13 @@ export interface SheetPlan {
   signature: string;
   stats: {
     variablesDocumented: number;
+    /**
+     * Variables the sync projects that this sheet does not bind — the exceptions
+     * to the claim the whole artifact rests on, counted rather than absorbed.
+     * `variablesDocumented + variablesUnbound` is the whole projection, and each
+     * one has its reason in `skipped`.
+     */
+    variablesUnbound: number;
     nodesPlanned: number;
     creates: number;
     updates: number;

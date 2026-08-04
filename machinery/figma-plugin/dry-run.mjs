@@ -37,18 +37,23 @@
  *  12. Every combination frame carries an explicit mode for every collection.
  *  13. Drawing the sheet twice changes nothing the second time, and nothing in
  *      its vocabulary removes anything either.
- *  14. The REST projection is faithful and lossless: every collection and every
+ *  14. A `fontFamily` variable naming a font the running Figma does not have —
+ *      a CSS generic such as `system-ui` is not a font but a promise that the
+ *      operating system will choose one — becomes a planned skip with a stated
+ *      reason, visible in the diff before anything is written, rather than a
+ *      failure afterwards. Told no font list, the planner filters nothing.
+ *  15. The REST projection is faithful and lossless: every collection and every
  *      variable arrives under its own id, `variableIds` is derived rather than
  *      trusted, every alias lands on a variable in the same payload, and a
  *      colour's four channels come through with no rounding at all.
- *  15. The real plan, applied, exported in the REST read shape and handed to the
+ *  16. The real plan, applied, exported in the REST read shape and handed to the
  *      real `machinery/scripts/check-drift.mjs`, is reported as aligned with no
  *      drift. The plugin and the detector agree on every convention, and they
  *      say so to each other rather than in two comments.
- *  16. Both of those can fail: a payload missing a variable, one whose alias
+ *  17. Both of those can fail: a payload missing a variable, one whose alias
  *      points nowhere, and one whose colour moved by a billionth are each
  *      caught, and a corrupted snapshot fails the detector.
- *  17. The bridge has four message types, none of them a word for writing, and
+ *  18. The bridge has four message types, none of them a word for writing, and
  *      an unrecognised instruction parses to nothing rather than to something
  *      to interpret.
  *
@@ -81,7 +86,7 @@ if (!existsSync(CORE)) {
   process.exit(1);
 }
 
-/* The whole namespace as well as the names, because 18 checks the bridge's
+/* The whole namespace as well as the names, because 19 checks the bridge's
  * exported names against what the built core actually carries. */
 const core = await import(`file://${CORE}`);
 
@@ -749,10 +754,139 @@ assert(Boolean(clash) && /delete/i.test(clash.message),
   clash && clash.message);
 
 /* ================================================================== *
- * 14. The sheet on a third dimension
+ * 14. A font this Figma does not have
+ *
+ * Observed in the desktop app rather than imagined. A font stack narrows to
+ * its first family, and that family is `system-ui` — a CSS generic, which is
+ * not a font but a promise that the operating system will choose one. Figma
+ * resolves fonts by name and has no face under that name, so the bind threw at
+ * apply time, in a failure list, on a diff the user had already confirmed.
+ *
+ * The fix moves the fact into the plan: a skip with a reason, in the diff,
+ * before anything is written. Which fonts exist is a property of the running
+ * application, so the pure core cannot discover it — it is told, by an argument
+ * this harness has no Figma to fill in. That is why the argument is optional,
+ * and why the first thing asserted below is that omitting it still filters
+ * nothing: every assertion above this point depends on that.
  * ================================================================== */
 
-process.stdout.write('\n12. Fixture: the sheet across three dimensions\n');
+process.stdout.write('\n12. A font this Figma does not have\n');
+
+/** Every string value a documented variable holds, across its modes. */
+const familyValuesOf = (specimen) => {
+  const collection = synced.collections.filter((c) => c.name === specimen.collection)[0];
+  const variable = synced.variables.filter((v) => v.collectionId === collection.id && v.name === specimen.name)[0];
+  return Object.keys(variable.valuesByMode)
+    .map((modeId) => variable.valuesByMode[modeId])
+    .filter((value) => value.kind === 'STRING')
+    .map((value) => value.value);
+};
+
+/** Every variable bound anywhere on a drawn page. */
+const boundKeysOn = (page) => {
+  const out = new Set();
+  const walk = (node) => {
+    for (const field of Object.keys(node.bindings)) {
+      out.add(`${node.bindings[field].collection}/${node.bindings[field].name}`);
+    }
+    for (const child of node.children) walk(child);
+  };
+  walk(page);
+  return out;
+};
+
+const fontSpecimens = sheet.specimens.filter((s) => s.field === 'fontFamily');
+assert(fontSpecimens.length > 1,
+  'the real token root projects more than one fontFamily variable, so withholding one family still leaves another to bind',
+  `${fontSpecimens.length} fontFamily specimen(s)`);
+
+const withheldSpecimen = fontSpecimens[0];
+const withheldFamilies = familyValuesOf(withheldSpecimen);
+const withheldKey = `${withheldSpecimen.collection}/${withheldSpecimen.name}`;
+const everyFamily = sheet.fonts.slice();
+const partialFamilies = everyFamily.filter((family) => !withheldFamilies.includes(family));
+assert(withheldFamilies.length > 0 && withheldFamilies.every((family) => everyFamily.includes(family))
+  && partialFamilies.length > 0,
+  'and the family withheld below is a real one the sheet would otherwise load, with others left in the list',
+  `${JSON.stringify(withheldFamilies)} withheld from ${JSON.stringify(everyFamily)}`);
+
+/* Nothing supplied means do not filter — the floor every assertion above
+ * stands on, asserted rather than assumed. */
+assert(sheet.stats.variablesUnbound === 0
+  && same(sheet.skipped.map((s) => s.token).sort(), plan.skipped.map((s) => s.token).sort()),
+  'the plan every assertion above this point was made against was given no font list, so it filtered nothing and skipped only what the sync skips',
+  `${sheet.stats.variablesUnbound} unbound`);
+const nullList = planSheet(bundle, synced, new MemoryNodes(synced).readSheet(), null);
+assert(nullList.signature === sheet.signature && nullList.stats.variablesUnbound === 0,
+  'and a list that could not be fetched reads as no list rather than as a list of none — an empty answer would skip every font specimen for a stated reason that is not true',
+  `${nullList.signature} vs ${sheet.signature}`);
+
+/* A list that omits a family the tokens use. */
+const withheldNodes = new MemoryNodes(synced);
+const withheldPlan = planSheet(bundle, synced, withheldNodes.readSheet(), partialFamilies);
+
+assert(withheldPlan.errors.length === 0,
+  'a font the running application does not have is a skip, not an error — the rest of the sheet is still worth drawing',
+  JSON.stringify(withheldPlan.errors.slice(0, 2)));
+assert(withheldPlan.stats.variablesDocumented === sheet.stats.variablesDocumented - 1
+  && !withheldPlan.specimens.some((s) => `${s.collection}/${s.name}` === withheldKey),
+  'the variable naming that family gets no specimen',
+  `${withheldPlan.stats.variablesDocumented} documented, was ${sheet.stats.variablesDocumented}`);
+
+const fontSkip = withheldPlan.skipped.filter((s) => s.token === withheldSpecimen.token)[0];
+assert(Boolean(fontSkip), 'it is skipped rather than dropped, in the same list as the sync\'s own skips',
+  JSON.stringify(withheldPlan.skipped.map((s) => s.token)));
+assert(Boolean(fontSkip) && withheldFamilies.every((family) => fontSkip.reason.includes(family)),
+  'and the skip names the value Figma cannot resolve, not merely the token that carries it',
+  fontSkip && fontSkip.reason);
+assert(Boolean(fontSkip) && /resolves fonts by name/i.test(fontSkip.reason)
+  && /nothing to bind/i.test(fontSkip.reason),
+  'and says why there is nothing to bind, so the diff explains the absence rather than reporting it',
+  fontSkip && fontSkip.reason);
+assert(!withheldPlan.fonts.some((family) => withheldFamilies.includes(family)),
+  'and the family is not in the list of fonts to load, because nothing on the sheet needs it any more',
+  JSON.stringify(withheldPlan.fonts));
+
+/* The summary carries the exception rather than absorbing it. */
+assert(withheldPlan.stats.variablesUnbound === 1,
+  'the plan\'s own summary counts the exception instead of quietly documenting one variable fewer',
+  String(withheldPlan.stats.variablesUnbound));
+assert(withheldPlan.stats.variablesDocumented + withheldPlan.stats.variablesUnbound === plan.projected.length,
+  'documented plus unbound is the whole projection — the headline claim and its exception are both readable off the summary',
+  `${withheldPlan.stats.variablesDocumented} + ${withheldPlan.stats.variablesUnbound} vs ${plan.projected.length} projected`);
+
+/* And on the page that actually gets drawn. */
+const withheldBuilt = applySheet(withheldPlan, withheldNodes);
+assert(withheldBuilt.failures.length === 0, 'the sheet still draws with no failures',
+  JSON.stringify(withheldBuilt.failures.slice(0, 3).map((f) => f.message)));
+const withheldBindings = boundKeysOn(withheldNodes.readSheet().page);
+assert(!withheldBindings.has(withheldKey),
+  'the skipped variable is bound nowhere on the drawn page — and no substitute family is bound in its place, because a specimen that disagreed with its variable would break the one claim the sheet makes',
+  withheldKey);
+assert(plan.projected.filter((v) => `${v.collection}/${v.name}` !== withheldKey)
+  .every((v) => withheldBindings.has(`${v.collection}/${v.name}`)),
+  'while every other variable the sync projects is still bound — one stated exception, not a collapsed sheet');
+assert(planSheet(bundle, synced, withheldNodes.readSheet(), partialFamilies).actions.length === 0,
+  'and a sheet with a skip on it is idempotent too — a skipped variable is not re-planned on every run');
+
+/* The filter is what did that, and not the mere presence of the argument. */
+const fullNodes = new MemoryNodes(synced);
+const fullPlan = planSheet(bundle, synced, fullNodes.readSheet(), everyFamily);
+assert(fullPlan.signature === sheet.signature && fullPlan.stats.variablesUnbound === 0,
+  'a list that does hold every family plans exactly what no list plans',
+  `${fullPlan.stats.variablesUnbound} unbound, ${fullPlan.signature} vs ${sheet.signature}`);
+const fullBuilt = applySheet(fullPlan, fullNodes);
+assert(fullBuilt.failures.length === 0, 'it draws with no failures',
+  JSON.stringify(fullBuilt.failures.slice(0, 3).map((f) => f.message)));
+assert(boundKeysOn(fullNodes.readSheet().page).has(withheldKey),
+  'and the same variable *is* bound when its family is in the list — so the skip above is the filter doing work, not an assertion that could never fail',
+  withheldKey);
+
+/* ================================================================== *
+ * 15. The sheet on a third dimension
+ * ================================================================== */
+
+process.stdout.write('\n13. Fixture: the sheet across three dimensions\n');
 
 const threeSheetVariables = threeFigma.readSnapshot();
 const threeNodes = new MemoryNodes(threeSheetVariables);
@@ -793,7 +927,7 @@ assert(!threeSheet.specimens.some((s) => s.token === 'shadow.raised'),
   'a composite type is absent from the sheet, exactly as it is absent from the sync');
 
 /* ================================================================== *
- * 15. The REST projection
+ * 16. The REST projection
  *
  * `toRestPayload` is the one place that turns a variable backend's state into
  * the shape `GET /v1/files/<key>/variables/local` returns, and the drift
@@ -802,7 +936,7 @@ assert(!threeSheet.specimens.some((s) => s.token === 'shadow.raised'),
  * colour channel that arrives rounded is drift nobody caused.
  * ================================================================== */
 
-process.stdout.write('\n13. The REST projection: everything arrives, nothing is tidied\n');
+process.stdout.write('\n14. The REST projection: everything arrives, nothing is tidied\n');
 
 const restSource = figma.readRestSource();
 const payload = toRestPayload(restSource);
@@ -890,7 +1024,7 @@ assert(restSource.variables.some((v) => v.description.length > 0)
   'and at least one description actually made the trip, so that check is looking at something');
 
 /* ================================================================== *
- * 16. The plugin and the drift detector, run against each other
+ * 17. The plugin and the drift detector, run against each other
  *
  * This is the only assertion in the repo that runs both sides of the
  * projection at once, and it is the reason `rest.ts` exists.
@@ -912,7 +1046,7 @@ assert(restSource.variables.some((v) => v.description.length > 0)
  * an assertion instead of as a paragraph somebody ran once.
  * ================================================================== */
 
-process.stdout.write('\n14. Against the real drift detector, end to end\n');
+process.stdout.write('\n15. Against the real drift detector, end to end\n');
 
 const scratch = mkdtempSync(join(tmpdir(), 'mizan-dry-run-'));
 const snapshotFile = join(scratch, 'variables-local.json');
@@ -955,7 +1089,7 @@ if (drift.report) {
 }
 
 /* ================================================================== *
- * 17. Breaking both on purpose
+ * 18. Breaking both on purpose
  *
  * An assertion nothing can break is not an assertion. Everything above passes
  * on a good payload; below, a deliberately corrupted one is built in memory and
@@ -964,7 +1098,7 @@ if (drift.report) {
  * would do with incorrect input.
  * ================================================================== */
 
-process.stdout.write('\n15. Breaking the projection on purpose\n');
+process.stdout.write('\n16. Breaking the projection on purpose\n');
 
 /* One variable dropped before the projection: the payload is short by one, and
  * the check that counts them says which. */
@@ -1026,7 +1160,7 @@ rmSync(scratch, { recursive: true, force: true });
 assert(!existsSync(scratch), 'the harness leaves no snapshot behind — the temporary directory is removed');
 
 /* ================================================================== *
- * 18. The bridge vocabulary
+ * 19. The bridge vocabulary
  *
  * [016] chose a bridge of this plugin's own over a general Figma-over-MCP
  * dependency, and the argument was attribution: a second write path into Figma
@@ -1037,7 +1171,7 @@ assert(!existsSync(scratch), 'the harness leaves no snapshot behind — the temp
  * can claim.
  * ================================================================== */
 
-process.stdout.write('\n16. The bridge: four words, none of them a write\n');
+process.stdout.write('\n17. The bridge: four words, none of them a write\n');
 
 assert(same([...BRIDGE_MESSAGE_TYPES], BRIDGE_VOCABULARY),
   'the bridge knows exactly four message types: hello, snapshot-request, snapshot, error',
@@ -1112,7 +1246,8 @@ if (plan.warnings.length > 0) {
 }
 
 process.stdout.write(
-  `\nProof sheet: ${sheet.stats.variablesDocumented} variables documented across ` +
+  `\nProof sheet: ${sheet.stats.variablesDocumented} variables documented, ` +
+    `${sheet.stats.variablesUnbound} projected but not bound, across ` +
     `${sheet.combinations.length} mode combination(s), ${sheet.stats.nodesPlanned} nodes\n`,
 );
 const byBinding = new Map();

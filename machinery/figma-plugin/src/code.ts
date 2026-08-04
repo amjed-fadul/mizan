@@ -33,6 +33,7 @@ import type { Plan, SheetPlan, TokenBundle } from './core/types';
 import {
   FigmaNodes,
   FigmaVariables,
+  captureAvailableFonts,
   captureDocument,
   captureRestSource,
   captureSheetSnapshot,
@@ -151,10 +152,19 @@ figma.ui.onmessage = async (message: Incoming) => {
       return;
     }
 
+    /**
+     * The font list is read here and again in `apply-sheet`, and it is the one
+     * input to the sheet planner that does not come from the token root. It has
+     * to be supplied on both sides of the gate: a preview that filters and an
+     * apply that does not would plan two different pages, the signatures would
+     * never match, and every confirmation would come back stale. If the list
+     * genuinely changes in between — somebody installs a font mid-session — the
+     * diff really has moved and reporting it as stale is the correct answer.
+     */
     if (message.type === 'preview-sheet') {
       const snapshot = await captureSnapshot();
       const sheet = await captureSheetSnapshot(SHEET_PAGE_NAME, snapshot);
-      const plan = planSheet(message.bundle, snapshot, sheet);
+      const plan = planSheet(message.bundle, snapshot, sheet, await captureAvailableFonts());
       pendingSheet = { bundle: message.bundle, plan };
       figma.ui.postMessage({ type: 'sheet-plan', plan });
       return;
@@ -178,8 +188,12 @@ figma.ui.onmessage = async (message: Incoming) => {
       // refuse if the diff has moved since the preview. A confirmation on a
       // diff nobody is going to write is not a confirmation.
       const snapshot = await captureSnapshot();
+      // Read once and used for all three plans below, so the comparison against
+      // the previewed signature and the idempotency check afterwards are made
+      // against the same statement about this Figma.
+      const families = await captureAvailableFonts();
       const adapter = await FigmaNodes.create(SHEET_PAGE_NAME, snapshot, pendingSheet.plan.fonts);
-      const fresh = planSheet(pendingSheet.bundle, snapshot, adapter.readSheet());
+      const fresh = planSheet(pendingSheet.bundle, snapshot, adapter.readSheet(), families);
       if (fresh.signature !== message.signature) {
         pendingSheet = { bundle: pendingSheet.bundle, plan: fresh };
         figma.ui.postMessage({
@@ -196,6 +210,7 @@ figma.ui.onmessage = async (message: Incoming) => {
         pendingSheet.bundle,
         afterSnapshot,
         await captureSheetSnapshot(SHEET_PAGE_NAME, afterSnapshot),
+        families,
       );
       pendingSheet = { bundle: pendingSheet.bundle, plan: after };
 

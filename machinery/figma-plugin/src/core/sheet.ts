@@ -76,6 +76,33 @@
  *
  * Nothing here names a dimension, a mode, a collection or a token. The page
  * name is the one constant, and it is generic on purpose — see below.
+ *
+ * ===========================================================================
+ * THE ONE DOCUMENTED EXCEPTION: A FONT FIGMA DOES NOT HAVE
+ * ===========================================================================
+ *
+ * Figma resolves a font by name against the faces the running app has. A CSS
+ * generic — `system-ui`, `ui-sans-serif` — is not a family at all but a promise
+ * that the operating system will choose one, so no Figma anywhere holds a face
+ * under that name, and a `fontFamily` variable carrying one cannot be bound:
+ * `setBoundVariable` throws. The same is true, less interestingly, of a real
+ * family nobody has installed.
+ *
+ * That is a fact about the running app, so the planner cannot know it on its
+ * own — it is told, by the optional `availableFonts` argument below. Told
+ * nothing, it filters nothing, which is what the command-line dry run needs and
+ * is exactly the behaviour that existed before the argument did.
+ *
+ * Told a list, it emits a SKIP rather than a specimen, with the family named.
+ * A skip is a line in the diff before anything is written; the alternative is a
+ * failure in a list afterwards, on a change the user already confirmed.
+ *
+ * What it does NOT do is bind the next family in the stack. The sync narrows a
+ * stack to its first family — a Figma variable holds one string — and the drift
+ * detector expects exactly that value, so a specimen rendering the second family
+ * would disagree with the variable it documents. The sheet's whole claim is that
+ * a swatch *is* the variable rather than a picture of one; a helpful substitution
+ * is the one repair that would break it.
  */
 
 import type {
@@ -96,6 +123,7 @@ import type {
   SheetPropValue,
   SheetSnapshot,
   SheetSpecimen,
+  Skip,
   Snapshot,
   TokenBundle,
 } from './types';
@@ -293,8 +321,22 @@ export function combinationsOf(plan: Plan): SheetCombination[] {
  * `snapshot` is the file's variable state — the sheet can only bind variables
  * that exist, so this is checked rather than assumed. `sheet` is the generated
  * page as it currently stands, and nothing else in the document.
+ *
+ * `availableFonts` is the one thing here that comes from the running Figma
+ * rather than from the token root: the families it actually has. It is optional
+ * because this core is also driven with no Figma at all, and omitting it means
+ * *do not filter* rather than *filter against nothing* — an absent list is a
+ * question that was not asked, not an answer of none. Whatever a caller passes,
+ * it must pass the same thing on both sides of the confirmation gate, or the
+ * previewed diff and the written diff would describe different pages and every
+ * apply would report itself stale.
  */
-export function planSheet(bundle: TokenBundle, snapshot: Snapshot, sheet: SheetSnapshot): SheetPlan {
+export function planSheet(
+  bundle: TokenBundle,
+  snapshot: Snapshot,
+  sheet: SheetSnapshot,
+  availableFonts?: string[] | null,
+): SheetPlan {
   const errors: Problem[] = [];
   const warnings: Problem[] = [];
 
@@ -326,6 +368,8 @@ export function planSheet(bundle: TokenBundle, snapshot: Snapshot, sheet: SheetS
 
   const missing: string[] = [];
   const documented: ProjectedVariable[] = [];
+  /** Projected variables this sheet cannot draw. The exception, stated. */
+  const unbound: Skip[] = [];
 
   for (const variable of sync.projected) {
     const live = liveVariables.get(`${variable.collection}\u0000${variable.name}`);
@@ -342,9 +386,24 @@ export function planSheet(bundle: TokenBundle, snapshot: Snapshot, sheet: SheetS
       });
       continue;
     }
-    documented.push(variable);
-
     const rendering = renderingFor(variable);
+
+    // The one thing the token root cannot decide: whether the application that
+    // will render this actually has the font. Decided here, in the plan, rather
+    // than discovered as a failure after the write.
+    if (rendering.field === 'fontFamily' && availableFonts) {
+      const unavailable = live.values.filter((family) => availableFonts.indexOf(family) === -1);
+      if (unavailable.length > 0) {
+        unbound.push({
+          token: variable.token,
+          type: variable.dtcgType,
+          reason: unavailableFontReason(unavailable),
+        });
+        continue;
+      }
+    }
+
+    documented.push(variable);
     specimens.push({
       token: variable.token,
       collection: variable.collection,
@@ -490,12 +549,19 @@ export function planSheet(bundle: TokenBundle, snapshot: Snapshot, sheet: SheetS
     actions,
     errors,
     warnings,
-    skipped: sync.skipped,
+    // The sync's skips first, then this sheet's own. Both are tokens that exist
+    // and are not drawn, and a reader wanting to know why anything is absent
+    // should have one list to read rather than two to reconcile.
+    skipped: sync.skipped.concat(unbound),
     orphans,
     fonts,
     signature: signatureOf(actions),
     stats: {
       variablesDocumented: documented.length,
+      // Stated, not subtracted: `documented + unbound` is the whole projection,
+      // so the headline claim and its exceptions are both readable off the
+      // summary rather than one silently shrinking the other.
+      variablesUnbound: unbound.length,
       nodesPlanned: countNodes(page) - 1,
       creates,
       updates: actions.length - creates,
@@ -506,6 +572,24 @@ export function planSheet(bundle: TokenBundle, snapshot: Snapshot, sheet: SheetS
 /* ------------------------------------------------------------------ *
  * Helpers
  * ------------------------------------------------------------------ */
+
+/**
+ * Why a variable the sync projects has no specimen, in the diff, before a write.
+ *
+ * The reason names the value rather than the token, because the value is the
+ * whole problem: the token is fine, the sync is fine, and the variable in the
+ * file holds exactly what it should. What is missing is a face to render it in.
+ */
+function unavailableFontReason(families: string[]): string {
+  const named = families.map((family) => `"${family}"`).join(' or ');
+  return (
+    `Figma resolves fonts by name and this Figma has no font called ${named}, so there is nothing to bind and ` +
+    'nothing to render — a CSS generic such as system-ui is not a font but a promise that the operating system ' +
+    'will choose one. The variable holds the first family of its stack and binding a later one instead would make ' +
+    'the specimen disagree with the variable it documents, so the variable is still synced and only its specimen ' +
+    'is left off the sheet.'
+  );
+}
 
 function heading(text: string, fontSize: number): SheetNode {
   return {

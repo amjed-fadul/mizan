@@ -1125,7 +1125,7 @@
       };
     });
   }
-  function planSheet(bundle, snapshot, sheet) {
+  function planSheet(bundle, snapshot, sheet, availableFonts) {
     const errors = [];
     const warnings = [];
     const sync = planSync(bundle, snapshot);
@@ -1150,6 +1150,7 @@
     }
     const missing = [];
     const documented = [];
+    const unbound = [];
     for (const variable of sync.projected) {
       const live = liveVariables.get(`${variable.collection}\0${variable.name}`);
       if (!live) {
@@ -1165,8 +1166,19 @@
         });
         continue;
       }
-      documented.push(variable);
       const rendering = renderingFor(variable);
+      if (rendering.field === "fontFamily" && availableFonts) {
+        const unavailable = live.values.filter((family) => availableFonts.indexOf(family) === -1);
+        if (unavailable.length > 0) {
+          unbound.push({
+            token: variable.token,
+            type: variable.dtcgType,
+            reason: unavailableFontReason(unavailable)
+          });
+          continue;
+        }
+      }
+      documented.push(variable);
       specimens.push({
         token: variable.token,
         collection: variable.collection,
@@ -1284,17 +1296,28 @@
       actions,
       errors,
       warnings,
-      skipped: sync.skipped,
+      // The sync's skips first, then this sheet's own. Both are tokens that exist
+      // and are not drawn, and a reader wanting to know why anything is absent
+      // should have one list to read rather than two to reconcile.
+      skipped: sync.skipped.concat(unbound),
       orphans,
       fonts,
       signature: signatureOf(actions),
       stats: {
         variablesDocumented: documented.length,
+        // Stated, not subtracted: `documented + unbound` is the whole projection,
+        // so the headline claim and its exceptions are both readable off the
+        // summary rather than one silently shrinking the other.
+        variablesUnbound: unbound.length,
         nodesPlanned: countNodes(page) - 1,
         creates,
         updates: actions.length - creates
       }
     };
+  }
+  function unavailableFontReason(families) {
+    const named = families.map((family) => `"${family}"`).join(" or ");
+    return `Figma resolves fonts by name and this Figma has no font called ${named}, so there is nothing to bind and nothing to render \u2014 a CSS generic such as system-ui is not a font but a promise that the operating system will choose one. The variable holds the first family of its stack and binding a later one instead would make the specimen disagree with the variable it documents, so the variable is still synced and only its specimen is left off the sheet.`;
   }
   function heading(text, fontSize) {
     return {
@@ -1722,6 +1745,19 @@
     }
     return out;
   }
+  async function captureAvailableFonts() {
+    try {
+      const available = await figma.listAvailableFontsAsync();
+      const families = [];
+      for (const font of available) {
+        const family = font.fontName.family;
+        if (families.indexOf(family) === -1) families.push(family);
+      }
+      return families;
+    } catch (e) {
+      return null;
+    }
+  }
   var FigmaNodes = class _FigmaNodes {
     constructor(snapshot, collections, variables) {
       this.snapshot = snapshot;
@@ -1942,7 +1978,7 @@
       if (message.type === "preview-sheet") {
         const snapshot = await captureSnapshot();
         const sheet = await captureSheetSnapshot(SHEET_PAGE_NAME, snapshot);
-        const plan = planSheet(message.bundle, snapshot, sheet);
+        const plan = planSheet(message.bundle, snapshot, sheet, await captureAvailableFonts());
         pendingSheet = { bundle: message.bundle, plan };
         figma.ui.postMessage({ type: "sheet-plan", plan });
         return;
@@ -1960,8 +1996,9 @@
           return;
         }
         const snapshot = await captureSnapshot();
+        const families = await captureAvailableFonts();
         const adapter = await FigmaNodes.create(SHEET_PAGE_NAME, snapshot, pendingSheet.plan.fonts);
-        const fresh = planSheet(pendingSheet.bundle, snapshot, adapter.readSheet());
+        const fresh = planSheet(pendingSheet.bundle, snapshot, adapter.readSheet(), families);
         if (fresh.signature !== message.signature) {
           pendingSheet = { bundle: pendingSheet.bundle, plan: fresh };
           figma.ui.postMessage({
@@ -1976,7 +2013,8 @@
         const after = planSheet(
           pendingSheet.bundle,
           afterSnapshot,
-          await captureSheetSnapshot(SHEET_PAGE_NAME, afterSnapshot)
+          await captureSheetSnapshot(SHEET_PAGE_NAME, afterSnapshot),
+          families
         );
         pendingSheet = { bundle: pendingSheet.bundle, plan: after };
         figma.ui.postMessage({

@@ -431,6 +431,46 @@ function readExplicitModes(
   return out;
 }
 
+/**
+ * Which font families the running Figma actually has.
+ *
+ * Figma resolves a font by name against the faces it has installed. It has no
+ * notion of a CSS generic — `system-ui`, `ui-sans-serif` — which is not a family
+ * at all but a promise that the operating system will choose one, so no Figma
+ * anywhere holds a face under that name. A `fontFamily` variable carrying one
+ * cannot be loaded, and `setBoundVariable` then throws at apply time, after the
+ * user has already confirmed a diff that said the binding would happen.
+ *
+ * So the planner is given this list and decides *before* anything is written.
+ * It is a plain list of names rather than a lookup because the pure core is
+ * driven by the command-line dry run too, where there is no Figma to ask.
+ *
+ * Two things it will not do.
+ *
+ * It does not throw. A sheet is worth planning even if the font list could not
+ * be fetched; failing the whole preview because one query failed trades a
+ * complete answer for a tidy one.
+ *
+ * It does not return an empty list when it could not ask. An empty list is a
+ * claim — that this Figma has no fonts at all — and the planner would act on it
+ * by skipping every font specimen for a stated reason that is not true. `null`
+ * says the question was not answered, and the planner reads that as "do not
+ * filter", which is exactly the behaviour that existed before this list did.
+ */
+export async function captureAvailableFonts(): Promise<string[] | null> {
+  try {
+    const available = await figma.listAvailableFontsAsync();
+    const families: string[] = [];
+    for (const font of available) {
+      const family = font.fontName.family;
+      if (families.indexOf(family) === -1) families.push(family);
+    }
+    return families;
+  } catch {
+    return null;
+  }
+}
+
 /** The write side of the sheet. One Plugin API call per method, as above. */
 export class FigmaNodes implements NodesAdapter {
   private nodes = new Map<string, BaseNode>();

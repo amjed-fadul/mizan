@@ -89,6 +89,20 @@ The radius vocabulary in `src/core/sheet.ts` names geometric roles and nothing e
 
 **Composite types stay out**, with the sync's own reason rather than a new one: `shadow`, `typography`, `border` and the rest are styles in Figma, not variables, so there is nothing to bind.
 
+### The one other thing that stays out: a font Figma does not have
+
+A `fontFamily` token holds a stack. A Figma variable holds one string, so the sync narrows the stack to its **first** family and warns that it did. On the token root in `content/` that first family is `system-ui` — which is not a font. It is a CSS generic: a promise that the operating system will choose one. Figma resolves fonts by name and has no face under that name, so binding it throws:
+
+```
+in setBoundVariable: unloaded font "system-ui Regular".
+```
+
+That was the first run of the sheet in the desktop app: 4,356 changes written, then one failure — on a diff the user had already confirmed. Which fonts exist is a fact about the running application, not about the token root, so the planner is **told**: `planSheet` takes an optional list of the families this Figma has, and `code.ts` supplies it on both sides of the confirmation gate. A family that is not in it becomes a **skip with a stated reason, in the diff, before anything is written** — the same shape composite types already use. The plan's summary counts it (`variablesUnbound`), so `variablesDocumented + variablesUnbound` is the whole projection and the exception is stated rather than subtracted.
+
+The list is optional because the pure core is also driven by `dry-run.mjs`, where there is no Figma to ask. Told nothing, the planner filters nothing — an absent list is a question that was not asked, not an answer of none. The adapter returns `null` rather than `[]` when the query fails, for the same reason: an empty list is a claim that this Figma has no fonts at all, and the planner would act on it by skipping every font specimen for a reason that is not true.
+
+What it will **not** do is bind the next family in the stack instead. The variable holds the first family and `check-drift.mjs` expects exactly that, so a specimen rendering the second one would disagree with the variable it documents — and a swatch that is a picture of a value rather than the value itself is the one thing this page cannot contain. The variable is still synced. Only its specimen is missing, and the diff says so and says why.
+
 ### What it will not do
 
 - **It will not create variables.** It binds them. A file whose variables have not been synced is an error naming the fix, not a sheet full of empty swatches.
@@ -312,15 +326,16 @@ And for the proof sheet, against the same in-memory model plus an in-memory scen
 15. There is no delete operation in the sheet's vocabulary either, and the scene-graph adapter exposes no method that could remove a node. A node on the page that the plan did not produce is reported as an orphan and left alone.
 16. The sheet refuses a file whose variables have not been synced, and refuses a node whose name matches but whose type does not.
 17. Every word in every frame title comes from the token root; no generated layer name contains a character outside plain ASCII.
-18. Eight combinations on the three-dimension fixture, with no code change.
+18. A `fontFamily` variable naming a family the running Figma does not have is a **planned skip** whose reason names the value, not an error and not a substitution: it is bound nowhere on the page that gets drawn, the plan's summary counts it, and the sheet stays idempotent with a skip on it. Given a list that *does* hold the family, the same variable is bound and the plan is byte-for-byte the one made with no list at all — so the filter is doing the work, and the assertion is not vacuous. Told no list, nothing is filtered.
+19. Eight combinations on the three-dimension fixture, with no code change.
 
 And for the two files that carry this plugin's state back out — the REST projection in `src/core/rest.ts` and the read bridge's vocabulary in `src/core/bridge.ts`:
 
-19. Every collection and every variable arrives in the payload under its own id, `variableIds` on a collection is *derived* from the variables that name it rather than trusted, and every alias lands on a variable in the same payload — including one that crosses a collection boundary.
-20. A colour's four channels come through exactly as the plan set them — compared with `===`, not within a tolerance, because a projection that rounds produces drift below the gate's own resolution. `resolvedType` and `description` survive verbatim, and the payload carries `generatedBy` beside `meta`, so a saved snapshot says on its face that it did not come from the REST API.
-21. The plan for the real token root, applied and exported, is reported as aligned by the **real** drift detector, run as a separate process. See below.
-22. The bridge knows four message types — `hello`, `snapshot-request`, `snapshot`, `error` — and neither those nor any name it exports contains a word for writing. A well-formed message asking to delete a variable parses to `null`: an unrecognised instruction is not an instruction.
-23. A snapshot survives the round trip through the wire unchanged, payload and all.
+20. Every collection and every variable arrives in the payload under its own id, `variableIds` on a collection is *derived* from the variables that name it rather than trusted, and every alias lands on a variable in the same payload — including one that crosses a collection boundary.
+21. A colour's four channels come through exactly as the plan set them — compared with `===`, not within a tolerance, because a projection that rounds produces drift below the gate's own resolution. `resolvedType` and `description` survive verbatim, and the payload carries `generatedBy` beside `meta`, so a saved snapshot says on its face that it did not come from the REST API.
+22. The plan for the real token root, applied and exported, is reported as aligned by the **real** drift detector, run as a separate process. See below.
+23. The bridge knows four message types — `hello`, `snapshot-request`, `snapshot`, `error` — and neither those nor any name it exports contains a word for writing. A well-formed message asking to delete a variable parses to `null`: an unrecognised instruction is not an instruction.
+24. A snapshot survives the round trip through the wire unchanged, payload and all.
 
 Those are checked by mutation as well as by construction. Breaking the sheet on purpose — describing a variable in text instead of binding it, dropping one collection's explicit mode from a frame, writing a plain value for a property that is also bound, collapsing two swatches onto one name — makes the harness fail. So does breaking the projection: the harness builds corrupted payloads in memory and asserts they are **caught** — one missing a variable, one whose alias points at an id nothing holds, one whose collection claims a variable it does not hold, and one whose colour moved by 1e-9, which a 1e-6 tolerance would have waved through. An assertion nothing can break is not an assertion.
 
