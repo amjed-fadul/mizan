@@ -33,22 +33,9 @@ Half the dark theme vanishes and rung 2 reports green. The only trace is `80 →
 
 **Fix:** after `mapModes`, assert every id in `set.modes` is claimed by some collection mode. New drift class `mode-missing-in-figma`, with the outward remedy every other class carries.
 
-### A2 — two token paths projecting to one Figma name are permanently non-idempotent
+### ~~A2 — two token paths projecting to one Figma name are permanently non-idempotent~~
 
-`machinery/figma-plugin/src/core/plan.ts` (~line 295) guards `:`, a leading `/` and `//`, but not a duplicate `(collection, name)`, and not a `/` inside a segment. `SEGMENT_PATTERN` is exported from `token-model.ts` and **never called anywhere**.
-
-Reproduced with token paths `color.a/b` and `color.a.b`, both projecting to `color/a/b`:
-
-```
-plan 1 errors : []
-isApplicable  : true          <- the plugin would let this through
-plan 1 creates: primitive/color/a/b, primitive/color/a/b
-plan 2/3/4    : blue -> red -> blue ...
-```
-
-It oscillates forever, each apply flipping the value.
-
-**Fix:** one duplicate check over `desired`, keyed on `(collection, name)`. `sheet.ts`'s `checkSiblingNames` already solves exactly this for nodes — copy its shape. Ideally also run `SEGMENT_PATTERN` in `loadBundle`.
+**Done** in `522ca46`. Two checks at two layers: `token-model.ts` now calls `SEGMENT_PATTERN` — it was exported and enforced nowhere, and the plugin is a second entry point into the same token root that `check-schema.mjs` cannot vouch for — so a `/` inside a segment is a `naming-pattern` error at load. `plan.ts` gains `checkDistinctNames` over the desired set, keyed on `(collection, name)`, shaped on `sheet.ts`'s `checkSiblingNames`, naming both token paths and the single Figma name. Both are errors, not warnings: the failure is a gate nobody can ever clear. `dry-run` 178 → 187, five of the nine verified failing against the unfixed source. Nothing to do here.
 
 ### A3 — a pair's `modes` list can silence the pair entirely
 
