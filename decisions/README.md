@@ -16,6 +16,7 @@ Decision · Why · Consequences · What would make us revisit this?
 - **If there was only one option, it was not a decision.** No entry needed.
 - **If the chosen option has no downsides, the entry is not finished.** Every real decision costs something.
 - **Every entry ends with a revisit trigger.** A decision without a stated condition for reopening it is a preference wearing a decision's clothes.
+- **An entry that has not been carried out says so — in its status line, and in the table below.** Entries are written in the present tense, which reads as a description of the system whether or not anything was built. Two of them currently describe intentions ([013](./013-script-is-a-mode-not-a-parallel-scale.md), [017](./017-primitives-are-hidden-from-publishing.md)), and the marker is there so the table cannot be mistaken for an inventory.
 
 ## Numbering
 
@@ -37,9 +38,9 @@ Entries are numbered sequentially in the order decisions actually happen. Number
 | [010](./010-contrast-is-a-token-layer-guarantee.md) | Contrast is guaranteed at the token layer and enforced by a build gate | 2 |
 | [011](./011-a-hue-needs-both-ends-only-if-it-carries-text.md) | A hue gets steps at both ends of the ramp only if it carries text | 2 |
 | [012](./012-western-numerals-and-what-follows.md) | Western numerals in both locales, and the formatted/transcribed split | 2 |
-| [013](./013-script-is-a-mode-not-a-parallel-scale.md) | The Arabic type scale is a mode, and script becomes a third dimension | 2 |
+| [013](./013-script-is-a-mode-not-a-parallel-scale.md) | The Arabic type scale is a mode, and script becomes a third dimension — decided, not yet implemented | 2 |
 | [014](./014-direction-is-not-a-mode-dimension.md) | Direction is not a mode dimension — logical properties make it unnecessary | 3 |
 | [015](./015-rung-2-has-a-plan-floor.md) | Governance rung 2 has a plan floor, and the floor is published | 3 |
 | [016](./016-build-the-read-bridge-rather-than-adopt-figma-console-mcp.md) | The variable read bridge is built read-only, not adopted from `figma-console-mcp` | 3 |
-| [017](./017-primitives-are-hidden-from-publishing.md) | Primitives are hidden from publishing; only the semantic layer is a library | 3 |
+| [017](./017-primitives-are-hidden-from-publishing.md) | Primitives are hidden from publishing; only the semantic layer is a library — decided, not yet in the file | 3 |
 | [018](./018-the-preview-reads-the-build-output.md) | The Stage 2 preview reads the build output, and the content seam it opens | 2 |
