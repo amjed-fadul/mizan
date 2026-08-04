@@ -34,7 +34,7 @@ Option 3 costs more time and produces the only defensible answer: the measuremen
 
 ## Decision
 
-Merge on role, verified by distance. **33 values become 14.** Four consolidations, three refusals.
+Merge on role, verified by distance. **33 values become 14.** Four consolidations, three refusals. (The output figure did not survive implementation — see the correction under Consequences. The four consolidations and three refusals did.)
 
 ### The merges
 
@@ -99,8 +99,14 @@ The refusals also carry more weight than the merges, because a merge can be undo
 ## Consequences
 
 - **33 values become 14.** Every remaining value is referenced by a semantic token; no primitive exists without a consumer.
+
+> **Correction, made while auditing this entry against the tokens that shipped.** Both halves of that consequence are wrong, and they are wrong in opposite directions.
+>
+> **The 14 does not reproduce.** `content/tokens/primitive/color.json` holds **23** colour primitives, carrying **15** colour semantics across `shared.json`, `commerce.json` and `mobility.json` — two of which, the `text.secondary-*` slots, are plumbing rather than vocabulary ([007](./007-modes-for-shared-namespaces-for-unique.md)'s amendment). The input figure of 33 is right and is the audit's. The output figure is not, and what it was counting cannot be recovered from this entry: it was written before a single primitive existed, which is the moment a count is cheapest to state and least likely to survive contact with the file. The right lesson is not that 14 was a bad guess. It is that **a number written ahead of the artifact should be labelled as a target, because once it is in prose nobody can tell it was ever a projection.**
+>
+> **"No primitive exists without a consumer" is false, and rung 1 has been saying so on every run.** `npm run check:schema` emits **40** `unused-primitive` warnings, one of them a colour: `neutral.200`. That is not a defect in the ramp. The neutral steps were spaced by the contrast ratios the system has to hit rather than by what something already referenced, so a step can exist because a declared pairing will need it and no semantic has reached for it yet. What is a defect is this line asserting the opposite of what the check prints, which is the more expensive of the two errors — a wrong number is wrong once, a claim that contradicts a live gate teaches a reader to discount the gate.
 - Two amber tokens can no longer be used for text. This is a real capability loss and needs stating in their `$description`, because the obvious use is the forbidden one.
-- The brand is now one value across both products, so a brand change is one edit and Market can no longer drift from Move by accident.
+- **The brand is one green instead of two, not one colour instead of two products.** `action.primary` still resolves per product mode — `{green.600}` in Market and `{blue.600}` in Move, as `content/tokens/modes/product.market.json` and `product.move.json` hold it. So a brand change is one edit *within a product*, and Market can no longer drift from itself the way it had. An earlier version of this line read "the brand is now one value across both products", which is precisely the claim the correction under "The merges" above exists to retract; it survived here because that correction was made in the Why section and this section was not re-read. **A retraction that does not sweep the whole entry leaves the entry arguing with itself**, and a reader who starts at Consequences meets the wrong half first.
 - `text.secondary` resolving differently per product is the first real test of [007](./007-modes-for-shared-namespaces-for-unique.md). If mode resolution turns out to be awkward in practice, this is where it shows first.
 - Nine deleted values means nine places in v0 that have no direct replacement. That is intentional — the Stage 6 migration should be forced to ask what each one *meant*, not mechanically swap it.
 

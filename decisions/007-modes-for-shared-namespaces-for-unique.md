@@ -15,8 +15,14 @@ Market and Move both need a primary action colour. Only Market needs a discount 
 
 - Two products that must stay visibly different ([005](./005-two-products-not-one.md)). A system that makes them identical has failed even if it is perfectly consistent.
 - Components are built once in Stage 4 and used by both products.
-- Figma Professional allows 10 variable modes; four are needed for light/dark × Market/Move.
+- Figma Professional allows 10 variable modes; four are needed for light/dark × Market/Move. **Superseded — see the note below.**
 - Solo maintainer. Every token authored is a token maintained.
+
+> **Note on the ten-mode constraint, added because this entry is where later ones went looking for it.** [013](./013-script-is-a-mode-not-a-parallel-scale.md) and [014](./014-direction-is-not-a-mode-dimension.md) both cite "007's ten-mode ceiling" as a background constraint on how many dimensions the system can afford, and both have since retracted the arithmetic they built on it — [013 under its first consequence](./013-script-is-a-mode-not-a-parallel-scale.md#consequences), [014 under its trade-offs](./014-direction-is-not-a-mode-dimension.md#trade-offs). The correction is the same in each: Figma's ten-mode limit is **per variable collection**, not per file, and there is no documented limit on collections. The sync plugin maps one collection per dimension, so each collection holds exactly two modes however many dimensions exist, the cartesian product is never materialised, and the ceiling does not bind.
+>
+> The line above is left standing rather than edited, because the constraint as stated is what the options below were weighed against and rewriting it would misrepresent the reasoning. But nothing in this entry ever *depended* on it — the choice between modes and namespaces turns on whether the other product has the concept, which is a question about meaning and not about budget. The ceiling was atmosphere.
+>
+> That is the transferable part. **A constraint attributed to a tool was actually a property of an unstated design choice**, and it propagated for three entries before anyone asked which architecture it assumed. The check that would have caught it is cheap: when a limit is cited, state the unit it is measured in.
 
 ## Options
 

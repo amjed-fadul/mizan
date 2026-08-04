@@ -48,7 +48,7 @@ The confusion in the original line is worth naming, because it is a common one: 
 
 ## Consequences
 
-- The mode budget is four combinations now, eight once script lands, against a ceiling of ten. Comfortable rather than tight.
+- The combination count is four now and eight once script lands. **There is no budget being spent.** This consequence originally read "against a ceiling of ten. Comfortable rather than tight", which is the same retracted arithmetic the correction under Trade-offs above disposes of, restated one section later — under collection-per-dimension each dimension is a collection holding two modes, and the combinations are never materialised as modes at all. Found while sweeping the ceiling claim out of the repository; it is recorded rather than silently deleted because **a correction placed at the argument it falsifies does not reach the consequence that repeats it**, and this file is the second of two entries where exactly that happened.
 - **The logical-property rule is now load-bearing** rather than stylistic. If a physical property ships, the system has no mechanism to correct it, because the dimension that would have expressed the correction deliberately does not exist. This raises the value of the lint rule in Stage 6 considerably.
 - The Figma library needs no direction modes, so the collection structure maps to theme and product only.
 - Testing direction means flipping `dir` and looking, not switching a mode. That is a different verification habit and worth stating in the preview and in the eventual Figma docs.
