@@ -85,6 +85,20 @@ The short version, which the file expands: logical properties only, never `left`
 
 ---
 
+## Briefing an agent
+
+Work here is often fanned out across several agents at once. Brief them **tightly** — a reading list is not a brief, and six agents each independently reading the same four documents is the same context paid for six times.
+
+- **Always name:** this file, and the files the task actually edits. Nothing else is automatic.
+- **The quarantine line goes in every brief**, however short. `legacy/` is the one mistake that destroys evidence for two whole stages, and every agent tries to tidy it on reflex.
+- **Add `git log --oneline -12` and one sibling file only when the output is prose** that has to match the house voice — a commit message, a decision entry, a README. It is what makes them read like the repo instead of like generated text. For a bug fix it is dead weight.
+- **Name one decision entry only if the task turns on that judgment.** Never a range.
+- **Pay the reading cost once.** Extract the findings into a condensed brief yourself and point agents at it, rather than having each one rediscover them.
+- **Give each agent a disjoint set of paths**, and say which paths other agents hold. Split by file ownership, not by how coupled the problem feels — tightly coupled work parallelises fine once the contract for the shared shape is written down.
+- **Verify their claims rather than relaying them.** Recompute the headline number, re-run the repro. Agents report confidently and are sometimes wrong.
+
+---
+
 ## Vocabulary
 
 **Use:** design tokens, DTCG, Figma variables, component API, MCP, Code Connect, governance, linting, deprecation, migration, RTL, WCAG, headless, multi-brand.
