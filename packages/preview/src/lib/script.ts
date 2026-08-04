@@ -1,13 +1,23 @@
 /**
  * Which script a run of text is written in, and when to say so in markup.
  *
- * Decision 013: script is a mode, and unlike theme and product it is scoped to a
- * subtree rather than to the document root — an Arabic page contains Latin runs
- * and an English page contains Arabic ones, which is the case the bidi rules
- * exist for. The mode is therefore selected by :lang() on the element that
- * carries the language, and the two rules that read it live in app.css as
- * `.mz-script:lang(ar)` (family, leading, tracking — all inherited) and
- * `.mz-run:lang(ar)` (the optical size correction, applied once on the run).
+ * Decision 013 settled that script is a mode of the type scale, and that unlike
+ * theme and product it is scoped to a subtree rather than to the document root —
+ * an Arabic page contains Latin runs and an English page contains Arabic ones,
+ * which is the case the bidi rules exist for.
+ *
+ * That decision is not in the token layer yet, and this file does not implement
+ * it. `content/tokens/modes.json` declares two dimensions, and the Arabic
+ * typography values are separate primitives under `arabic-*` names. What is here
+ * is a CSS approximation standing in until Stage 3: two selectors swapping one
+ * named primitive for another — `.mz-script:lang(ar)` (family, leading,
+ * tracking — all inherited) and `.mz-run:lang(ar)` (the optical size correction,
+ * applied once on the run). By 013's own account that shape is Option 1, the
+ * parallel scale, with a class doing the switching rather than a resolved mode.
+ *
+ * The half of 013 the approximation does carry is where the scoping goes: the
+ * selector sits on the element that carries the language, never on the root.
+ * That part is a property of the markup and survives the mode landing.
  *
  * langAttr is the reason the correction is never applied twice: it emits a lang
  * attribute only when the run differs from the language already in force, so a

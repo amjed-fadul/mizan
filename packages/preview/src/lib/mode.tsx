@@ -34,9 +34,10 @@ export function ModeProvider({ children }: { children: ReactNode }) {
     root.dataset.product = product
     root.dir = direction
     // The document language, for assistive technology and for hyphenation. The
-    // Arabic *type* mode is not attached here: decision 013 scopes it to a
-    // subtree, so it is selected by :lang() on elements that opt in, never at
-    // the root. See lib/script.ts.
+    // Arabic *type* treatment is not attached here: decision 013 scopes script
+    // to a subtree, so it is selected by :lang() on elements that opt in, never
+    // at the root. 013 is decided and not yet in the token layer — lib/script.ts
+    // states what stands in for the script mode until Stage 3.
     root.lang = lang
   }, [theme, product, direction, lang])
 

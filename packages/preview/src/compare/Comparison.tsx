@@ -57,8 +57,8 @@ const REBUILT_CHANGES: Str[] = [
     ar: 'منسّق واحد يطلب ar-AE-u-nu-latn صراحةً. أرقام غربية في اللغتين، وشكل الرمز وموضعه من CLDR: ‏AED 18.90 و18.90 د.إ.'
   },
   {
-    en: 'The Arabic type mode is applied to this subtree and selected by :lang(). It is never applied at the document root, because an English page contains Arabic runs and the reverse.',
-    ar: 'وضع الخط العربي مطبَّق على هذه الشجرة الفرعية ومحدَّد بـ:lang()‎. ولا يُطبَّق على جذر المستند أبدًا، لأن الصفحة الإنجليزية تحتوي نصوصًا عربية والعكس.'
+    en: 'Arabic typography is selected by :lang() on this subtree, never at the document root, because an English page contains Arabic runs and the reverse. Decision 013 calls for a script mode here and the token layer has two dimensions so far, so what is wired up is two separately named primitives swapped by a selector. The scoping is right; the mode is Stage 3.',
+    ar: 'خصائص الخط العربي تُحدَّد بـ:lang()‎ على هذه الشجرة الفرعية، ولا تُطبَّق على جذر المستند أبدًا، لأن الصفحة الإنجليزية تحتوي نصوصًا عربية والعكس. ويقضي القرار 013 بوضع للكتابة هنا، وطبقة الرموز ما زالت ببعدين، فالقائم فعليًا رمزان أوّليان منفصلان يبدّل بينهما محدِّد. النطاق صحيح، والوضع عمل المرحلة الثالثة.'
   },
   {
     en: 'Every colour resolves from a token, so every pairing drawn here is one the build gate already checked in all four combinations.',

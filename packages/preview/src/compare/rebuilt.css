@@ -14,7 +14,8 @@
     surface.sunken, which is itself a declared pair.
   - A block that contains an Arabic run takes Arabic leading, selected with
     :has(). That is the leading following the script rather than the page, which
-    is what decision 013 means by scoping the script mode to a subtree.
+    is the scoping decision 013 argues for. The script mode itself is decided
+    and not yet built — src/lib/script.ts states what stands in for it.
 */
 
 .rb {
