@@ -52,6 +52,7 @@
   "stylesheet": "machinery/scripts/__fixtures__/contracts/src/Widget.css",
   "tokens": [
     "action.primary",
+    "border.default",
     "border.subtle",
     "font-family.sans",
     "space.100",

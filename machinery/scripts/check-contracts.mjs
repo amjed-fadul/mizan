@@ -79,7 +79,7 @@ import {
   fileNameFor,
   loadSchema,
   readStylesheet,
-  stylesheetBeside,
+  componentStylesheets,
   unsupportedKeywords,
   validate,
 } from './lib/contract.mjs';
@@ -255,9 +255,9 @@ function main(argv) {
       continue;
     }
 
-    const cssFile = stylesheetBeside(sourceFile);
-    const stylesheet = cssFile && tokenPaths
-      ? readStylesheet(readFileSync(cssFile, 'utf8'), tokenPaths, cssPrefix)
+    const cssFiles = componentStylesheets(sourceFile);
+    const stylesheet = cssFiles.length > 0 && tokenPaths
+      ? readStylesheet(cssFiles.map((file) => readFileSync(file, 'utf8')).join('\n'), tokenPaths, cssPrefix)
       : null;
 
     const built = buildContract({
@@ -269,7 +269,7 @@ function main(argv) {
       generator: GENERATOR,
       authoredRef: displayPath(authoredPath),
       stylesheet,
-      stylesheetRef: cssFile ? displayPath(cssFile) : null,
+      stylesheetRef: cssFiles.length > 0 ? cssFiles.map(displayPath).join(', ') : null,
     });
     for (const problem of built.problems) {
       diagnostics.error('authored-invalid', `${problem.path}: ${problem.message}`, {

@@ -97,18 +97,24 @@ Three differences that would *not* be legitimate, named because each is the kind
 
 **No `confirm`, no `cancel`, no `kind`, no `type` as a variant name.** All four translate. See Code API mapping.
 
-### Product density: decided and owed
+### Product density: landed
 
-`size` names the **step**; the product mode is meant to decide what the step resolves to. That is 020's fourth judgment and it is only half implemented, so it is stated here as a visible gap rather than left to be discovered:
+`size` names the **step**; the product mode decides what the step resolves to. That is 020's fourth judgment, and [decision 022](../../../../decisions/022-control-geometry-resolves-by-product.md) implemented it — `content/tokens/semantic/control.json` carries fifteen control-geometry semantics and both product mode files state all fifteen, six of them differing.
 
-> `content/tokens/modes/product.market.json` and `product.move.json` differ by **exactly three tokens, all colour** — `action.primary`, `action.primary-hover`, and the `text.secondary` slot selection. No spacing or control-geometry semantic resolves by product, and `dimension.json` holds a `space` ramp and a `radius` ramp with no semantic layer above them. **Both products' buttons are therefore the same size at the same step today.** That is a temporary regression against v0, and it is visible in the running app rather than hidden in a file.
+| step | Market | Move |
+|---|---|---|
+| `sm` | 12/8 padding, 13px, floors 32/40 | **identical, on purpose** |
+| `md` | 16/12 padding, 14px | 24/16 padding, 16px |
+| `lg` | 24/16 padding, 16px | 32/20 padding, 18px |
+
+Market's values are byte-for-byte what shipped before 022, so nothing in Market moved; everything that moved, moved in Move.
 
 Two things follow that a reader implementing from the product brief would get wrong:
 
-- **Move is not the smaller of the two.** `.mv-action` is 17px type with 14px/22px padding against `.mk-btn--md`'s 15px with 10px/18px — Move's single button is *larger* than Market's medium and lands beside Market's large. Move is compact in how much it puts on a screen and generous in the one thing you have to hit at a curb with one thumb. "Move's `md` is smaller than Market's `md`" is the wrong rule, it is not encoded anywhere in this component, and it must not be written into the mode files when the density work lands.
+- **Move is not the smaller of the two.** `.mv-action` is 17px type with 14px/22px padding against `.mk-btn--md`'s 15px with 10px/18px — Move's single button is *larger* than Market's medium and lands on Market's large. Move is compact in how much it puts on a screen and generous in the one thing you have to hit at a curb with one thumb. "Move's `md` is smaller than Market's `md`" is the wrong rule and it is encoded nowhere — not in this component, and not in the mode files 022 wrote.
 - **A `density` prop is not the workaround.** It would push the choice onto every call site and let a Market screen ask for Move's geometry, which is the drift the mode system exists to prevent.
 
-Until the tokens land, a Move screen that wants the geometry it had names the step at the call site — `size="lg"`, whose 54px of rendered height is within half a pixel of `.mv-action`'s 53.5.
+There is no `[data-product]` selector in this component and no product named anywhere in it. A control that had to know which product it was in to size itself would be the crack 007 exists to prevent, and it would arrive looking like one small conditional.
 
 ---
 

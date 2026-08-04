@@ -1,4 +1,5 @@
 import type { MouseEvent, ReactNode } from 'react'
+import './shared.css'
 import './Widget.css'
 
 /** The three appearances, behind a name, so the alias has to be followed. */

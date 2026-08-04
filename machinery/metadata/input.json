@@ -1,0 +1,517 @@
+{
+  "$schema": "./component-contract.schema.json",
+  "name": "Input",
+  "status": "stable",
+  "source": "packages/components/src/Input/Input.tsx",
+  "propsType": "InputProps",
+  "extends": [],
+  "purpose": "The one single-line text field. It holds a value the user types, states what that value is for in a visible label, and decides how the value is directed independently of how the page is laid out — which is the judgment it exists to carry, because an email inside an Arabic interface is Latin and the platform only gets that right for one input type.",
+  "responsibilities": [
+    "Render a native <input> bound to a real <label> by id, always.",
+    "Decide the direction of the VALUE — inherited, Latin, or unknown — and derive that decision from the type when the call site has not made it.",
+    "Take its geometry from a size step and let the product mode decide what that step resolves to.",
+    "Carry an invalid state in three signals at once — an edge colour, a message, and aria-invalid — and never in only one of them.",
+    "Link its hint and its error to the field programmatically, in the order a reader needs them.",
+    "Nothing about validation. It renders the state it is told about and never decides whether a value is acceptable."
+  ],
+  "do": [
+    "Give it a label that names the value, and put instructions in the label or the hint rather than in the placeholder.",
+    "Let type derive the direction wherever type knows — email, tel, url and password all hold Latin values.",
+    "Set valueDirection explicitly where type cannot know: an order reference, a promo code or an IBAN in a text field is Latin, and a customer's name is not.",
+    "Use the placeholder for an example of the value, in the same script as the value.",
+    "Pass errorMessage whenever invalid is set, so that the state a user can see is a state they can act on.",
+    "Use the same size step as the Button beside it, and let the product mode make them the same height in both products."
+  ],
+  "dont": [
+    "Do not use the placeholder as the label. It disappears at the first keystroke, it is not an accessible name in any assistive technology worth relying on, and in an ltr field on an Arabic page it is painted hard against the wrong edge.",
+    "Do not put an instruction in the placeholder and expect it to be re-readable while it is being followed.",
+    "Do not set dir on a field to fix the layout. The layout comes from the page; the only dir this component writes is a statement about content.",
+    "Do not signal invalid with colour alone. A colour-blind user reads the message, not the edge.",
+    "Do not reach for valueDirection='auto' as a default. On an empty field it resolves to ltr, so an Arabic field opens left-aligned and snaps right at the first letter — the jump is the defect, not the fix.",
+    "Do not fix a height to fit Latin ink. Arabic descends below the baseline as a matter of course and its diacritics reach above the declared ascent."
+  ],
+  "do_not_use_when": [
+    {
+      "when": "The value runs to more than one line — a review, a delivery note of any length, an address block.",
+      "use_instead": "A textarea. It is a different component and it takes dir='auto' rather than deriving from a type, because rtl-arabic.md §6 records that a multi-line field gets direction per paragraph and a single attribute cannot describe content with two directions in it."
+    },
+    {
+      "when": "The user is choosing from a known set rather than typing a value.",
+      "use_instead": "A select, a radio group or a segmented control. A field that only accepts four answers has made the user type one of them."
+    },
+    {
+      "when": "The value is a quantity the interface will format — a price, a fare, a distance.",
+      "use_instead": "This component with inputMode='numeric', and the formatting boundary in rtl-arabic.md §4 on the way out. There is deliberately no type='number': it discards values it cannot parse, changes on a scroll wheel, and would be a second formatting boundary that disagrees with the first."
+    },
+    {
+      "when": "The value is a date, a time or a duration.",
+      "use_instead": "Nothing yet. rtl-arabic.md lists calendar and duration formatting as open questions blocked on a string catalogue, and a date field built before those are settled would encode an answer nobody has chosen."
+    },
+    {
+      "when": "The control needs a prefix, a suffix, a unit or a button inside the field — a currency mark, a visibility toggle, a search submit.",
+      "use_instead": "Nothing yet. It is a deliberate v1 boundary rather than an oversight: an affix changes the padding on one side of the field, and 'one side' is exactly the kind of value §1 says must be logical rather than written down. It is the first thing this component should grow."
+    }
+  ],
+  "alternatives": [
+    {
+      "use": "a textarea",
+      "for": "any value that wraps to more than one line — a review, an address block",
+      "in_system": false
+    },
+    {
+      "use": "a select, a radio group or a segmented control",
+      "for": "a value chosen from a known set rather than typed",
+      "in_system": false
+    },
+    {
+      "use": "Button",
+      "for": "the action that submits what was typed here",
+      "in_system": true
+    },
+    {
+      "use": "Input itself, with inputMode=\"numeric\", formatted through the §4 boundary on the way out",
+      "for": "a quantity, because there is deliberately no type=\"number\"",
+      "in_system": false
+    }
+  ],
+  "content": [
+    "The label, which names the value rather than instructing the user.",
+    "The hint, which is where a format or a constraint goes so it stays readable while the field is being used.",
+    "The error message, which says what is wrong and where possible what to do about it.",
+    "The placeholder, which is an example of the value and is in the value's script, not the interface's."
+  ],
+  "constraints": [
+    "No width prop and no fixed height. Width is the container's business through fullWidth; height comes from padding and the Arabic line height.",
+    "No className and no style. The props type deliberately does not extend InputHTMLAttributes, because that hands back style, className, width and size — and size on a native input is a width in characters, which is precisely the prop §6 says clips Arabic.",
+    "No prop shortens a string, in the label, the hint or the error.",
+    "No type='number'. The reason is in do_not_use_when and it is a rule-layer reason as much as a platform one.",
+    "No aria-label escape hatch. The label is required and visible, because a name somebody using speech control cannot see is a name they cannot say.",
+    "No validation. This component never decides whether a value is acceptable, only how to render having been told.",
+    "No announcement of its own error. There is no role='alert' and no live region: a field cannot know whether its error arrived from typing, from blur or from a failed submit, and the third wants a summary and a focus move that belong to whatever owns the form.",
+    "No colour that content/tokens/pairs.json has not seen. The disabled appearance and the error pair are both declared and gated.",
+    "No product name anywhere in the component or its stylesheet. The size step resolves per product because the mode files say so, not because this component knows which product it is in.",
+    "One written number beyond the 1px edge — the 0.875 ratio the label, hint and error are set at. It is a ratio rather than a ramp step on purpose, so that supporting text tracks the field's own type when the product mode makes it larger."
+  ],
+  "rtl": {
+    "behaviour": [
+      "Layout is logical throughout. The stack is a block-axis grid, the required marker uses margin-inline-start, and there is no [dir='rtl'] selector anywhere in the component.",
+      "The value's direction is a separate decision from the page's, and it is the reason this component exists in the shape it does. rtl-arabic.md §6 verified that the platform's directionality algorithm covers exactly one input type — tel — while email, url, search, number and plain text all inherit the page. So the explicit dir is written rather than relied upon.",
+      "Without it the failure is visible and moves: an email under composition paints amjed@ as @amjed, the @ jumping to the far end of the field and returning once a domain is typed. The stored value is correct throughout, which is why this survives being tested by somebody reading state instead of the screen.",
+      "The label, hint and error carry dir='auto' because they are BLOCKS whose content direction cannot be known by the component. §3 draws that line: <bdi> isolates a run inside a sentence, but alignment belongs to the block. Rendered rather than reasoned about — an English error message ending in '@.' inside an Arabic page paints as '.@ That address is missing everything after the' without it.",
+      "Arabic sets at letter-spacing 0, always, and takes the Arabic line height rather than the Latin one. The field's height comes from padding and leading so that diacritics reaching above the declared ascent are not clipped.",
+      "The placeholder does not move, fade or re-align as the field is used. §6 refuses the common pattern of an Arabic placeholder that flips alignment once typing starts: a field that jumps at the first character is the defect rather than the fix."
+    ],
+    "mirrors": [
+      "The whole control, with the document, through logical properties alone.",
+      "The required marker, which follows the label's last glyph on whichever side that is."
+    ],
+    "does_not_mirror": [
+      "A value declared ltr. That is the entire point: an email, a phone number or an order reference is compared against a thing in the world, so its order is not ours to rearrange."
+    ]
+  },
+  "accessibility": {
+    "guarantees": [
+      "A native <input> bound to a real <label> by id, so the accessible name comes from the platform and clicking the label focuses the field.",
+      "A visible label always. There is no unlabelled variant and no aria-label prop to substitute for one.",
+      "A visible two-tone focus indicator, the same construction decision 019 settled for Button, drawn on the field rather than on the wrapper so the indicator matches the thing that actually has focus.",
+      "A hit target of at least 44 by 44 CSS px at md and lg, held there by machinery/scripts/check-tap-target.mjs in every mode combination rather than by arithmetic nobody verifies.",
+      "The invalid state reaches assistive technology through aria-invalid and reaches a sighted user through both an edge colour and a message, so no single channel carries it alone.",
+      "The hint and the error are linked with aria-describedby and read in that order — what is wanted, then what went wrong.",
+      "The disabled and read-only states use the real platform attributes, so the difference between them — a read-only value stays selectable and reachable by keyboard — is one assistive technology reports rather than one only the paint knows.",
+      "The disabled appearance is a declared token pair rather than an opacity."
+    ],
+    "consumer_must": [
+      "Announce the error when it appears, if the validation is submit-time. This component sets aria-invalid and links the message, but deliberately has no live region: a field cannot know whether its error arrived from typing, from blur or from a failed submit, and the third wants a summary and a focus move that belong to whatever owns the form.",
+      "Pass errorMessage whenever invalid is set. The two are independent so that a field failing as part of a group can be marked without inventing a message for it, which means a consumer can produce a state a user sees and cannot act on.",
+      "Indicate required-ness by more than the asterisk where a form's design allows. The marker is aria-hidden and the platform attribute carries the meaning, but a form whose only visible indication is one glyph in one colour has said it once.",
+      "Supply a label, hint and error whose direction is declared where the application knows it. dir=\"auto\" reads the first strong character and nothing else, so a message opening with a Latin brand name resolves LTR whatever follows — these props are ReactNode precisely so a caller with a string catalogue can pass a node that declares its direction."
+    ]
+  },
+  "stylesheet": "packages/components/src/styles/focus.css, packages/components/src/Input/Input.css",
+  "tokens": [
+    "border.control",
+    "border.default",
+    "border.error",
+    "control.lg.font-size",
+    "control.lg.min-block",
+    "control.lg.padding-block",
+    "control.lg.padding-inline",
+    "control.md.font-size",
+    "control.md.min-block",
+    "control.md.padding-block",
+    "control.md.padding-inline",
+    "control.sm.font-size",
+    "control.sm.min-block",
+    "control.sm.padding-block",
+    "control.sm.padding-inline",
+    "duration.100",
+    "easing.entrance",
+    "focus.ring",
+    "focus.ring-contrast",
+    "font-family.sans",
+    "font-weight.medium",
+    "font-weight.regular",
+    "letter-spacing.none",
+    "line-height.normal",
+    "radius.100",
+    "space.100",
+    "space.25",
+    "space.50",
+    "surface.default",
+    "surface.sunken",
+    "text.error",
+    "text.primary",
+    "text.secondary"
+  ],
+  "tokens_absent": [
+    {
+      "property": "--mz-input-supporting-scale",
+      "why": "The 0.875 ratio the label, hint and error are set at, defined on the component's own wrapper. It is deliberately not a token: it is a RATIO against whatever the size step resolved to, so that supporting text tracks the field's type when the product mode makes it larger — a ramp step would stay 14px while Move's field grew to 16 and the label would drift away from the control it names, in one product only, silently. It is not reachable as a token either, because the type ramp's steps are not evenly spaced and no single ratio expresses \"one step down\" everywhere on it. This is the component token layer decision 022 named and nobody has built; when that layer exists, this is one of the first values that belongs in it."
+    }
+  ],
+  "props": [
+    {
+      "name": "defaultValue",
+      "type": "string",
+      "values": null,
+      "required": false,
+      "default": null,
+      "description": "The uncontrolled initial value.",
+      "guidance": "The uncontrolled initial value, and the one a Figma text layer mirrors. A designer filling this in is showing what a real value looks like, which is the thing worth reviewing at the wrong length in Arabic.",
+      "figmaProperty": "Value"
+    },
+    {
+      "name": "disabled",
+      "type": "boolean",
+      "values": null,
+      "required": false,
+      "default": "false",
+      "description": "The field is not available. The real `disabled` attribute.",
+      "notes": [
+        "Drawn with a declared token pair — `text.secondary` on `surface.sunken` — and not with an opacity. v0 uses `opacity: 0.5`, which renders a colour no token declares and therefore a contrast ratio the gate cannot see."
+      ],
+      "guidance": "The real disabled attribute, drawn with a declared token pair rather than an opacity. An opacity renders a colour no token declares, and therefore a contrast ratio the gate cannot see; v0 does exactly that in all three stylesheets.",
+      "figmaProperty": "Disabled"
+    },
+    {
+      "name": "errorMessage",
+      "type": "ReactNode",
+      "values": null,
+      "required": false,
+      "default": null,
+      "description": "What was wrong and, where possible, what to do about it. Rendered under the field in `text.error` and linked with `aria-describedby`.",
+      "notes": [
+        "**This component does not announce it.** There is no `role=\"alert\"` and no live region here, and the omission is deliberate: a field cannot know whether its error arrived because the user is still typing, because they left the field, or because a submit failed, and those want different announcements — the third wants a summary of every failure and a move of focus, which is a form's job and not a field's. `aria-describedby` means the message is read whenever the field is reached. Anything louder belongs to whatever owns the form."
+      ],
+      "guidance": "What went wrong and, where possible, what to do about it. Deliberately not announced by this component: a field cannot know whether its error came from typing, from blur or from a failed submit, and the last wants a summary and a focus move that belong to whatever owns the form.",
+      "figmaProperty": "Error message"
+    },
+    {
+      "name": "fullWidth",
+      "type": "boolean",
+      "values": null,
+      "required": false,
+      "default": "false",
+      "description": "Fill the inline extent of the container. Not a width — see §6.",
+      "guidance": "As wide as the container, which is a statement about where it was put rather than a number about its content. Not a width: §6 says a component does not take one, because the same label is not the same size in Arabic and a control sized to Latin ink clips it.",
+      "figmaProperty": "Full width"
+    },
+    {
+      "name": "hint",
+      "type": "ReactNode",
+      "values": null,
+      "required": false,
+      "default": null,
+      "description": "Helper text under the field — a format, a constraint, a reassurance. Linked with `aria-describedby`, so it is read when the field takes focus rather than only seen.",
+      "guidance": "A format, a constraint or a reassurance, linked with aria-describedby so it is read on focus and stays on screen while the field is used. This is where an instruction goes that a placeholder cannot hold.",
+      "figmaProperty": "Hint"
+    },
+    {
+      "name": "inputMode",
+      "type": "'text' | 'numeric' | 'decimal' | 'tel' | 'email' | 'url' | 'search'",
+      "values": [
+        "text",
+        "numeric",
+        "decimal",
+        "tel",
+        "email",
+        "url",
+        "search"
+      ],
+      "required": false,
+      "default": null,
+      "description": "A hint to the on-screen keyboard. Separate from `type` on purpose: a quantity is `type=\"text\"` with `inputMode=\"numeric\"` (see {@link InputType} on why `number` is absent), and a numeric keypad is a convenience rather than a parsing rule.",
+      "guidance": "A keyboard hint on a device, separate from type on purpose: a quantity is text with inputMode numeric, because §4 keeps parsing and formatting behind one boundary that is not this component.",
+      "figmaProperty": null
+    },
+    {
+      "name": "invalid",
+      "type": "boolean",
+      "values": null,
+      "required": false,
+      "default": "false",
+      "description": "The value was not accepted.",
+      "notes": [
+        "Sets `aria-invalid` and paints the edge with `border.error`. It is deliberately independent of `errorMessage` being present, because a field can be one of several in a group that failed together — but a screen that sets this without ever rendering a message has built a state a user can see and not act on, and that is worth saying out loud rather than enforcing in a type.",
+        "**Three signals, and no one of them alone.** The edge colour, the message, and `aria-invalid`. Colour alone fails WCAG 1.4.1 for a colour-blind user; a message alone is missed by somebody scanning a long form; `aria-invalid` alone is invisible to everyone looking at the screen. Decision 023 is why the edge is a colour change rather than a heavier line: there is no border-width scale, and a thicker edge is the weakest of the three signals anyway."
+      ],
+      "guidance": "Sets aria-invalid and paints the edge with border.error. One of three signals and never sufficient alone — decision 023 is why the edge is a colour rather than a heavier line, and why text.error and border.error are two tokens gated at two thresholds rather than one name used twice.",
+      "figmaProperty": "Invalid"
+    },
+    {
+      "name": "label",
+      "type": "ReactNode",
+      "values": null,
+      "required": true,
+      "default": null,
+      "description": "The label. Required, and a `ReactNode` rather than a string so it can carry a `<bdi>`-wrapped run without this component having to know about direction inside it.",
+      "notes": [
+        "There is no unlabelled variant and no `aria-label` prop to substitute for one. A visible label is what lets somebody using speech control say the name they can see, and it is the only one of the accessible-name mechanisms that also serves a sighted user who has forgotten what the field is for.",
+        "**Instructions belong here, not in the placeholder.** §6: a placeholder is an example of the value, it disappears the moment typing starts, and in an `ltr` field on an Arabic page it is painted hard against the wrong edge."
+      ],
+      "guidance": "Required, visible, and a ReactNode so it can carry a directed or <bdi>-wrapped run. There is no aria-label escape hatch: a name somebody using speech control cannot see is a name they cannot say. Instructions go here or in the hint, never in the placeholder, which disappears at the first keystroke.",
+      "figmaProperty": "Label"
+    },
+    {
+      "name": "name",
+      "type": "string",
+      "values": null,
+      "required": false,
+      "default": null,
+      "description": "The form control name, for a field inside a real `<form>`.",
+      "guidance": "The form control name. No visual form at all.",
+      "figmaProperty": null
+    },
+    {
+      "name": "onChange",
+      "type": "(event: ChangeEvent<HTMLInputElement>) => void",
+      "values": null,
+      "required": false,
+      "default": null,
+      "description": "Change handler.",
+      "guidance": "A handler is behaviour, and Figma properties describe what a component looks like.",
+      "figmaProperty": null
+    },
+    {
+      "name": "placeholder",
+      "type": "string",
+      "values": null,
+      "required": false,
+      "default": null,
+      "description": "An example of the value — `name@example.com`, `+971 50 123 4567`.",
+      "notes": [
+        "In the same script as the value, never the interface language, and never carrying an instruction. §6 refuses the common workaround of right-aligning an Arabic placeholder inside an `ltr` field and letting the alignment flip once typing starts: a field that jumps as the first character lands is the defect, not the fix."
+      ],
+      "guidance": "An example of the value, in the value's script rather than the interface's. Never an instruction and never a label. §6 refuses the workaround of right-aligning an Arabic placeholder inside an ltr field and letting it flip once typing starts: a field that jumps at the first character is the defect, not the fix.",
+      "figmaProperty": "Placeholder"
+    },
+    {
+      "name": "readOnly",
+      "type": "boolean",
+      "values": null,
+      "required": false,
+      "default": "false",
+      "description": "The value is shown but not editable. The real `readonly` attribute — the value stays selectable, copyable and reachable by keyboard, which is the whole difference between this and `disabled`.",
+      "guidance": "Not disabled, and drawn so it does not look like it. The value stays selectable, copyable and keyboard-reachable — that is the whole difference — and the edge drops to the divider token because it has stopped claiming to be editable.",
+      "figmaProperty": "Read only"
+    },
+    {
+      "name": "required",
+      "type": "boolean",
+      "values": null,
+      "required": false,
+      "default": "false",
+      "description": "The field must be filled. Sets the real `required` attribute so it reaches assistive technology through the platform, and marks the label.",
+      "guidance": "The real required attribute, which is what reaches assistive technology. The asterisk beside the label is aria-hidden because an asterisk read aloud as \"star\" mid-label is noise, and because a form whose only indication is one glyph in one colour has said it once, visually.",
+      "figmaProperty": "Required"
+    },
+    {
+      "name": "size",
+      "type": "InputSize",
+      "values": [
+        "sm",
+        "md",
+        "lg"
+      ],
+      "required": false,
+      "default": "'md'",
+      "description": "The size step. Defaults to `'md'`, the smallest step that clears 44×44.",
+      "guidance": "Names the step, not the pixels, and it is the same step Button names — the same control.{sm,md,lg}.* semantics decision 022 made per-product. A field and the button beside it at the same step are the same height in both products, and neither knows which product it is in. md and lg guarantee 44 by 44; sm does not and is for the places WCAG 2.5.8 grants an exception.",
+      "figmaProperty": "Size"
+    },
+    {
+      "name": "type",
+      "type": "InputType",
+      "values": [
+        "text",
+        "email",
+        "tel",
+        "url",
+        "password",
+        "search"
+      ],
+      "required": false,
+      "default": "'text'",
+      "description": "The HTML `type`. Defaults to `'text'`.",
+      "guidance": "The real HTML attribute. It also carries a second job — email, tel, url and password derive dir=\"ltr\" from it, because rtl-arabic.md §6 verified the platform only does that for tel. There is no number: it discards values it cannot parse, changes on a scroll wheel, and would be a second formatting boundary disagreeing with §4's one.",
+      "figmaProperty": null
+    },
+    {
+      "name": "value",
+      "type": "string",
+      "values": null,
+      "required": false,
+      "default": null,
+      "description": "The controlled value.",
+      "guidance": "The controlled value. Mapped to Figma through defaultValue rather than twice — a controlled string and an uncontrolled one are the same string to a designer.",
+      "figmaProperty": null
+    },
+    {
+      "name": "valueDirection",
+      "type": "InputValueDirection",
+      "values": [
+        "page",
+        "ltr",
+        "auto"
+      ],
+      "required": false,
+      "default": null,
+      "description": "How the value is directed. Defaults are derived from `type` — see {@link InputValueDirection}.",
+      "guidance": "How the VALUE is directed, which is not how the page is laid out. Three cases, and they are §1's three legitimate reasons for a dir below the root: page inherits and writes no attribute at all, ltr is for a value Latin by nature, auto is for a direction genuinely unknown. Derived from type when unset, because type knows for four of the six. Never defaulted to auto: on an empty field auto resolves to ltr, so an Arabic field would open left-aligned and snap right at the first letter.",
+      "figmaProperty": null
+    }
+  ],
+  "figma": {
+    "component": "Input",
+    "properties": [
+      {
+        "property": "Value",
+        "prop": "defaultValue",
+        "values": null
+      },
+      {
+        "property": "Disabled",
+        "prop": "disabled",
+        "values": null
+      },
+      {
+        "property": "Error message",
+        "prop": "errorMessage",
+        "values": null
+      },
+      {
+        "property": "Full width",
+        "prop": "fullWidth",
+        "values": null
+      },
+      {
+        "property": "Hint",
+        "prop": "hint",
+        "values": null
+      },
+      {
+        "property": "Invalid",
+        "prop": "invalid",
+        "values": null
+      },
+      {
+        "property": "Label",
+        "prop": "label",
+        "values": null
+      },
+      {
+        "property": "Placeholder",
+        "prop": "placeholder",
+        "values": null
+      },
+      {
+        "property": "Read only",
+        "prop": "readOnly",
+        "values": null
+      },
+      {
+        "property": "Required",
+        "prop": "required",
+        "values": null
+      },
+      {
+        "property": "Size",
+        "prop": "size",
+        "values": [
+          "sm",
+          "md",
+          "lg"
+        ]
+      }
+    ],
+    "unmapped": [
+      {
+        "prop": "type",
+        "why": "The HTML type attribute has almost no visual form: an email field, a url field and a text field render identically, and the one that does differ — password, which paints dots — is a text-content difference a designer expresses by typing dots into the layer. A Figma variant per HTML type would be six variants, five of which are pixel-identical."
+      },
+      {
+        "prop": "valueDirection",
+        "why": "It resolves to a dir attribute on the field, and Figma has no direction property on a text layer that means the same thing. The visible consequence — which end the value sits at — is a property of the frame's own direction in Figma rather than of the component, so mirroring it as a variant would produce two variants that look identical in a left-to-right file."
+      },
+      {
+        "prop": "onChange",
+        "why": "A handler is behaviour. Figma properties describe what a component looks like."
+      },
+      {
+        "prop": "name",
+        "why": "A form control name has no visual form."
+      },
+      {
+        "prop": "inputMode",
+        "why": "A keyboard hint is a runtime affordance on a device. Nothing about it is drawn."
+      },
+      {
+        "prop": "value",
+        "why": "Mapped through defaultValue's text property rather than twice. A controlled value and an uncontrolled one are the same string to a designer."
+      }
+    ]
+  },
+  "aiHints": {
+    "keywords": [
+      "input",
+      "text field",
+      "field",
+      "form",
+      "email",
+      "phone",
+      "search",
+      "password",
+      "textbox",
+      "entry",
+      "label",
+      "validation",
+      "error",
+      "hint",
+      "placeholder",
+      "promo code",
+      "order reference"
+    ],
+    "use_when": [
+      "A user types a single-line value.",
+      "A form needs a labelled field with a hint or a validation message.",
+      "A value is Latin by nature inside a right-to-left interface — an email, a phone number, an IBAN, an order reference.",
+      "A field must be the same height as the Button beside it in both products."
+    ],
+    "not_a": [
+      "A textarea. Anything that wraps is a different component with a different direction rule.",
+      "A select, a radio group or any control where the value is chosen rather than typed.",
+      "A number input. There is no type='number' and its absence is a decision, not an omission.",
+      "A validator. It renders a state it is told about and never decides whether a value is acceptable.",
+      "A place to put an instruction in a placeholder."
+    ]
+  },
+  "deprecation": {
+    "policy": "The first component in the library with no v0 predecessor to consolidate, so it is withdrawn only by a decision naming what replaces it. A prop is withdrawn ahead of the component: mark it @deprecated in the source with the replacement named in the tag, which this contract derives and any agent reading it sees, keep it working for one minor version, then remove it in a major one with the migration written down. valueDirection is the prop most likely to change shape — if a fourth case appears it is a new member of the union rather than a second prop, because two props describing one axis is the defect decision 020 named in v0's three names for a variant."
+  },
+  "generated": {
+    "by": "machinery/scripts/gen-contract.mjs",
+    "from": "packages/components/src/Input/Input.tsx",
+    "authored": "machinery/metadata/authored/input.json",
+    "note": "Build output. Edit the component or the authored half and regenerate; an edit made here is overwritten by the next run and reported by check-contracts.mjs in the meantime."
+  }
+}

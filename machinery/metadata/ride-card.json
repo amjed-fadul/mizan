@@ -1,0 +1,394 @@
+{
+  "$schema": "./component-contract.schema.json",
+  "name": "RideCard",
+  "status": "stable",
+  "source": "packages/components/src/RideCard/RideCard.tsx",
+  "propsType": "RideCardProps",
+  "extends": [],
+  "purpose": "Move's ride option, and one radio in a group. A rider chooses exactly one of several ways to make the same journey, so the card is the label of a real radio input rather than a box with a click handler — which is what v0 shipped and what made the ride selector unusable without a pointer.",
+  "responsibilities": [
+    "Render a real <input type=\"radio\"> whose label is the whole card, so the platform supplies the tab stop, the arrow keys, aria-checked and the disabled semantics.",
+    "Show one journey option: the vehicle, the tier, how far away it is, what it will cost and how many it seats.",
+    "Say when a fare is raised by demand, and attach that to the option rather than beside it.",
+    "Nothing about formatting. Every number arrives already formatted through the boundary content/rules/rtl-arabic.md §4 sets out.",
+    "Nothing about which option is chosen. That is the group's state and the caller's."
+  ],
+  "do": [
+    "Put every option for one journey in a single RideCardGroup, so they share a name and behave as one choice.",
+    "Give the group a label. It becomes a real <legend>, and it is the only thing that says what is being chosen.",
+    "Pass eta, fare and capacity already formatted — Arabic has six plural categories, and a component cannot select between them.",
+    "Use disabled for a tier with no vehicle nearby, so the platform skips it during arrow-key navigation.",
+    "Pass surgeNote whenever a fare is raised, so the reason travels with the option through aria-describedby."
+  ],
+  "dont": [
+    "Do not put a button, a link or any other control inside this card. It is a radio, and interactive content nested in a radio has no behaviour a user can reach — that is decision 024's argument and it is structural rather than stylistic.",
+    "Do not use it to display a ride nobody is choosing. A completed trip or a scheduled booking is a different component; this one is a control.",
+    "Do not pass a number to eta or capacity and let this component write the words. v0 does, with a hand-written special case for one seat, which is a two-category plural rule in a product that ships a six-category language.",
+    "Do not map a ride-type key to a label in here. v0 holds RIDE_TYPE_LABELS and falls back to the raw key, so an unrecognised tier renders as 'economy' in the middle of a translated interface.",
+    "Do not reach for mobility.* colours to carry a sentence. mobility.surge is declared at the 3.0 indicator bar and sits at 3.87:1 in dark, so it marks the note and text.secondary sets it."
+  ],
+  "do_not_use_when": [
+    {
+      "when": "The card must contain a button, a link, or any second interactive target.",
+      "use_instead": "ProductCard, or a plain container. A radio may not contain a control — decision 024."
+    },
+    {
+      "when": "A ride is being displayed rather than chosen — a receipt, a trip in progress, a scheduled booking.",
+      "use_instead": "Nothing yet. That component does not exist, and decision 024 records that it might be closer to ProductCard than to this."
+    },
+    {
+      "when": "The user may pick more than one option.",
+      "use_instead": "A checkbox-based control. A radio group is exclusive by definition, and making this multi-select changes what element it is."
+    },
+    {
+      "when": "There is only one option.",
+      "use_instead": "Plain content. A choice of one is not a choice, and a radio that cannot be unchecked is a control with nothing to do."
+    },
+    {
+      "when": "The screen is Market's.",
+      "use_instead": "ProductCard. This component names mobility.* tokens, which only Move has."
+    }
+  ],
+  "alternatives": [
+    {
+      "use": "ProductCard",
+      "for": "a Market product tile, which is a container holding a link and an action",
+      "in_system": true
+    },
+    {
+      "use": "a checkbox group",
+      "for": "a choice where more than one option may be picked",
+      "in_system": false
+    },
+    {
+      "use": "plain content",
+      "for": "a ride being shown rather than chosen",
+      "in_system": false
+    }
+  ],
+  "content": [
+    "The vehicle, as a rider will recognise it at the curb.",
+    "The tier name, which is a string from the catalogue rather than a key mapped in here.",
+    "The ETA, the fare and the capacity, each already formatted.",
+    "The surge note, which says why a fare is higher than usual."
+  ],
+  "constraints": [
+    "No width and no fixed height. §6: a control sized to Latin ink clips Arabic, and the vertical axis clips rather than reflows.",
+    "No className and no style. The props type does not extend InputHTMLAttributes, which would hand back size — a width in characters.",
+    "No prop shortens a string.",
+    "No numbers. eta, fare and capacity are nodes, already formatted by §4's one boundary.",
+    "No nested interactive content, ever. It is a radio.",
+    "No colour that content/tokens/pairs.json has not seen, and none used outside the context it was declared in.",
+    "No click handler on the card. The label forwards activation to the input, which is what makes the keyboard work.",
+    "One written number, the 1px control edge, because there is still no border-width scale."
+  ],
+  "rtl": {
+    "behaviour": [
+      "Logical properties throughout. The rows are flex with space-between, which names an axis rather than a side, and the surge mark is a border-inline-start so it sits on the reading-start edge in both directions.",
+      "The fare carries unicode-bidi: isolate — the CSS equivalent of the <bdi> §3 asks for — because a formatted amount is the one run in this card guaranteed to be opposite-direction in Arabic.",
+      "The vehicle name is a ReactNode so a caller can wrap a Latin name in <bdi> when it sits inside a longer Arabic run.",
+      "letter-spacing 0, always, declared so it cannot be inherited from a page.",
+      "There is no [dir='rtl'] selector anywhere in the component."
+    ],
+    "mirrors": [
+      "The whole card, with the document.",
+      "The surge mark, which follows the reading-start edge."
+    ],
+    "does_not_mirror": [
+      "Nothing. There is no glyph in this component whose form carries meaning."
+    ]
+  },
+  "accessibility": {
+    "guarantees": [
+      "A real <input type=\"radio\"> inside a <label>, so one tab stop serves the group, arrow keys move between options, and aria-checked is the platform's.",
+      "The radio is visually hidden with a clip-rect rather than display:none, so it stays focusable and announced — display:none would reintroduce exactly the defect this component replaces.",
+      "A real <fieldset> and <legend> through RideCardGroup, which is what gives a set of radios one accessible name.",
+      "The surge note is linked with aria-describedby, so a rider is told an option is surging while they are on it rather than after.",
+      "Disabled uses the real attribute, so arrow-key navigation skips an option nobody can book.",
+      "The focus indicator is drawn on the card from the state of the hidden input, so the visible ring matches the thing that actually has focus.",
+      "0 axe violations across all six stories, checked in dark + Move + RTL."
+    ],
+    "consumer_must": [
+      "Give the group a label. It is required by the type, but a label that does not say what is being chosen satisfies the type and not the user.",
+      "Pass every number already formatted. This component cannot select an Arabic plural category and will render whatever string it is handed.",
+      "Keep every option for one journey inside one group. Two groups on a screen are two independent choices, which is a different question from the one the screen is asking."
+    ]
+  },
+  "stylesheet": "packages/components/src/styles/focus.css, packages/components/src/RideCard/RideCard.css",
+  "tokens": [
+    "action.primary",
+    "border.control",
+    "duration.100",
+    "easing.entrance",
+    "focus.ring",
+    "focus.ring-contrast",
+    "font-family.sans",
+    "font-size.200",
+    "font-size.300",
+    "font-size.400",
+    "font-weight.medium",
+    "letter-spacing.none",
+    "line-height.normal",
+    "mobility.surge",
+    "radius.200",
+    "space.100",
+    "space.150",
+    "space.200",
+    "space.25",
+    "space.50",
+    "surface.default",
+    "surface.sunken",
+    "text.primary",
+    "text.secondary"
+  ],
+  "tokens_absent": [],
+  "props": [
+    {
+      "name": "capacity",
+      "type": "ReactNode",
+      "values": null,
+      "required": false,
+      "default": null,
+      "description": "Seat capacity, already formatted — \"4 seats\".",
+      "notes": [
+        "A node for the same reason `eta` is: v0 writes `seats + ' seats'` with a hand-written special case for `1 seat`, which is a two-category plural rule in a product that ships a six-category language."
+      ],
+      "guidance": "Already formatted, for the same plural reason as eta. v0 special-cases '1 seat' by hand.",
+      "figmaProperty": "Capacity"
+    },
+    {
+      "name": "checked",
+      "type": "boolean",
+      "values": null,
+      "required": false,
+      "default": null,
+      "description": "Whether this option is the chosen one.",
+      "guidance": "Whether this is the chosen option. The card styles itself from the input's :checked state through :has(), so the DOM is the single source of truth and nothing in React mirrors it into a class that could disagree.",
+      "figmaProperty": "Selected"
+    },
+    {
+      "name": "disabled",
+      "type": "boolean",
+      "values": null,
+      "required": false,
+      "default": "false",
+      "description": "The option is not available — no vehicle of this tier nearby.",
+      "guidance": "No vehicle of this tier nearby. The real attribute, so arrow-key navigation skips it — a rider does not land on a ride they cannot book.",
+      "figmaProperty": "Disabled"
+    },
+    {
+      "name": "eta",
+      "type": "ReactNode",
+      "values": null,
+      "required": true,
+      "default": null,
+      "description": "How far away the vehicle is, already formatted.",
+      "notes": [
+        "**Not a number.** v0 writes `etaMinutes + ' min away'`, which is English concatenation with nowhere to put a plural category — and Arabic has six, including a dual, so \"2 minutes\" is not \"3 minutes\" with the number swapped. `content/rules/rtl-arabic.md` §4 puts every number behind one formatting boundary and records duration formatting as blocked on a string catalogue. This prop takes what that boundary produced."
+      ],
+      "guidance": "Already formatted. v0 writes etaMinutes + ' min away', which is English concatenation with nowhere to put a plural category, and Arabic has six including a dual.",
+      "figmaProperty": "ETA"
+    },
+    {
+      "name": "fare",
+      "type": "ReactNode",
+      "values": null,
+      "required": true,
+      "default": null,
+      "description": "The fare, already formatted by the §4 boundary — `AED 24.00`, or `24.00 د.إ` in Arabic, with the symbol placed by `Intl` rather than concatenated.",
+      "guidance": "Already formatted by §4's boundary — symbol placed by Intl, Western digits in both locales, the currency's own minor-unit count. Isolated in CSS because it is the one run here guaranteed to be opposite-direction in Arabic.",
+      "figmaProperty": "Fare"
+    },
+    {
+      "name": "fareBasis",
+      "type": "FareBasis",
+      "values": [
+        "estimate",
+        "settled"
+      ],
+      "required": false,
+      "default": "'estimate'",
+      "description": "Whether the fare is an estimate or settled. Defaults to `'estimate'`, because that is what every fare Move currently shows actually is.",
+      "guidance": "Estimate or settled. Every fare Move currently shows is an estimate, and saying so is a decision rather than a default: a rider who reads a provisional fare as fixed has been misled by the interface.",
+      "figmaProperty": "Fare basis"
+    },
+    {
+      "name": "name",
+      "type": "string",
+      "values": null,
+      "required": false,
+      "default": null,
+      "description": "The group name. **Every card in one choice shares it**, and that shared name is what makes the browser treat them as one radio group: a single tab stop for the whole set, arrow keys moving between options, and exactly one chosen. None of that is implemented here — it is the platform's, and it is the reason this component is a real `<input type=\"radio\">` rather than a `div` with `role=\"radio\"` and a key handler that would have to reimplement all of it.",
+      "notes": [
+        "`RideCardGroup` sets this for its children, so a call site normally does not."
+      ],
+      "guidance": "Shared by every card in one choice, which is what makes the browser treat them as one radio group. RideCardGroup sets it, so a call site normally does not — a call site repeating it by hand is one where the fifth card gets a typo and silently becomes its own group of one.",
+      "figmaProperty": null
+    },
+    {
+      "name": "onChange",
+      "type": "(value: string, event: ChangeEvent<HTMLInputElement>) => void",
+      "values": null,
+      "required": false,
+      "default": null,
+      "description": "Chosen. Reports the `value` of whichever card the user picked.",
+      "guidance": "Reports the value of whichever card the user picked.",
+      "figmaProperty": null
+    },
+    {
+      "name": "rideType",
+      "type": "ReactNode",
+      "values": null,
+      "required": true,
+      "default": null,
+      "description": "The tier — Economy, Comfort, XL, Electric.",
+      "notes": [
+        "Taken as a node rather than mapped from a key inside this component. v0 holds a `RIDE_TYPE_LABELS` object and falls back to the raw key when a type is missing from it, which means an unrecognised tier renders as `economy` in the middle of a translated interface. A label is a string from the catalogue and the catalogue is not this component's business."
+      ],
+      "guidance": "The tier. A string from the catalogue rather than a key this component maps — v0 maps it and falls back to the raw key, so an unrecognised tier renders as 'economy' mid-translation.",
+      "figmaProperty": "Ride type"
+    },
+    {
+      "name": "surgeNote",
+      "type": "ReactNode",
+      "values": null,
+      "required": false,
+      "default": null,
+      "description": "Why the fare is higher than usual, when it is — Move's surge note.",
+      "notes": [
+        "Painted in `mobility.surge`, which this component is allowed to reference and a shared one is not. That permission is a consequence of decision 024 rather than an incidental convenience: keeping this component Move's is what lets it name Move's tokens."
+      ],
+      "guidance": "Why the fare is higher. Marked with mobility.surge and set in text.secondary — the token is declared at the 3.0 indicator bar and cannot carry a sentence, which axe caught after the first version painted the whole note with it.",
+      "figmaProperty": "Surge note"
+    },
+    {
+      "name": "value",
+      "type": "string",
+      "values": null,
+      "required": true,
+      "default": null,
+      "description": "The value this option submits, and what `onChange` reports. Unique within the group.",
+      "guidance": "What this option submits. Unique within the group and never shown.",
+      "figmaProperty": null
+    },
+    {
+      "name": "vehicle",
+      "type": "ReactNode",
+      "values": null,
+      "required": true,
+      "default": null,
+      "description": "The vehicle, as the rider will recognise it at the curb — \"Toyota Camry\".",
+      "notes": [
+        "A `ReactNode` rather than a string so it can carry a `<bdi>`-wrapped run. A vehicle name is Latin in an Arabic interface more often than not, and §3 is explicit that a run of opposite-direction content inside a sentence is isolated rather than hoped about."
+      ],
+      "guidance": "What the rider will recognise at the curb. A node, so a Latin name inside an Arabic run can be wrapped in <bdi> by the caller.",
+      "figmaProperty": "Vehicle"
+    }
+  ],
+  "figma": {
+    "component": "RideCard",
+    "properties": [
+      {
+        "property": "Capacity",
+        "prop": "capacity",
+        "values": null
+      },
+      {
+        "property": "Selected",
+        "prop": "checked",
+        "values": null
+      },
+      {
+        "property": "Disabled",
+        "prop": "disabled",
+        "values": null
+      },
+      {
+        "property": "ETA",
+        "prop": "eta",
+        "values": null
+      },
+      {
+        "property": "Fare",
+        "prop": "fare",
+        "values": null
+      },
+      {
+        "property": "Fare basis",
+        "prop": "fareBasis",
+        "values": [
+          "estimate",
+          "settled"
+        ]
+      },
+      {
+        "property": "Ride type",
+        "prop": "rideType",
+        "values": null
+      },
+      {
+        "property": "Surge note",
+        "prop": "surgeNote",
+        "values": null
+      },
+      {
+        "property": "Vehicle",
+        "prop": "vehicle",
+        "values": null
+      }
+    ],
+    "unmapped": [
+      {
+        "prop": "value",
+        "why": "A form value has no visual form."
+      },
+      {
+        "prop": "name",
+        "why": "The group name is plumbing that makes four radios one choice. Nothing about it is drawn."
+      },
+      {
+        "prop": "onChange",
+        "why": "A handler is behaviour. Figma properties describe what a component looks like."
+      }
+    ]
+  },
+  "aiHints": {
+    "keywords": [
+      "ride",
+      "ride option",
+      "ride card",
+      "booking",
+      "fare",
+      "eta",
+      "vehicle",
+      "radio",
+      "choice",
+      "select ride",
+      "move",
+      "surge",
+      "economy",
+      "comfort",
+      "xl"
+    ],
+    "use_when": [
+      "A rider chooses one of several ways to make the same journey.",
+      "A Move booking screen needs its ride selector.",
+      "A set of options is exclusive and each needs more than a line of text."
+    ],
+    "not_a": [
+      "A product tile. That is ProductCard and it is a container, not a control.",
+      "A container for other controls. A card whose whole surface selects it cannot also contain an independently operable button.",
+      "A display of a ride nobody is choosing.",
+      "A multi-select."
+    ]
+  },
+  "deprecation": {
+    "policy": "It replaces v0's RideCard and is withdrawn only by a decision naming what replaces it. A prop is withdrawn ahead of the component: mark it @deprecated in the source with the replacement named in the tag, keep it working for one minor version, then remove it in a major one with the migration written down. The prop most likely to move is fareBasis, which currently has two values and would gain a third rather than a sibling prop."
+  },
+  "generated": {
+    "by": "machinery/scripts/gen-contract.mjs",
+    "from": "packages/components/src/RideCard/RideCard.tsx",
+    "authored": "machinery/metadata/authored/ride-card.json",
+    "note": "Build output. Edit the component or the authored half and regenerate; an edit made here is overwritten by the next run and reported by check-contracts.mjs in the meantime."
+  }
+}

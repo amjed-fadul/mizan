@@ -493,10 +493,13 @@
   change shape at the moment it is being pointed at.
 */
 .mz-button:focus-visible {
+  /*
+    The indicator itself is in ../styles/focus.css, reached by the
+    `mz-focus-ring` class. What stays here is the one part that is about
+    Button's layout rather than about focus: raising the control so its ring
+    paints OVER a pressed neighbour in a segmented control instead of under it.
+  */
   z-index: 1;
-  outline: var(--space-25) solid var(--focus-ring);
-  outline-offset: var(--space-25);
-  box-shadow: 0 0 0 var(--space-100) var(--focus-ring-contrast);
 }
 
 /* ------------------------------------------------------ label, icon, busy   */

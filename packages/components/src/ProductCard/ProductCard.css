@@ -1,0 +1,271 @@
+/*
+  ProductCard — Market's product tile, and the container half of decision 024.
+
+  Same rule as every other component here: nothing in this file is a value.
+
+  It names two PRODUCT-SPECIFIC tokens — commerce.discount and
+  commerce.stock.low — and, like RideCard naming mobility.surge, that permission
+  is decision 024's doing. A shared Card could not reach either without taking
+  them as props or exposing a slot, both of which write Market's identity into
+  shared code under another name.
+
+  The lesson RideCard learned the hard way is applied here from the start:
+  commerce.stock.low is declared in pairs.json at the 3.0 INDICATOR bar and sits
+  at 4.29:1 in every combination, which clears 4.5 nowhere. So it is a mark and
+  not a sentence — the words are text.secondary. commerce.discount is declared
+  as TEXT at 4.5 and passes, so it is allowed to be the colour of its own words.
+  Two tokens, two contexts, and the difference is in pairs.json rather than in
+  anybody's judgment at the moment of writing CSS.
+
+  One written number, the 1px control edge, for the fourth time. Still no
+  border-width scale.
+*/
+
+.mz-product-card {
+  display: flex;
+  flex-direction: column;
+
+  box-sizing: border-box;
+  overflow: hidden;
+
+  background-color: var(--surface-default);
+  color: var(--text-primary);
+
+  border-radius: var(--radius-200);
+  border: 1px solid var(--border-default);
+
+  font-family: var(--font-family-sans);
+  letter-spacing: var(--letter-spacing-none);
+
+  /*
+    No width. content/rules/rtl-arabic.md §6: a component does not take one, and
+    v0's ProductCard hard-codes `width: 240px` in an inline style — which is the
+    exact prop §6 names as the usual culprit, arriving as a style object instead
+    of as an API. The card fills whatever grid cell it is placed in.
+
+    No fixed height either. Arabic names run longer and shorter than Latin ones
+    by more than padding absorbs, so the card grows.
+  */
+}
+
+/* ----------------------------------------------------------------- the media */
+
+.mz-product-card__media {
+  position: relative;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background-color: var(--surface-sunken);
+
+  /*
+    A ratio rather than a height, so every card in a row has the same media box
+    whatever its image is, and none of them is a number of pixels chosen for one
+    screen size.
+  */
+  aspect-ratio: 4 / 3;
+}
+
+.mz-product-card__media :where(img) {
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+}
+
+/*
+  The discount badge, over the media.
+
+  Positioned with logical insets, so it sits in the reading-start corner in both
+  directions with no side named anywhere. §1's list of things `dir` does not
+  reach is why this is an element with `inset-inline-start` rather than a
+  background image with a `background-position`: that property has no logical
+  keywords at all, which was checked rather than assumed.
+*/
+.mz-product-card__discount {
+  position: absolute;
+  inset-block-start: var(--space-100);
+  inset-inline-start: var(--space-100);
+
+  padding-inline: var(--space-100);
+  padding-block: var(--space-25);
+
+  background-color: var(--surface-default);
+  color: var(--commerce-discount);
+
+  border-radius: var(--radius-100);
+
+  font-size: var(--font-size-200);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-normal);
+
+  /*
+    A percentage is a formatted quantity sitting inside an Arabic layout, so it
+    is isolated for the reason §3 gives — the CSS equivalent of the <bdi> that
+    rule asks for.
+  */
+  unicode-bidi: isolate;
+}
+
+/* ------------------------------------------------------------------ the body */
+
+.mz-product-card__body {
+  display: grid;
+  gap: var(--space-50);
+  padding: var(--space-200);
+}
+
+.mz-product-card__heading {
+  /* A heading's UA margin would fight the grid gap. The gap is the rhythm. */
+  margin: 0;
+
+  font-size: var(--font-size-300);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-normal);
+}
+
+.mz-product-card__link {
+  color: var(--text-primary);
+
+  /*
+    Underlined only on hover and focus, which is a defensible choice for a card
+    title inside a grid where every title is a link and a page of underlines is
+    noise — and it is why the underline rules below exist at all.
+  */
+  text-decoration: none;
+}
+
+.mz-product-card__link:hover,
+.mz-product-card__link:focus-visible {
+  text-decoration: underline;
+
+  /*
+    The offset is the Arabic rule, not a refinement. §2: Arabic carries dots
+    below the baseline — ب, ي, ج all do — and a default underline is drawn
+    straight through them, so the reader sees letters whose dots have fused with
+    a line, and the dots are the whole difference between ب, ت and ث.
+
+    text-decoration-skip-ink is already `auto` in every current engine and does
+    NOT solve it: on an Arabic string it fires several times per word, and the
+    link arrives as four or five dashes with the dots sitting in the gaps. The
+    collision is traded for a broken line. Pushing the line clear is what
+    restores one continuous underline that touches nothing.
+
+    §2 says this belongs in the token layer for the same reason the optical size
+    correction does, and there is no token for it yet — so this is the second
+    value in this file the token layer owes a name to, after the 1px edge.
+  */
+  text-underline-offset: 0.25em;
+}
+
+.mz-product-card__link:focus-visible {
+  /*
+    The two-tone indicator, decision 019. Fourth copy in the library, and the
+    extraction Input.css named is now overdue rather than owed — three was the
+    trigger. It is left here so this commit adds a component rather than
+    refactoring three others, and both card READMEs record it.
+  */
+  /*
+    The indicator is in ../styles/focus.css via `mz-focus-ring`. What stays is
+    the radius: this is an inline link inside a heading, not a rounded box, and
+    the shared rule deliberately sets no radius so that every consumer keeps its
+    own corners.
+  */
+  border-radius: var(--radius-0);
+}
+
+.mz-product-card__package-size,
+.mz-product-card__unit,
+.mz-product-card__delivery {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--font-size-200);
+  line-height: var(--line-height-normal);
+}
+
+/* ---------------------------------------------------------------- the prices */
+
+.mz-product-card__prices {
+  margin: 0;
+
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-100);
+}
+
+.mz-product-card__price {
+  font-size: var(--font-size-400);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-normal);
+
+  /* A formatted amount in a mixed-direction layout. §3. */
+  unicode-bidi: isolate;
+}
+
+.mz-product-card__was {
+  color: var(--text-secondary);
+  font-size: var(--font-size-200);
+  line-height: var(--line-height-normal);
+  unicode-bidi: isolate;
+}
+
+/*
+  Visually hidden, not display:none — the label has to reach a screen reader.
+  Same clip-rect construction RideCard uses for its radio, and here for the same
+  class of reason: something that must exist for assistive technology and not on
+  screen.
+*/
+.mz-product-card__visually-hidden {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ----------------------------------------------------------------- the stock */
+
+.mz-product-card__stock {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--font-size-200);
+  line-height: var(--line-height-normal);
+}
+
+/*
+  Low stock. A mark in commerce.stock.low and words in text.secondary, for the
+  reason stated in the header: that token is declared at the 3.0 indicator bar
+  and sits at 4.29:1, which clears 4.5 in no combination. RideCard shipped the
+  other version of this and axe caught it; this one starts correct.
+*/
+.mz-product-card__stock[data-level='low'] {
+  border-inline-start: var(--space-25) solid var(--commerce-stock-low);
+  padding-inline-start: var(--space-100);
+}
+
+/*
+  Out of stock is not painted red and does not fade. What communicates it is the
+  words plus a disabled action — and the disabled Button already draws itself
+  from a declared token pair rather than from an opacity, which is the defect
+  v0 carries in all three of its stylesheets.
+*/
+.mz-product-card__stock[data-level='out'] {
+  color: var(--text-primary);
+  font-weight: var(--font-weight-medium);
+}
+
+/* ---------------------------------------------------------------- the action */
+
+.mz-product-card__action {
+  /*
+    A little air above the action, and the only place in this file that adds
+    space beyond the grid gap. An action is a different kind of thing from the
+    facts above it and the gap says so.
+  */
+  margin-block-start: var(--space-100);
+}

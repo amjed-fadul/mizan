@@ -114,5 +114,14 @@
       "$value": { "colorSpace": "srgb", "components": [0.6588235294117647, 0.3843137254901961, 0.0392156862745098], "alpha": 1, "hex": "#a8620a" },
       "$description": "INDICATOR ONLY, on exactly the same terms as amber.600 — a graphic or a mark, never text. The darker step, for hover and pressed on an amber mark and for amber sitting on a tinted rather than a white ground. It is closer to 600 than the other ramps' pairs are, because there is very little room left below amber before it stops being amber. Worth stating plainly: this value does clear 4.5:1 on white (4.75:1). That is arithmetic, not permission. It is the pressed state of an indicator, and decision 008 narrowed the amber role rather than the amber value — status colour and status text are two jobs, and a hover step is not where the text one gets smuggled back in."
     }
+  },
+
+  "scrim": {
+    "$type": "color",
+    "$description": "The one translucent colour in the system, and deliberately not a step on the neutral ramp. A scrim is not a surface — it is the interface being pushed back so that something in front of it is unambiguously the subject, and the thing behind it is meant to remain partly visible so a user keeps their place. shadow.300's own description named this mechanism and declined to be it: \"anything that needs to feel further away than this needs a scrim behind it, which is a separate mechanism and not a fourth shadow\". This is that mechanism, arriving when decision 025 gave it a consumer. It sits outside the ramp because ramp position means contrast rank, and a translucent value has no fixed contrast to rank — what it resolves to depends on what is behind it, which is exactly why check-contrast.mjs refuses a translucent background rather than measuring one.",
+    "black": {
+      "$value": { "colorSpace": "srgb", "components": [0, 0, 0], "alpha": 0.5, "hex": "#000000" },
+      "$description": "Pure black at half opacity, and the only colour token in the system whose alpha is not 1. Black rather than neutral.1000 because a scrim darkens whatever is behind it rather than tinting it toward a chosen grey, and 0.5 because it has to do two jobs at once in opposite themes: over the light page it must dim white enough that the page reads as inactive, and over the dark page it must still separate #141414 into a visibly darker #0a0a0a. A lighter value fails the first and a heavier one closes the second to nothing. This is the value to revisit if either page ground moves."
+    }
   }
 }

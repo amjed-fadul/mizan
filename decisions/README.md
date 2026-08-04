@@ -48,3 +48,6 @@ Entries are numbered sequentially in the order decisions actually happen. Number
 | [020](./020-the-button-consolidation.md) | Four buttons become one, and the vocabulary the shared API refuses to carry | 4 |
 | [021](./021-the-motion-scale-and-where-a-spinner-does-not-go.md) | The motion scale, the cycle that is not a tier, and reduced motion as a rule rather than a mode | 4 |
 | [022](./022-control-geometry-resolves-by-product.md) | Control geometry resolves by product, and the tap target is not a token | 4 |
+| [023](./023-the-error-semantic-is-two-tokens.md) | The error semantic is two tokens, and neither of them is the red that already exists | 4 |
+| [024](./024-productcard-and-ridecard-stay-separate.md) | ProductCard and RideCard stay separate, because one is a container and the other is a control | 4 |
+| [025](./025-the-scrim-is-one-value-and-carries-no-pairing.md) | The scrim is one value in all four combinations, and the first token with no contrast pairing | 4 |

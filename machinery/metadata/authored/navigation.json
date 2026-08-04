@@ -1,0 +1,178 @@
+{
+  "status": "stable",
+  "purpose": "The way around a product — a nav landmark holding a list of destinations, one of which may be the page the user is on. It replaces the pipe-separated row of links v0 copy-pasted into five screens, which has no landmark, no current-page marker, and a separator that is a text character.",
+  "responsibilities": [
+    "Render a real <nav> landmark with an accessible name, so it can be jumped to and skipped past.",
+    "Hold the destinations in a real list, so they are counted.",
+    "Mark at most one destination as the current page, with aria-current=\"page\".",
+    "Draw a separator as a box decoration rather than as content.",
+    "Nothing about routing. It renders anchors and has no opinion about what happens when one is followed.",
+    "Nothing about which destination is current. The screen knows; this component is told."
+  ],
+  "do": [
+    "Name it for what it is FOR — Main, Account, Footer — and leave the word navigation out, because the role already says it.",
+    "Mark the current page. It is the only thing that answers \"where am I\" for somebody who cannot see which label is heavier.",
+    "Keep the current destination a link. It is still somewhere a user can go, and removing it changes how many tab stops the bar has depending on which page you are on.",
+    "Let the labels wrap. Arabic runs to 117 per cent of English on some strings, and a bar that refuses to wrap clips a destination instead."
+  ],
+  "dont": [
+    "Do not put the word \"navigation\" in the label. aria-label=\"Main navigation\" is announced as \"Main navigation navigation\".",
+    "Do not use a text character as a separator. v0 uses a literal pipe, which is content — so it is announced — and is a Unicode-neutral character, so it reorders with its surroundings in Arabic instead of staying between two things.",
+    "Do not mark more than one destination current. aria-current=\"page\" answers a question that has one answer.",
+    "Do not set aria-current=\"false\" on the others. That is a stated claim repeated on every destination, and absence says the same thing more quietly.",
+    "Do not use a button for a destination. A control that changes the address is a link wearing the wrong element, and it loses the middle-click, the copy-link and the open-in-new-tab that came free.",
+    "Do not signal the current page with colour alone. The hover state uses the same two neutral tokens, so colour alone would make \"where I am\" and \"where my pointer is\" the same appearance."
+  ],
+  "do_not_use_when": [
+    {
+      "when": "The links are inside a sentence or a paragraph of prose.",
+      "use_instead": "A plain <a>. A landmark around an inline link tells a screen-reader user there is a navigation region where there is only a sentence."
+    },
+    {
+      "when": "The items perform actions on the current screen rather than going somewhere.",
+      "use_instead": "Button. If it does not change the address it is not a destination, and a toolbar of actions is not a navigation landmark."
+    },
+    {
+      "when": "Exactly one item is chosen and the choice is the point — a filter set, a segmented control.",
+      "use_instead": "RideCard, whose RideCardGroup is a real radio group. Choosing is not navigating."
+    },
+    {
+      "when": "The destinations are a plain collection to read rather than the way around the product — related products, recent orders.",
+      "use_instead": "List. It gives the counted-list semantics without claiming a landmark, and a page with five navigation landmarks has none."
+    },
+    {
+      "when": "The navigation is a hierarchy with expandable sections, or a breadcrumb trail.",
+      "use_instead": "Nothing yet. Both are real components with their own semantics — a tree needs expanded state, a breadcrumb needs an ordered list and a separator rule of its own — and neither is built."
+    }
+  ],
+  "alternatives": [
+    {
+      "use": "List",
+      "for": "a collection of links that is not the way around the product",
+      "in_system": true
+    },
+    {
+      "use": "Button",
+      "for": "an item that acts on this screen rather than going somewhere",
+      "in_system": true
+    },
+    {
+      "use": "RideCard",
+      "for": "a set where exactly one is chosen — its RideCardGroup is the radio group",
+      "in_system": true
+    },
+    {
+      "use": "a plain <a>",
+      "for": "a link inside a sentence",
+      "in_system": false
+    }
+  ],
+  "content": [
+    "The destination labels, which name where they go.",
+    "The landmark's name, which says which navigation this is."
+  ],
+  "constraints": [
+    "No className and no style.",
+    "No routing. This renders anchors; what a click does belongs to whatever router the application has.",
+    "No orientation prop. Both products' navigation is a horizontal row, and a vertical arrangement would change which axis the separator and the current marker sit on — a decision worth making with a real sidebar in front of it rather than in advance.",
+    "No dropdown, no submenu, no expandable section. A hierarchy needs expanded state this component does not have.",
+    "No skip link. It belongs to the page rather than to one landmark, and a component that emitted one would emit several on a page with several navigations.",
+    "No prop shortens a label.",
+    "One written number, the 1px separator and current-page rule, for the seventh time in the library. Still no border-width scale.",
+    "One value the token layer owes a name to: the 0.25em underline offset, which is the Arabic rule from §2 and the second place in the library to write it after ProductCard."
+  ],
+  "rtl": {
+    "behaviour": [
+      "This is the component where the inline axis actually matters. The row is laid out along the reading direction, the separator sits between items on that axis, and the current-page rule is drawn under them — three places a physical left or right would produce the half-flipped bar §1 says reads worse than one that did not flip at all.",
+      "The row is flex, so it reverses with the document and no rule names a side.",
+      "The separator is a border-inline-start on every item after the first. Verified in a browser rather than assumed: in an RTL page it resolves to the RIGHT edge, 1px there and 0 on the left, and the first destination is the rightmost.",
+      "The current-page rule is a border-block-end, so it stays underneath in both directions. It is deliberately not an inline-start marker, which would sit above the item in a vertical arrangement.",
+      "The hover underline declares text-underline-offset, because §2 records that Arabic carries dots below the baseline and a default underline is drawn straight through them. skip-ink is left at its initial auto and is not relied on: on an Arabic string it fires several times per word and delivers the link as four or five dashes.",
+      "letter-spacing 0 is declared rather than inherited. A navigation is short text, which is exactly where a page's global tracking is most often applied for effect, and tracking breaks the joins in Arabic script."
+    ],
+    "mirrors": [
+      "The whole row, with the document.",
+      "The separator, which moves to the other side of each item."
+    ],
+    "does_not_mirror": [
+      "The current-page rule, which is on the block axis and stays under the label in both directions."
+    ]
+  },
+  "accessibility": {
+    "guarantees": [
+      "A real <nav> landmark, which v0 has nowhere in the application — so for the first time the navigation can be jumped to and skipped past.",
+      "An accessible name on every landmark, because label is required and a page may hold more than one.",
+      "The destinations in a real list with role=\"list\" written explicitly, so they are counted after list-style: none removes the markers.",
+      "aria-current=\"page\" on the current destination — the token rather than the generic true — and the attribute absent rather than false on the others.",
+      "The current page carried by three signals: the attribute, a weight and colour change, and a rule beneath it. Never colour alone, which would also be indistinguishable from hover.",
+      "Real anchors, so middle-click, copy-link, open-in-new-tab and the status-bar preview all work.",
+      "0 axe violations across all six stories, checked in dark + RTL."
+    ],
+    "consumer_must": [
+      "Tell it which destination is current. This component cannot know the route, and a navigation with nothing marked is the v0 behaviour it exists to replace.",
+      "Mark at most one. Nothing here prevents two, and two answers to \"where am I\" is worse than none.",
+      "Provide the skip link. It belongs to the page, and a component that emitted one would emit several on a page with several navigations.",
+      "Keep the label free of the word navigation, and distinct from any other navigation landmark on the page."
+    ]
+  },
+  "tokens_absent": [],
+  "aiHints": {
+    "keywords": [
+      "navigation",
+      "nav",
+      "menu",
+      "navbar",
+      "tabs",
+      "links",
+      "destinations",
+      "current page",
+      "aria-current",
+      "landmark",
+      "header nav",
+      "footer nav",
+      "site navigation"
+    ],
+    "use_when": [
+      "A set of links is the way around the product.",
+      "One destination is the page the user is currently on and should be marked as such.",
+      "A screen-reader user should be able to jump to the navigation or skip past it."
+    ],
+    "not_a": [
+      "A toolbar of actions. If an item does not change the address it is a Button, not a destination.",
+      "A radio group or a filter set. Choosing is not navigating.",
+      "A plain list of links. A collection to read is a List; a landmark is for the way around.",
+      "A breadcrumb or a tree. Both have semantics this does not have.",
+      "A router. It renders anchors and has no opinion about what following one does."
+    ]
+  },
+  "deprecation": {
+    "policy": "The last component of Stage 4 and the one most likely to grow rather than be withdrawn: a real product eventually wants a vertical arrangement, a submenu or a breadcrumb, and each of those is a decision about whether this component gains a mode or a sibling is built. The rule from decision 020 applies either way — one axis, one prop, and a new case is a new member of a union rather than a second prop beside it. A prop is withdrawn ahead of the component: @deprecated in the source with the replacement named in the tag, one minor version of overlap, then removal in a major one with the migration written down."
+  },
+  "figma": {
+    "component": "Navigation",
+    "unmapped": [
+      {
+        "prop": "children",
+        "why": "The destinations are instances a designer places directly. There is no property to mirror."
+      },
+      {
+        "prop": "label",
+        "why": "It becomes aria-label — a name for assistive technology with no visual form. A Figma variant for it would be two identical frames."
+      }
+    ]
+  },
+  "props": {
+    "label": {
+      "figmaProperty": null,
+      "guidance": "Required, and it becomes aria-label on the landmark. Name it for what it is FOR — Main, Account, Footer — and leave the word navigation out: the role already says it, so \"Main navigation\" is announced as \"Main navigation navigation\". A page with two unnamed navigation landmarks is a page where a screen-reader user hears \"navigation, navigation\" and has to guess."
+    },
+    "children": {
+      "figmaProperty": null,
+      "guidance": "The destinations, each a NavigationItem. NavigationItem exists so a call site cannot forget the <li> and cannot reach for a <button> — a control that changes the address is a link wearing the wrong element."
+    },
+    "separators": {
+      "figmaProperty": "Separators",
+      "guidance": "A border-inline-start on every item after the first, replacing v0's literal pipe. The pipe is wrong on two counts and only one is visual: it is content, so it is announced; and it is a Unicode-neutral character, so it reorders with its surroundings in Arabic rather than staying between two things. A border is a box decoration on the inline axis — invisible to a screen reader, and it changes side with the document."
+    }
+  }
+}

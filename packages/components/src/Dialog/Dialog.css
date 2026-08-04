@@ -1,0 +1,190 @@
+/*
+  Dialog — the fifth component, and the first one v0 has no version of at all.
+  There is no modal anywhere in legacy/src, which is why Move cancels a trip in
+  one click with a driver en route.
+
+  Same rule as every other stylesheet here: nothing in this file is a value.
+
+  It is the first consumer of surface.scrim, which decision 025 added for it —
+  and the elevation scale asked for years before that, in shadow.300's own
+  description: "anything that needs to feel further away than this needs a
+  scrim behind it, which is a separate mechanism and not a fourth shadow."
+
+  THREE written numbers, and an earlier version of this header said one. They
+  are counted here because the house rule is to name each and say what the
+  token layer owes:
+
+  - `1px`, the control edge, for the fifth time. Still no border-width scale,
+    and this is now the strongest evidence that one is owed.
+  - `28rem`, the readable ceiling on the dialog's width. A maximum measure is
+    one of the few things that legitimately belongs to a dialog rather than to
+    a token, because it is about how far an eye tracks a line of text; it is
+    argued under Constraints in ./README.md.
+  - `26rem`, the width below which the actions stretch instead of huddling at
+    one end. The least defensible of the three, flagged rather than smoothed:
+    it is the library's FIRST viewport-dimension media query — every other
+    @media in these components is a capability or preference query — so it puts
+    a breakpoint into a system with no breakpoint scale. A second component
+    needing one is the trigger for deciding that scale.
+*/
+
+/* ---------------------------------------------------------------- the dialog */
+
+/*
+  The <dialog> element itself is the click target for backdrop dismissal, so it
+  carries NO padding and no visible box of its own — everything drawn is in the
+  panel below. A padded dialog would turn its own padding into backdrop, and a
+  click an inch from the title would close it.
+*/
+.mz-dialog {
+  /*
+    The element's UA defaults are a box in the middle of the viewport with a
+    solid border and a fixed width. All three are replaced: the border and
+    background move to the panel, and the sizing is logical.
+  */
+  padding: 0;
+  border: 0;
+  background: transparent;
+
+  /*
+    Sized against the viewport rather than in pixels. A dialog is one of the few
+    things that legitimately has a maximum width — a line of text 900px wide is
+    unreadable in any language — but it is expressed as a ceiling the content
+    stays under, not as a width the content is forced into. min() takes whichever
+    of the two is smaller, so a narrow phone gets margins and a wide screen gets
+    a readable measure.
+  */
+  inline-size: min(100% - var(--space-400), 28rem);
+  max-block-size: calc(100% - var(--space-400));
+
+  /*
+    The UA centres a modal horizontally but pins it to the block start. Auto
+    margins on both axes centre it in the viewport, which is where a
+    confirmation belongs — near the middle of where the eye already is, rather
+    than at the top of a screen the user was reading the bottom of.
+  */
+  margin: auto;
+
+  color: var(--text-primary);
+  overflow: visible;
+}
+
+/*
+  The backdrop, and the reason decision 025 exists.
+
+  ::backdrop inherits from its originating element, so the custom properties
+  defined on :root reach it — verified rather than assumed, because that
+  inheritance is a relatively recent spec change and older advice says the
+  pseudo-element inherits from nothing.
+
+  surface.scrim is the one colour in the system that carries no contrast
+  pairing, and 025 is explicit that this is a property rather than an
+  exemption: check-contrast.mjs errors on a translucent background because
+  what shows through is unknown. The rule that makes it safe is a rule about
+  use — NOTHING is drawn on the scrim. There is no close button floating here,
+  and there must never be one.
+*/
+.mz-dialog::backdrop {
+  background-color: var(--surface-scrim);
+}
+
+/* ----------------------------------------------------------------- the panel */
+
+.mz-dialog__panel {
+  display: grid;
+  gap: var(--space-150);
+
+  box-sizing: border-box;
+  padding: var(--space-300);
+  max-block-size: 100%;
+  overflow-y: auto;
+
+  background-color: var(--surface-default);
+
+  border-radius: var(--radius-200);
+  border: 1px solid var(--border-default);
+
+  /*
+    shadow.300 — the top of the elevation scale, described as "the element is
+    over the whole interface rather than over its neighbours". This is the first
+    component to use it, and it is doing half the work: over a light page the
+    scrim separates the dialog on its own, but in dark the scrimmed page is
+    #0a0a0a against a #141414 panel, and the shadow plus the border are what
+    keep the edge legible. 025 says so rather than pretending one value does
+    everything.
+  */
+  box-shadow: var(--shadow-300);
+
+  font-family: var(--font-family-sans);
+  letter-spacing: var(--letter-spacing-none);
+}
+
+.mz-dialog__title {
+  margin: 0;
+  font-size: var(--font-size-500);
+  font-weight: var(--font-weight-medium);
+  /*
+    Arabic leading, for the reason §2 gives and §6 measures: مُخفَّض reaches
+    above the font's declared ascent, and a heading set to a Latin-fitted
+    line-height clips the diacritics. A dialog title is short, which is exactly
+    when a tight leading looks safe and is not.
+  */
+  line-height: var(--line-height-normal);
+}
+
+.mz-dialog__description {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--font-size-300);
+  line-height: var(--line-height-normal);
+}
+
+.mz-dialog__body {
+  font-size: var(--font-size-300);
+  line-height: var(--line-height-normal);
+}
+
+/* --------------------------------------------------------------- the actions */
+
+.mz-dialog__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-100);
+
+  /*
+    The actions sit at the reading END of the row — the right in English, the
+    left in Arabic — and neither side is named. `flex-end` is a position on the
+    inline axis rather than a physical edge, so the whole row flips with the
+    document and the committing action stays last in reading order in both.
+  */
+  justify-content: flex-end;
+
+  margin-block-start: var(--space-100);
+}
+
+/*
+  Wrapped actions fill the row rather than huddling at one end. Two long Arabic
+  labels — "الاحتفاظ بالرحلة" against "Keep trip" — are the case this is for:
+  §6 measured Arabic running to 117 per cent of English on some strings, so a
+  row that fits on one line in English is a row that wraps in Arabic, and a
+  wrapped row of right-aligned buttons reads as a mistake.
+*/
+@media (max-width: 26rem) {
+  .mz-dialog__actions > * {
+    flex: 1 1 auto;
+  }
+}
+
+/* ---------------------------------------------------------- reduced motion */
+
+/*
+  There is no entrance animation, and that is the decision rather than an
+  omission. A modal takes focus and makes everything else inert at the moment
+  it appears; animating it in delays the point at which a keyboard user's focus
+  is somewhere predictable, and a dialog that fades is a dialog whose first
+  200ms are spent not being usable. Decision 021's scale exists and is
+  deliberately not reached for here.
+
+  So there is nothing for prefers-reduced-motion to reduce, and this block says
+  the question was asked rather than changing anything.
+*/

@@ -31,7 +31,7 @@
  */
 
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 
 /* ------------------------------------------------------------------ *
  * Layout
@@ -88,13 +88,45 @@ export function customPropertyName(tokenPath, prefix = '') {
   return `--${prefix ? `${prefix}-` : ''}${tokenPath.split('.').join('-')}`;
 }
 
+/** `import './Button.css'` / `import '../styles/focus.css'` — side-effect only. */
+const CSS_IMPORT = /^\s*import\s+['"](\.{1,2}\/[^'"]+\.css)['"]/gm;
+
 /**
- * The stylesheet a component's source sits beside — same directory, same
- * basename. A convention, stated here once rather than assumed in two scripts.
+ * Every stylesheet a component's source imports, in the order it imports them.
+ *
+ * This used to be one file found by convention — the `.css` sitting beside the
+ * source with the same basename — and that convention was true until it was
+ * not. Extracting the focus indicator into a shared `styles/focus.css` gave
+ * four components a second stylesheet each, and a contract derived from the
+ * convention silently dropped `focus.ring` and `focus.ring-contrast` from all
+ * four token lists. The components had not stopped rendering a focus
+ * indicator; the generator had stopped being able to see it.
+ *
+ * That is the failure mode this repository keeps finding: not a wrong answer,
+ * a smaller one, reported as a pass. So the question is asked of the source
+ * rather than of the filesystem — a component's stylesheets are the ones it
+ * says it imports, which is a fact rather than a naming convention, and it
+ * keeps working the next time a component composes a second shared sheet.
+ *
+ * Only relative, side-effect CSS imports are read. A package import
+ * (`import '@mizan/tokens/tokens.css'`) is deliberately not followed: those are
+ * the token DEFINITIONS, and a contract that listed them would be recording
+ * what the system publishes rather than what this component consumes.
  */
-export function stylesheetBeside(sourceFile) {
-  const css = sourceFile.replace(/\.[^./\\]+$/, '.css');
-  return existsSync(css) ? css : null;
+export function componentStylesheets(sourceFile) {
+  let source;
+  try {
+    source = readFileSync(sourceFile, 'utf8');
+  } catch {
+    return [];
+  }
+  const dir = dirname(sourceFile);
+  const files = [];
+  for (const match of source.matchAll(CSS_IMPORT)) {
+    const resolved = resolve(dir, match[1]);
+    if (existsSync(resolved) && !files.includes(resolved)) files.push(resolved);
+  }
+  return files;
 }
 
 const VAR_REFERENCE = /var\(\s*(--[A-Za-z0-9_-]+)/g;

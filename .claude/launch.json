@@ -17,7 +17,8 @@
       "name": "mizan-storybook",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "storybook", "--workspace", "@mizan/components", "--", "--no-open"],
-      "port": 6006
+      "port": 6006,
+      "autoPort": true
     }
   ]
 }

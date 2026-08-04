@@ -1,0 +1,70 @@
+/*
+  The focus indicator, defined once.
+
+  Decision 019 settled that Mizan's focus indicator is two-tone — a band of
+  focus.ring with a band of focus.ring-contrast on either side — and gave the two
+  tones their own token names. What it did not settle is the CONSTRUCTION that
+  draws them, and for four components that construction was copy-pasted.
+
+  Input.css wrote the rule for extracting it: two occurrences is a coincidence,
+  three is a pattern. Button and Input were two. RideCard was three and
+  ProductCard was four, and both of those recorded the extraction as owed
+  instead of doing it. This file is that debt paid.
+
+  ## Why a class and not a token
+
+  The two COLOURS are tokens and stay tokens. What is here is the geometry that
+  arranges them — a 2px outline, offset by 2px, over an 8px shadow — and that is
+  a component-layer concern. Decision 022 named the component token layer this
+  system has not built; until it exists, a shared stylesheet is where a shared
+  construction lives, and the alternative was a fifth copy.
+
+  ## Why the utility knows nothing about its consumers
+
+  The obvious shortcut is one rule listing every component's selector:
+
+      .mz-button:focus-visible, .mz-input__field:focus-visible, … { … }
+
+  That is one definition and it is the wrong shape: this file would have to be
+  edited every time a component is added, and it would hold a list of every
+  class name in the library. The dependency has to point the other way — a
+  component opts in by naming the utility, and this file never learns who did.
+
+  ## The two selectors, and why there are two rather than one
+
+  Three of the four consumers take focus themselves. RideCard does not: its
+  real focus lands on a radio that is visually hidden inside the card, and the
+  ring has to be drawn on the card. That is not a special case to be smoothed
+  away — it is the correct construction for any control whose focusable element
+  is not the thing a user sees — so it gets a name of its own.
+
+    .mz-focus-ring          the element itself takes focus
+    .mz-focus-ring-within   a descendant takes focus and this element shows it
+
+  Both resolve to the same three declarations, which is the whole point.
+
+  ## What is deliberately NOT here
+
+  No border-radius and no offset override. Both mechanisms follow the element's
+  own corners, so the indicator mirrors with `dir` for free and a control does
+  not change shape at the moment it is being pointed at. A consumer that needs a
+  different radius sets it on its own rule — ProductCard's link does, because an
+  inline link is not a rounded box — and that stays local rather than becoming a
+  variant here.
+
+  Nor is z-index. Button raises itself so its ring paints over a pressed
+  neighbour in a segmented control; that is a fact about Button's layout, not
+  about focus, and it stays in Button.css.
+
+  ## :focus-visible, not :focus
+
+  So a pointer click does not paint a ring a mouse user did not ask for, while a
+  keyboard user still gets one.
+*/
+
+.mz-focus-ring:focus-visible,
+.mz-focus-ring-within:has(:focus-visible) {
+  outline: var(--space-25) solid var(--focus-ring);
+  outline-offset: var(--space-25);
+  box-shadow: 0 0 0 var(--space-100) var(--focus-ring-contrast);
+}
