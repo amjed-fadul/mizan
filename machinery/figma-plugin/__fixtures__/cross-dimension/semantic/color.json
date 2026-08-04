@@ -1,0 +1,9 @@
+{
+  "text": {
+    "$type": "color",
+    "secondary": {
+      "$value": "{grey.500}",
+      "$description": "Deliberately wrong: overridden by BOTH dimensions instead of being expressed as a selector plus slots. The plugin must refuse this rather than pick a winner, because a Figma variable holds one value per mode of ONE collection."
+    }
+  }
+}

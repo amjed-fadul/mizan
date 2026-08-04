@@ -14,7 +14,10 @@ The load-bearing rule is the seam between `machinery/` and `content/`. Machinery
 | Directory | Holds |
 |---|---|
 | `machinery/` | Brand-agnostic pipeline, deterministic checks, component metadata, agent instructions. No Mizan values. |
+| `machinery/figma-plugin/` | Mizan Sync — the Figma plugin that writes variables from the token JSON, the generated proof sheet, and the read-only bridge the drift detector reads through. One-way, outward, no delete. |
+| `machinery/scripts/` | The gates: schema, contrast, drift, the self-test that proves they reject things, and the health dashboard. |
 | `content/` | Mizan's own tokens, rules, and Arabic specifics. No pipeline logic. |
+| `packages/` | Generated and consuming code. `packages/tokens/` is build output — CSS, iOS and Android, never hand-edited. `packages/preview/` is the live preview app. |
 | `brief/` | The Mizan Labs product brief — what Market and Move are and which surfaces exist. |
 | `decisions/` | The Decision Log: the significant calls, with reasoning and consequences. |
 | `audit/` | Assessments written before an intervention. What is true and what it costs — not what we chose. |
@@ -32,10 +35,11 @@ Tokens are the only editing surface. CSS variables and Figma variables are gener
 
 ## Status
 
-**Stage 2 — the foundation is re-architected, and it is visible.**
+**Stage 3 — Figma joins, synced.** The tooling is built; the component library is not.
 
-- **Stage 1** audited Mizan v0 and wrote down what it costs: 33 distinct colour values, four spacing rhythms, four button implementations behind three contradictory APIs, 72 physical direction properties and not one logical, and an accessibility floor that turns out to be mostly a token problem. [`audit/`](./audit/).
-- **Stage 2** rebuilt the foundation. Spec-strict DTCG source in [`content/tokens/`](./content/tokens/) as the only editing surface; two blocking gates in [`machinery/scripts/`](./machinery/scripts/) — structure and WCAG contrast — with a self-test that proves they reject a broken token set rather than merely accepting a good one; generated CSS, iOS and Android output in `packages/tokens/` for four mode combinations; and a preview in `packages/preview/` that reads the build output rather than restating it.
-- **Decisions 001–013 and 018** are in [`decisions/`](./decisions/), including the ones that were refusals. 014–017 are numbered and not here: they belong to Stage 3, on another branch.
+- **Stage 1** audited Mizan v0 — 33 distinct colour values, four spacing rhythms, four button implementations behind three contradictory APIs, 72 physical direction properties and not one logical, and an accessibility floor that is mostly a token problem. [`audit/`](./audit/).
+- **Stage 2** rebuilt the foundation: spec-strict DTCG source in [`content/tokens/`](./content/tokens/) as the only editing surface, two blocking gates with a self-test that proves they reject a broken token set rather than merely accepting a good one, generated CSS, iOS and Android output for four mode combinations, and a preview in `packages/preview/` that reads that output rather than restating it.
+- **Stage 3** built Mizan Sync, the Figma plugin that writes the variables; the drift detector with nine drift classes; the health dashboard; a generated proof sheet that binds every projected variable to a real node rather than asserting it reached Figma; and a read-only localhost bridge, because Figma gates the variables REST API for reading as well as writing.
+- **Published:** the Figma **variable library** — 74 variables in three collections, of which the semantic layer is what consumers see. **Not published, because it does not exist yet:** the component library. Components are Stage 4.
 
-Stage 3 — Figma, the sync plugin and the drift detector — is not in this branch. There is no `check-drift.mjs` here, and nothing in `machinery/` yet talks to Figma.
+Eighteen Decision Log entries so far, and the refusals are the useful ones. Implementation continues stage by stage per the roadmap.

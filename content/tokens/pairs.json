@@ -29,7 +29,7 @@
       "foreground": "text.on-action",
       "background": "action.primary",
       "context": "text",
-      "$description": "Label text on the primary action. action.primary is one value in both products (decision 008), so this pair must hold in every mode."
+      "$description": "Label text on the primary action. action.primary resolves per product — green.600 in Market, blue.600 in Move (decision 008) — so this pair is two fills, not one, and both were set at the lightness that lets white sit on them: 5.64:1 on green.600 and 5.27:1 on blue.600. Theme never touches either, so the same two ratios hold in all four combinations. The blue is the binding case, and a brand change in either product has to clear 4.5 here before it ships."
     },
     {
       "foreground": "text.on-action",

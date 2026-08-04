@@ -1,0 +1,19 @@
+{
+  "name": "figma-token-sync",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "One-way sync from a DTCG token root into Figma variables. Brand-agnostic: everything specific comes from the token root it is pointed at.",
+  "scripts": {
+    "build": "node build.mjs",
+    "typecheck": "tsc --noEmit",
+    "bundle": "node bundle.mjs",
+    "dry-run": "node build.mjs --quiet && node dry-run.mjs",
+    "test": "node build.mjs --quiet && node dry-run.mjs"
+  },
+  "devDependencies": {
+    "@figma/plugin-typings": "^1.132.0",
+    "esbuild": "^0.28.1",
+    "typescript": "^5.9.0"
+  }
+}

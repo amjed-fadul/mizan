@@ -1,0 +1,25 @@
+{
+  "line-height": {
+    "$type": "number",
+    "normal": { "$value": 1.5, "$description": "Latin leading." },
+    "loose": { "$value": 1.75, "$description": "Leading for a script that needs more room." }
+  },
+  "font-family": {
+    "$type": "fontFamily",
+    "sans": { "$value": ["System UI", "Helvetica", "sans-serif"], "$description": "A stack, so the projection has to narrow it." },
+    "other-script": { "$value": ["Some Script Face", "sans-serif"], "$description": "The same role, other script." }
+  },
+  "shadow": {
+    "$type": "shadow",
+    "raised": {
+      "$value": {
+        "color": { "colorSpace": "srgb", "components": [0, 0, 0], "alpha": 0.1, "hex": "#000000" },
+        "offsetX": { "value": 0, "unit": "px" },
+        "offsetY": { "value": 2, "unit": "px" },
+        "blur": { "value": 4, "unit": "px" },
+        "spread": { "value": 0, "unit": "px" }
+      },
+      "$description": "A composite. Figma has no composite variable, so this must be reported as skipped rather than flattened."
+    }
+  }
+}

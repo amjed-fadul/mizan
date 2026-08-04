@@ -8,6 +8,18 @@ RTL correctness is not a review step and not a specialist's job. Every agent, sc
 
 Arabic here is the advanced stress test of a global-grade system, not a fork of it. If a rule below only makes sense for Arabic, it is probably in the wrong place — the direction-neutral version of it belongs in the core.
 
+## The coverage of this file is the ceiling on the coverage of the audit
+
+The Stage 1 audit read every file in v0 and did not report the underline, transparency, line-breaking or text-expansion defects that were sitting in front of it — `text-decoration: underline`, `line-through` and `opacity: 0.5` are all in v0 today. It missed them because it audited Mizan against Mizan's own rules, and these rules did not contain them. An audit finds what some rule makes findable, and no more.
+
+That is the whole reason this is a living document rather than a finished one. An unwritten rule is an unfindable defect.
+
+## Sources
+
+The rules here are ours, but they are not all discovered here. The largest external source is Ahmad Shadeed's [RTL Styling 101](https://rtlstyling.com/posts/rtl-styling/), the fullest public treatment of the subject, and several rules below exist because that guide names a failure we had not written down.
+
+Everything taken from it was re-verified in a current browser before being adopted, because the guide dates from 2019–20 and parts of it have expired. Where its advice is no longer needed it has been dropped rather than repeated: the `box-shadow` fallback for underlines, physical fallbacks for logical `border-radius`, and the LTR/RTL stylesheet-doubling tools it recommends, which produce two physical stylesheets and contradict §1 outright. The guide also branches on `[dir="rtl"]` inside component selectors — reasonable in a codebase without logical properties, unnecessary in one with them, and forbidden by §1. One piece of its advice is refused rather than expired — the placeholder that changes alignment as the user types into it — and the reason is in §6. Individual departures are noted where they arise.
+
 ---
 
 ## 1. Direction and layout
@@ -26,7 +38,19 @@ Arabic here is the advanced stress test of a global-grade system, not a fork of 
 
 Block-direction properties (`margin-top`, `padding-bottom`, `height`) are unaffected and stay as they are. The rule is about the *inline* axis only.
 
-Direction is set once, high up, via `dir` on a root element. Components never set `dir` themselves and never read it to branch their styling. A component that needs to know the direction to lay itself out is a component that has not been written with logical properties.
+**The logical corner radii need no fallback.** `border-start-start-radius` and its three siblings arrived later than logical margin and padding, which is why older advice pairs them with physical fallbacks and a PostCSS plugin. They have been Baseline widely available since September 2021 and the fallback is now the more dangerous half: a physical `border-radius` written underneath a logical one does not flip, so it quietly reinstates the defect it was added to hide, in exactly the browsers nobody is testing. What the failure looks like is a tab, chip or segmented control with its rounded end on the wrong side — square corners butted against the page edge and round ones against the neighbour they were meant to join.
+
+### What `dir` does not reach
+
+Setting the direction flips the box model and the text. It does not touch a property that names a physical axis, and those properties are what produce a half-flipped screen — which the audit already established reads as more broken than an unflipped one.
+
+- **Transforms do not flip.** `translateX(6px)` moves six pixels rightward in both directions. An arrow that nudges forward on hover in English nudges backwards in Arabic, into the word it just came out of, and a panel that slides in from off-screen slides in from the wrong edge. A transform that means "forward" either takes its sign from the direction or is not used: animate `margin-inline-start` or `inset-inline-start` instead. See §5 for the one place a transform is allowed to encode direction, and for what it does to everything else on the element.
+- **Background images do not flip, and `background-position` has no logical keywords.** This was checked rather than assumed: `background-position: inline-start 6px center` does not parse in a current engine — `left`, `right`, `top` and `bottom` are all there is. A search glyph painted as a background image on the right edge of a field stays on the right edge in Arabic, at the opposite end from the caret and the placeholder it belongs to, and any arrow drawn into the image points the way it was drawn. Directional affordances are elements or pseudo-elements placed with `inset-inline-*`. If something genuinely has to be a background image, it needs a per-direction asset chosen by the mirroring flag in §5, not a position that gets nudged.
+- **Scrollbars flip, and their side is not yours to assume.** A scrolling container inside an RTL subtree puts its scrollbar on the left. Physical padding reserved for it then opens a gap on one side while content slides under the bar on the other. Reserve the space with `scrollbar-gutter: stable` and logical padding. The viewport's own scrollbar is a separate question that engines answer differently — Chromium keeps it on the right even with an RTL root — so no layout may depend on which side it lands.
+
+The *layout* direction is set once, high up, via `dir` on a root element. Components never read it to branch their styling, and a component that needs to know the direction to lay itself out is a component that has not been written with logical properties.
+
+What `dir` may still do further down is declare the direction of the *content* inside a particular element. There are three such cases and no others: content that may be in either direction — declared from data where we know it, `dir="auto"` where nobody can (§3); a field whose value is Latin whatever the page is (§6); and a surface drawn by somebody else that the bidirectional algorithm must not touch (§7). Each of those is a statement about content. None of them is a component choosing a layout.
 
 ## 2. Typography
 
@@ -34,6 +58,33 @@ Direction is set once, high up, via `dir` on a root element. Components never se
 - **Arabic needs more line-height than Latin at the same size.** Ascenders, descenders and diacritics occupy more vertical space. The Arabic scale compensates rather than inheriting Latin values: `line-height.arabic-tight` / `-normal` / `-relaxed` at 1.45 / 1.75 / 1.9 against Latin's 1.25 / 1.5 / 1.7. The size of that gap is itself the argument — Arabic body text needs roughly what Latin uses for long-form, so the two are offset by about a full step and no single shared value is anything but cramped Arabic or loose Latin.
 - **The font stack must contain a real Arabic face**, not a Latin face with fallback. A Latin-only stack does not fail loudly; it silently hands Arabic rendering to whatever face each OS picks, so the same string is set differently on iOS, Android and Windows and nobody chose any of it. `font-family.arabic` is that face. Note that `system-ui` does not satisfy this rule: it is not an Arabic face, it is a promise that the OS will choose one.
 - **The optical correction is a token, not an adjustment each designer makes by eye.** Arabic set at a Latin `font-size` reads as the smaller of the two. `font-size.arabic-scale` is `1.08`, and the value is bounded rather than chosen freely: the tightest step in the Latin scale is 12px to 13px, a ratio of 1.083, so a correction of 1.083 or more makes the Arabic rendering of one rung indistinguishable from the Latin rendering of the next and an eight-step scale becomes seven. If Arabic ever needs a larger correction, the 12/13 pair is what has to change first. Because line-height is a unitless ratio, the correction reaches leading on its own and must not be applied twice.
+
+### Underlines, and why the browser's default is not the fix
+
+Arabic carries dots below the baseline — ب, ي, ج all do — and a default underline is drawn straight through them. The reader does not see an underlined word. They see letters whose dots have fused with a line, and the dots are the entire difference between ب, ت and ث.
+
+The known answer is `text-decoration-skip-ink`, and it has since been absorbed into the platform: `auto` is the initial value, every current engine implements it, so the property is already on and no rule is needed to switch it on. What it actually does under Arabic is worth looking at rather than assuming, because it does not solve this. Skip-ink interrupts the line wherever a glyph crosses it; on an Arabic string that fires several times per word, and a link arrives as four or five dashes with the dots sitting in the gaps between them. The collision has been traded for a broken line.
+
+- **A link underline declares its offset and its thickness.** Pushing the line clear of the dots — `text-underline-offset` of roughly a quarter em at interface sizes — restores one continuous underline that touches nothing. Verified at 16px in a current browser: default renders as fragments, offset renders as a single line. This belongs in the token layer for the same reason the optical size correction does; an offset chosen per component is an offset that will differ per component.
+- **Never `text-decoration-skip-ink: none`.** It restores the collision the default was added to prevent, and the result is worse than either alternative.
+- **`line-through` is outside all of this.** Skip-ink applies to underlines and overlines only, so a strikethrough is drawn across whatever glyphs are there and there is no property that will move it. A struck-out "was" price therefore has a line through the letterforms and the digits, which means the strike cannot be the only thing carrying the meaning: the old price needs its own colour token and its own label as well. The amount inside it is a formatted quantity like any other and goes through the boundary in §4 — a struck price assembled by concatenation is struck through in whatever scrambled order the bidirectional algorithm produces.
+
+### Text colour is opaque
+
+**Never give text colour an alpha channel.** `color: rgba(...)` on Arabic produces visible dark patches along the joins between letters — the guide's "areas with a different colour between letters", and the reader's impression is of grubby marks or a font that has failed to load. The cause is mechanical rather than mysterious: Arabic is cursive, adjacent glyph outlines overlap where the letters connect, and a translucent fill painted glyph by glyph accumulates in the overlap. It reproduces today, in a current browser, in three different Arabic faces, and it is clearer in colour than in grey because the overlap comes out more saturated as well as darker.
+
+**`opacity` does not cause this, and is still not how a disabled state is built.** The two are usually named together and they should not be. An element with `opacity` is composited once, already flattened, so the joins stay uniform — tested side by side against the `rgba` case, which fails in the same string at the same size. Separating them matters because it changes the fix: the rule is about the *colour*, and moving a disabled style from `rgba` to `opacity` would look like compliance while fixing nothing that needed fixing.
+
+What is wrong with `opacity: 0.5` on a disabled control is a different thing entirely. It produces a rendered colour that no token declares, so the resulting foreground/background pairing cannot appear in `pairs.json` and sits outside the contrast guarantee of [decision 010](../../decisions/010-contrast-is-a-token-layer-guarantee.md). A disabled state is a declared pair of tokens. v0 carries `opacity: 0.5` on the disabled button in all three stylesheets, which is one unreviewable contrast ratio per product.
+
+### Arabic does not break, and does not abbreviate
+
+**Never `word-break: break-all`, and never `overflow-wrap: anywhere`, on anything that can hold Arabic.** Verified: ميزان broken across a line becomes م on one line and يزان on the next, and because the letters re-form according to their position, neither fragment is the shape it was — the reader is looking at two words that are not words, not at a word with a break in it. Latin loses a hyphen; Arabic loses the letterforms. There is no such thing as a word break in Arabic because there is no gap inside a word to break at.
+
+- The only permitted emergency wrap is `overflow-wrap: break-word`, which breaks a word solely when it cannot fit on a line by itself. That is common for a URL or an order reference and rare for an Arabic word, which is the whole difference between it and `anywhere`.
+- Hyphenation has nothing to do and should not be switched on hopefully. There is no Arabic hyphen.
+
+**Arabic has no abbreviations.** "Saturday" shortens to "Sat"; السبت does not shorten, because its letters are joined and the first three of them are not a word. Any component API that shortens by character count — a three-letter weekday, a two-letter month, a `maxChars` prop — is untranslatable by construction rather than merely awkward, and what ships is a label that reads as a typing error. Short and long forms are two authored strings in the catalogue and the component selects a variant. It never takes a substring.
 
 ### The Arabic scale is a mode of the Latin scale, not a parallel scale
 
@@ -43,7 +94,7 @@ Run it on every Arabic typography token. `line-height.arabic-normal` has `line-h
 
 Three consequences, stated because they are costs and not conveniences:
 
-- **Script becomes a third mode dimension.** Combinations go from four (light/dark × Market/Move) to eight. Decision 007 cites Figma Professional's ten-mode ceiling as a constraint at four; at eight it is a live one, and any fourth dimension now has to displace something rather than be added.
+- **Script becomes a third mode dimension.** Combinations go from four (light/dark × Market/Move) to eight. This originally continued *"decision 007 cites Figma Professional's ten-mode ceiling as a constraint at four; at eight it is a live one, and any fourth dimension now has to displace something"* — which is retracted. Figma's ten-mode limit is **per variable collection**, and the sync plugin maps one collection per dimension, so each collection holds two modes however many dimensions exist and the eight combinations are never materialised as modes at all. See the corrections in [013](../../decisions/013-script-is-a-mode-not-a-parallel-scale.md) and [014](../../decisions/014-direction-is-not-a-mode-dimension.md). The real cost of a further dimension is the slot indirection, not a mode budget.
 - **Script mode is not applied where the other two are.** Light/dark and Market/Move are properties of a whole rendered page. Script is not. An Arabic page contains Latin runs and an English page contains Arabic ones — that is what §3 exists for — so the script mode is scoped to a subtree, selected by `:lang()` and set on the same element that sets the language. A script mode applied at the document root is wrong for precisely the content the bidi rules are about.
 - **The two scales have to stay the same shape.** Three line-height steps on each side, not four and three. One size multiplier, not eight Arabic sizes shadowing eight Latin ones. Two scales with different shapes are two scales, and a mode has nothing left to resolve. This is also why the optical correction is a single multiplier: a parallel eight-step Arabic size scale would drift from the Latin one the first time either end was adjusted, and a multiplier cannot drift because there is only one of it.
 
@@ -53,9 +104,25 @@ A mode means one name resolving to different values, not to the same value. Noth
 
 Mixed-direction content is the normal case in this market, not the exception. A product title like `Apple iPhone 17 Pro` inside an Arabic layout, an address with an Arabic street name and a Latin building number, a phone number, a licence plate.
 
-- **Wrap runs of opposite-direction content in `<bdi>`.** Without it, the bidirectional algorithm reorders neighbouring punctuation and digits in ways that look like a rendering bug and are actually correct behaviour applied to unmarked content.
+- **Wrap runs of opposite-direction content in `<bdi>`.** Without it, the bidirectional algorithm reorders neighbouring punctuation and digits in ways that look like a rendering bug and are actually correct behaviour applied to unmarked content. A phone number is the cheapest demonstration: `+971 50 123 4567` dropped unmarked into an Arabic sentence renders with its `+` at the far end of the number, so the reader meets the digits first and the plus afterwards. The value is right and the screen is wrong, and nobody can tell by looking whether the number was stored correctly.
 - Never build a mixed-direction string by concatenation and hope. Isolate the parts.
 - Test with a real mixed string, not with Latin text in an RTL container. The second one looks fine and proves nothing.
+
+### `<bdi>` and `dir="auto"` are not two ways of doing the same thing
+
+They overlap enough to look like alternatives. They are not, and the difference is the case this section did not previously cover.
+
+For an inline run they are equivalent, and measurably so: `<bdi>` computes `unicode-bidi: isolate` and takes its direction from its content, and a `<span dir="auto">` computes exactly the same thing, because the HTML rendering rules now give an isolate to any element carrying a `dir` attribute. We keep `<bdi>` for reasons that survive that equivalence — it is an element rather than an attribute, so it cannot be stripped by a sanitiser or lost in a refactor that rewrites props, and it states in the markup that this run's direction is not the sentence's. Adopting `dir="auto"` alongside it would be a second mechanism for a job that already has one.
+
+Where they genuinely differ is that **`<bdi>` isolates a run and `dir` sets the direction of a block** — and alignment, and the end an ellipsis is placed at, belong to the block. An English product title inside an RTL card truncates at its *beginning*: `...o the Mizan store for shopping`, with the start of the sentence thrown away and the end kept. Wrapping that title in `<bdi>` does not change it, because the block still runs right to left. Setting `dir` on the block does: the same string truncates as `Welcome to the Mizan store f...`. Both results were rendered and read off the screen, not reasoned about.
+
+So the rule has two halves and neither replaces the other:
+
+- **Runs inside a sentence are wrapped in `<bdi>`.** Unchanged.
+- **A block whose entire content may be in either direction carries its own `dir`, set from data wherever the data knows.** The catalogue knows the language of a product title. The HTML specification is explicit that `dir="auto"` is a last resort, for when the direction is "truly unknown, and no better server-side heuristic can be applied" — and a design system with a string catalogue nearly always has a better heuristic than the browser does.
+- **`dir="auto"` is for content whose direction genuinely cannot be known**: a search query, a review body, a customer's name, an address line somebody typed.
+
+The reason to prefer the known value over the heuristic is that `dir="auto"` reads the first strong character and nothing else. `Lipton شاي أحمر` resolves to LTR, verified, because it opens with a Latin brand name — and this catalogue is full of Arabic titles that open with Latin brand names. The heuristic is right often enough to pass review and wrong exactly where our content lives.
 
 ## 4. Numbers, currency and the formatting boundary
 
@@ -106,7 +173,61 @@ The question is not "is the layout RTL" but **"does this icon describe the inter
 
 Every icon carries an explicit mirroring flag. The default is *do not mirror*, because a wrongly-mirrored real-world icon is a worse failure than an unmirrored arrow.
 
-## 6. Surfaces the system does not own
+### How a mirror is implemented
+
+The flag says *whether*. It has never said *how*, and the two available answers are not interchangeable.
+
+**`scaleX(-1)` is the default mechanism.** It costs no asset, it cannot drift from the original the way a separately drawn mirror can, and it leaves the layout box untouched, so hit area, focus ring and alignment are unaffected. It flips everything the element renders, which is the part that has to be checked:
+
+- **Text and numerals inside the icon flip too**, and mirrored text is not text — it is a smear that a reader will stare at. Any icon carrying a glyph (a numbered marker, a badge with a count, a keyboard key, a currency mark) cannot use the transform.
+- **Lighting flips.** A gradient, an inner shadow or an asymmetric stroke terminal encodes where the light comes from. Mirroring moves the light source, and next to icons that did not mirror, that one icon is now lit from the other side — visible as a set that has stopped looking like a set, even to someone who cannot say why.
+- **It inverts every other transform on the same element.** Under `scaleX(-1)`, a `translateX(6px)` hover nudge moves the other way. That is composition working correctly, not a bug, but it means a mirrored icon that also animates must be authored as one composed transform rather than two independent declarations — and it is the reason §1 says a directional transform needs its sign derived rather than written.
+
+**A separate asset is the other answer**, and it is required for the icons above and for any icon whose correct mirror is not its reflection — anything a designer would redraw rather than flip.
+
+That makes the flag three-valued rather than boolean: *does not mirror*, *mirrors by transform*, *mirrors by asset*. The default is still *does not mirror*, and an icon whose flag says *mirrors by asset* without the asset existing is a build failure, not a fallback to the transform.
+
+## 6. Components
+
+Everything above is about properties. This section is about component APIs, because a rule that a prop can violate is not enforceable by any amount of CSS discipline. Each defect here enters through an API decision that looks direction-neutral at the moment it is made, and each of them lands in Stage 4 rather than in a stylesheet.
+
+### The same label is not the same size in Arabic
+
+Translation changes the length of a string in both directions and by more than padding absorbs. Measured in one face at one size — 16px `system-ui`, current Chromium — "Done" sets 38.3px wide and تم sets 15.1px, 39 per cent of it. That is the guide's example and it holds. "Remove" against إزالة is 43 per cent. But "Add to cart" against أضف إلى السلة is 117 per cent, and "View all" against عرض الكل 115. Arabic is not shorter than English. It is differently long, string by string, and no per-component allowance covers both ends.
+
+What the reader sees at the contraction end is a button-shaped slab of brand colour with two characters stranded in the middle of it, which reads as a label that failed to load rather than as a word. At the expansion end the label wraps onto a line the control has no room for, or is clipped, or is ellipsised — an action whose name has been cut in half at the moment of pressing it.
+
+- **A component does not take a width.** Width is content plus padding, with a `min-width` from the token layer where a control needs a floor to stay a tap target. The guide's advice is a `min-width` on the button that broke; the rule is the same measure made a property of every component rather than a patch applied to the one somebody noticed.
+- **Nor a height fitted to Latin ink.** The vertical axis is worse because it clips instead of reflowing. At 16px in the same face, "Checkout" paints 12.0px of ink; إتمام الشراء paints 16.5px, because Arabic descends below the baseline as a matter of course; and مُخفَّض, with its diacritics, paints 19.1px and reaches 16.4px above the baseline — higher than the font's own declared ascent of 15.0px. A control whose height was measured against Latin cuts the tops off the diacritics, and §2 is why a lost mark is a different word rather than a cosmetic loss. The fix is padding and the Arabic line-height, never a fixed height.
+- **No prop shortens a string.** `maxChars`, `truncate={12}`, a three-letter weekday: §2 says why, and it applies to the API as much as to the string.
+- **The layout is always designed before the translation exists.** That is why this is an API rule and not a QA step. By the time a screen is being reviewed in Arabic, the prop that caused the problem has already been named — usually `width`, sometimes `size`.
+
+### Fields whose value is not in the language of the page
+
+Email addresses, phone numbers, URLs, IBANs, order references, card numbers and promo codes are Latin and Western-digit whatever the interface language is.
+
+The platform handles exactly one of them. Under the HTML specification's directionality algorithm an `<input type="tel">` with no `dir` attribute resolves to `ltr` whatever surrounds it, and the suggested rendering carries `input[type=tel i]:dir(ltr) { direction: ltr; }`. Nothing else is covered: `email`, `url`, `number`, `search` and plain `text` inherit the page. Verified in a current browser — every one of those computes `direction: rtl` inside an RTL page.
+
+What the user sees was rendered rather than reasoned about. `+971 50 123 4567` in a plain text input on an RTL page paints as `4567 123 50 971+`: the groups in reverse order and the country code at the far end, so somebody checking their own number is reading a different number. An email under composition is worse, because it moves — `amjed@` paints as `@amjed`, the `@` jumping to the opposite end of the field and returning once a domain is typed. In every one of these the stored value is correct and only the painting is wrong, which is exactly why it survives being tested by a developer who reads the value out of the state instead of off the screen.
+
+- **An input whose value is Latin by nature carries `dir="ltr"` explicitly.** Not inherited, not left to the user agent, and not limited to the one type the user agent already covers. These values are the transcribed identifiers of §4 and the reason is the one given there: they are compared against a thing in the world, so their order is not ours to rearrange.
+- **The placeholder is not where Arabic goes.** A field's direction is computed from its *value*; the placeholder never contributes to it. So an Arabic placeholder inside an `ltr` field is painted hard against the left edge of an interface that is read from the right. The guide's answer is to right-align the placeholder and let the alignment flip when typing starts. We refuse that one: a field that jumps as the first character lands is the defect, not the fix. Instructions belong in the label, which sits outside the field and stays RTL. The placeholder is an example of the value — `name@example.com`, `+971 50 123 4567` — and is therefore in the same script as the value.
+- **`dir="auto"` on an empty field is `ltr`.** The same rule read from the other end: auto direction comes from the value, an empty value contains no strong character, and the specified fallback is `ltr`. An Arabic search field with `dir="auto"` and an Arabic placeholder therefore opens left-aligned on an Arabic page and snaps to the right on the first letter typed. `dir="auto"` still belongs on fields whose typed value is genuinely of unknown direction (§3) — a search box, a customer's name, an address line — but nothing that matters may depend on where its placeholder sits.
+- **A multi-line field takes `dir="auto"` and gets it per paragraph.** A `<textarea dir="auto">` computes `unicode-bidi: plaintext`, so a review with an Arabic paragraph and an English one aligns each of them correctly instead of forcing both to the direction of whichever was typed first. This is the one place the browser's heuristic beats a value we could set ourselves, because the content has more than one direction in it and a single attribute could not describe it.
+
+### Component-level flips
+
+Some things flip on their own and some do not, and the split is not where intuition puts it.
+
+Flexbox and grid flip — the guide's point, still true and now unremarkable. So do the native form controls: verified, `<input type="range">` and `<progress>` set to 20 per cent both fill from the right in an RTL page with no help at all.
+
+A custom re-implementation of the same control does not, because it is built out of the one thing §1 says does not flip. The toggle switch is the case worth carrying around, and its failure is not subtle. A thumb positioned with `inset-inline-start: 2px` and moved to its "on" position with `translateX(30px)` was measured in an RTL page with the track spanning 657–717px across the viewport and the thumb 719–745px — the knob begins two pixels after the track ends. It is not at the wrong end of the track. It is outside the track altogether, floating in the gap beside it, on a control whose whole job is to show which end it is at. Half of that component was written logically and half physically, and under RTL the two halves moved in opposite directions.
+
+- **A control whose state is a position states that position logically** — `inset-inline-end` for the "on" end. If it must animate, the transform takes its sign from the direction (§1) and is authored as one composed declaration (§5).
+- The components where the flip is most of the work: toggles, custom sliders and steppers, tabs and segmented controls (which end the selection sits at, and which corners are round), carousels and anything with next and previous, drawers and sheets that enter from an edge, menus and popovers aligned to a trigger, tooltip arrows, count badges overlaid on a cart or an avatar, breadcrumb separators (§5) and the scrollbar (§1).
+- The test for a component is not "does it look mirrored". It is **"is every directional value in it derived, or is one of them written down?"** One written-down value is all a half-flipped component takes, and §1 has already said which way that reads.
+
+## 7. Surfaces the system does not own
 
 Some surfaces are drawn by somebody else and only rendered by us: a map, an embedded payment or 3-D Secure page, an OS-drawn date picker or select popup, a video player with vendor chrome, a captcha, an ad slot. They sit inside our layout, they do not read our tokens, and they do not obey our direction.
 
@@ -116,7 +237,7 @@ The rule: **the container flips, the surface does not.**
 
 - Chrome around it — controls, sheets, overlays, attribution, the ETA chip — is ours. It uses logical properties like everything else and it mirrors.
 - The surface itself is direction-neutral and is treated as an opaque box. A map is a depiction of physical space (§5), so mirroring it produces a false map.
-- This is the one place a subtree may re-set `dir`. `dir="ltr"` on the embed keeps the bidirectional algorithm away from anything the vendor draws. §1 says components never set `dir` themselves; this is the declared exception to that, and it is declared here rather than decided inside the component that happens to hold the map.
+- **`dir="ltr"` on the embed** keeps the bidirectional algorithm away from anything the vendor draws. This is the third of the three content-direction cases in §1 and the only one where the content belongs to somebody else — which is why it is declared here rather than settled inside whichever component happens to hold the map.
 - Third-party APIs almost always position in physical terms — `top`, `left`, `bottom-right`. Converting logical to physical is permitted **only in the adapter at that boundary**, and that adapter is the only place in the system allowed to contain a physical direction property. Everywhere else it is still a defect.
 
 ### Declaring one

@@ -1,0 +1,8 @@
+{
+  "text": {
+    "primary": { "$value": "{grey.900}" },
+    "secondary-one": { "$value": "{grey.500}" },
+    "secondary-two": { "$value": "{grey.900}" }
+  },
+  "surface": { "default": { "$value": "{grey.0}" } }
+}

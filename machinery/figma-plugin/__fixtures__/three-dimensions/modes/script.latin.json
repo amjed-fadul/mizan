@@ -1,0 +1,6 @@
+{
+  "text": {
+    "leading": { "$value": "{line-height.normal}" },
+    "face": { "$value": "{font-family.sans}" }
+  }
+}

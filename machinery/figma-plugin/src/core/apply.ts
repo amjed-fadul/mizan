@@ -1,0 +1,161 @@
+/**
+ * apply.ts — writing a plan, through an adapter.
+ *
+ * There is exactly one implementation of "how a plan is written", and this is
+ * it. Figma supplies one adapter, the command-line dry run supplies an
+ * in-memory one, and both drive the same code. That is deliberate: two apply
+ * paths would drift, and the whole point of the dry run is that what it proves
+ * is what actually happens.
+ *
+ * The plugin has **no delete path**. Not for orphans, not for modes, not for
+ * variables it created itself and later stopped needing. Everything it will not
+ * write is reported instead. A one-way sync that deletes is a sync that can
+ * destroy work it never owned.
+ */
+
+import type { Action, FigmaType, Plan, PlanValue, Snapshot } from './types';
+
+/**
+ * The narrow surface this plugin needs from a variables backend.
+ *
+ * Deliberately small and deliberately id-based: every method is something
+ * Figma's Plugin API does in one call, which keeps the in-memory stand-in
+ * honest rather than convenient.
+ */
+export interface VariablesAdapter {
+  readSnapshot(): Snapshot;
+  createCollection(name: string): { id: string; defaultModeId: string; defaultModeName: string };
+  renameMode(collectionId: string, modeId: string, name: string): void;
+  addMode(collectionId: string, name: string): string;
+  createVariable(collectionId: string, name: string, type: FigmaType): string;
+  setDescription(variableId: string, description: string): void;
+  setValue(variableId: string, modeId: string, value: PlanValue, resolve: (v: PlanValue) => ResolvedValue): void;
+}
+
+/** A value with any alias already turned into a concrete variable id. */
+export type ResolvedValue =
+  | { kind: 'COLOR'; value: { r: number; g: number; b: number; a: number } }
+  | { kind: 'FLOAT'; value: number }
+  | { kind: 'STRING'; value: string }
+  | { kind: 'BOOLEAN'; value: boolean }
+  | { kind: 'ALIAS'; id: string };
+
+export interface ApplyResult {
+  applied: number;
+  failures: { action: Action; message: string }[];
+}
+
+export function applyPlan(plan: Plan, adapter: VariablesAdapter): ApplyResult {
+  const snapshot = adapter.readSnapshot();
+
+  const collectionIds = new Map<string, string>();
+  const modeIds = new Map<string, string>(); // `${collection}\u0000${mode}` -> modeId
+  const variableIds = new Map<string, string>(); // `${collection}\u0000${name}` -> variableId
+
+  const collectionById = new Map<string, string>();
+  for (const collection of snapshot.collections) {
+    collectionIds.set(collection.name, collection.id);
+    collectionById.set(collection.id, collection.name);
+    for (const mode of collection.modes) modeIds.set(key(collection.name, mode.name), mode.id);
+  }
+  for (const variable of snapshot.variables) {
+    const collectionName = collectionById.get(variable.collectionId);
+    if (collectionName) variableIds.set(key(collectionName, variable.name), variable.id);
+  }
+
+  const failures: ApplyResult['failures'] = [];
+  let applied = 0;
+
+  const resolve = (value: PlanValue): ResolvedValue => {
+    if (value.kind === 'ALIAS') {
+      const id = variableIds.get(key(value.collection, value.name));
+      if (!id) throw new Error(`alias target ${value.collection}/${value.name} does not exist`);
+      return { kind: 'ALIAS', id };
+    }
+    if (value.kind === 'UNKNOWN') throw new Error(`cannot write an unreadable value: ${value.note}`);
+    return value;
+  };
+
+  // Two passes. Structure first — collections, modes, variables — so that a
+  // value written in the second pass can alias anything the token root
+  // mentions, including something created moments earlier in the same run.
+  const structure = plan.actions.filter((a) => a.op !== 'set-value');
+  const values = plan.actions.filter((a) => a.op === 'set-value');
+
+  for (const action of structure) {
+    try {
+      switch (action.op) {
+        case 'create-collection': {
+          const created = adapter.createCollection(action.collection);
+          collectionIds.set(action.collection, created.id);
+          // A new collection arrives with one mode under Figma's own
+          // placeholder name. It is renamed rather than added to, because a
+          // collection cannot have zero modes and the placeholder would
+          // otherwise survive as an orphan of this plugin's own making.
+          adapter.renameMode(created.id, created.defaultModeId, action.firstMode);
+          modeIds.set(key(action.collection, action.firstMode), created.defaultModeId);
+          break;
+        }
+        case 'rename-mode': {
+          const collectionId = requireId(collectionIds, action.collection, 'collection');
+          const modeId = requireId(modeIds, key(action.collection, action.from), 'mode');
+          adapter.renameMode(collectionId, modeId, action.to);
+          modeIds.delete(key(action.collection, action.from));
+          modeIds.set(key(action.collection, action.to), modeId);
+          break;
+        }
+        case 'create-mode': {
+          const collectionId = requireId(collectionIds, action.collection, 'collection');
+          const modeId = adapter.addMode(collectionId, action.mode);
+          modeIds.set(key(action.collection, action.mode), modeId);
+          break;
+        }
+        case 'create-variable': {
+          const collectionId = requireId(collectionIds, action.collection, 'collection');
+          const id = adapter.createVariable(collectionId, action.name, action.type);
+          variableIds.set(key(action.collection, action.name), id);
+          if (action.description) adapter.setDescription(id, action.description);
+          break;
+        }
+        case 'set-description': {
+          const id = requireId(variableIds, key(action.collection, action.name), 'variable');
+          adapter.setDescription(id, action.to);
+          break;
+        }
+        default:
+          break;
+      }
+      applied += 1;
+    } catch (error) {
+      failures.push({ action, message: messageOf(error) });
+    }
+  }
+
+  for (const action of values) {
+    if (action.op !== 'set-value') continue;
+    try {
+      const id = requireId(variableIds, key(action.collection, action.name), 'variable');
+      const modeId = requireId(modeIds, key(action.collection, action.mode), 'mode');
+      adapter.setValue(id, modeId, action.to, resolve);
+      applied += 1;
+    } catch (error) {
+      failures.push({ action, message: messageOf(error) });
+    }
+  }
+
+  return { applied, failures };
+}
+
+function key(collection: string, name: string): string {
+  return `${collection}\u0000${name}`;
+}
+
+function requireId(map: Map<string, string>, lookup: string, what: string): string {
+  const id = map.get(lookup);
+  if (!id) throw new Error(`${what} "${lookup.split('\u0000').join('/')}" was expected to exist by now`);
+  return id;
+}
+
+function messageOf(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}

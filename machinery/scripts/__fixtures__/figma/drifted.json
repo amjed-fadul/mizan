@@ -1,0 +1,365 @@
+{
+  "status": 200,
+  "error": false,
+  "meta": {
+    "variableCollections": {
+      "VariableCollectionId:1:0": {
+        "id": "VariableCollectionId:1:0",
+        "name": "primitive",
+        "modes": [
+          {
+            "modeId": "1:0",
+            "name": "Default"
+          }
+        ],
+        "defaultModeId": "1:0",
+        "remote": false,
+        "hiddenFromPublishing": false
+      },
+      "VariableCollectionId:2:0": {
+        "id": "VariableCollectionId:2:0",
+        "name": "theme",
+        "modes": [
+          {
+            "modeId": "2:0",
+            "name": "light"
+          },
+          {
+            "modeId": "2:1",
+            "name": "dark"
+          }
+        ],
+        "defaultModeId": "2:0",
+        "remote": false,
+        "hiddenFromPublishing": false
+      },
+      "VariableCollectionId:3:0": {
+        "id": "VariableCollectionId:3:0",
+        "name": "density",
+        "modes": [
+          {
+            "modeId": "3:0",
+            "name": "comfortable"
+          },
+          {
+            "modeId": "3:1",
+            "name": "compact"
+          },
+          {
+            "modeId": "3:2",
+            "name": "roomy"
+          }
+        ],
+        "defaultModeId": "3:0",
+        "remote": false,
+        "hiddenFromPublishing": false
+      },
+      "VariableCollectionId:4:0": {
+        "id": "VariableCollectionId:4:0",
+        "name": "semantic",
+        "modes": [
+          {
+            "modeId": "4:0",
+            "name": "Default"
+          }
+        ],
+        "defaultModeId": "4:0",
+        "remote": false,
+        "hiddenFromPublishing": false
+      }
+    },
+    "variables": {
+      "VariableID:1:1": {
+        "id": "VariableID:1:1",
+        "name": "color/neutral/0",
+        "variableCollectionId": "VariableCollectionId:1:0",
+        "resolvedType": "COLOR",
+        "description": "",
+        "valuesByMode": {
+          "1:0": {
+            "r": 1,
+            "g": 1,
+            "b": 1,
+            "a": 1
+          }
+        }
+      },
+      "VariableID:1:2": {
+        "id": "VariableID:1:2",
+        "name": "color/neutral/100",
+        "variableCollectionId": "VariableCollectionId:1:0",
+        "resolvedType": "COLOR",
+        "description": "",
+        "valuesByMode": {
+          "1:0": {
+            "r": 0.94,
+            "g": 0.94,
+            "b": 0.94,
+            "a": 1
+          }
+        }
+      },
+      "VariableID:1:3": {
+        "id": "VariableID:1:3",
+        "name": "color/neutral/400",
+        "variableCollectionId": "VariableCollectionId:1:0",
+        "resolvedType": "COLOR",
+        "description": "",
+        "valuesByMode": {
+          "1:0": {
+            "r": 0.55,
+            "g": 0.55,
+            "b": 0.55,
+            "a": 1
+          }
+        }
+      },
+      "VariableID:1:4": {
+        "id": "VariableID:1:4",
+        "name": "color/neutral/500",
+        "variableCollectionId": "VariableCollectionId:1:0",
+        "resolvedType": "COLOR",
+        "description": "",
+        "valuesByMode": {
+          "1:0": {
+            "type": "VARIABLE_ALIAS",
+            "id": "VariableID:1:5"
+          }
+        },
+        "_defect": "alias-unexpected. The token states the literal #808080; somebody pointed the variable at another primitive, so a raw ramp step has become a reference invented in the display."
+      },
+      "VariableID:1:5": {
+        "id": "VariableID:1:5",
+        "name": "color/neutral/600",
+        "variableCollectionId": "VariableCollectionId:1:0",
+        "resolvedType": "COLOR",
+        "description": "",
+        "valuesByMode": {
+          "1:0": {
+            "r": 0.4,
+            "g": 0.4,
+            "b": 0.4,
+            "a": 1
+          }
+        }
+      },
+      "VariableID:1:6": {
+        "id": "VariableID:1:6",
+        "name": "color/neutral/900",
+        "variableCollectionId": "VariableCollectionId:1:0",
+        "resolvedType": "COLOR",
+        "description": "",
+        "valuesByMode": {
+          "1:0": {
+            "r": 0.2,
+            "g": 0.2,
+            "b": 0.2,
+            "a": 1
+          }
+        },
+        "_defect": "value-mismatch. The source says components [0.18, 0.18, 0.18] \u2014 #2e2e2e. Somebody nudged it to #333333 in the file."
+      },
+      "VariableID:1:7": {
+        "id": "VariableID:1:7",
+        "name": "color/neutral/1000",
+        "variableCollectionId": "VariableCollectionId:1:0",
+        "resolvedType": "COLOR",
+        "description": "",
+        "valuesByMode": {
+          "1:0": {
+            "r": 0.06,
+            "g": 0.06,
+            "b": 0.06,
+            "a": 1
+          }
+        }
+      },
+      "VariableID:1:8": {
+        "id": "VariableID:1:8",
+        "name": "color/accent/500",
+        "variableCollectionId": "VariableCollectionId:1:0",
+        "resolvedType": "COLOR",
+        "description": "",
+        "valuesByMode": {
+          "1:0": {
+            "r": 0.1,
+            "g": 0.35,
+            "b": 0.2,
+            "a": 1
+          }
+        }
+      },
+      "VariableID:1:9": {
+        "id": "VariableID:1:9",
+        "name": "space/100",
+        "variableCollectionId": "VariableCollectionId:1:0",
+        "resolvedType": "FLOAT",
+        "description": "",
+        "valuesByMode": {
+          "1:0": 4
+        }
+      },
+      "VariableID:1:10": {
+        "id": "VariableID:1:10",
+        "name": "space/200",
+        "variableCollectionId": "VariableCollectionId:1:0",
+        "resolvedType": "FLOAT",
+        "description": "",
+        "valuesByMode": {
+          "1:0": 8
+        }
+      },
+      "VariableID:1:11": {
+        "id": "VariableID:1:11",
+        "name": "font-family/sans",
+        "variableCollectionId": "VariableCollectionId:1:0",
+        "resolvedType": "STRING",
+        "description": "",
+        "valuesByMode": {
+          "1:0": "Fixture Sans, Fixture Fallback, sans-serif"
+        },
+        "_defect": "value-mismatch, and the one that guards the lossy rule. The source declares a three-family stack; the sync writes the first family alone, because that is the only value Figma can bind to a font. Somebody has pasted the whole CSS stack in instead. It reads as correct to anyone who knows the source and renders as nothing in the file. It is also the shape a *divergence between the two tools* would take: if machinery/scripts/check-drift.mjs narrowed differently from machinery/figma-plugin, this is the finding that would come back after every sync, forever. Both now import the narrowing from machinery/scripts/lib/projection.mjs."
+      },
+      "VariableID:2:1": {
+        "id": "VariableID:2:1",
+        "name": "surface/default",
+        "variableCollectionId": "VariableCollectionId:2:0",
+        "resolvedType": "COLOR",
+        "description": "",
+        "valuesByMode": {
+          "2:0": {
+            "type": "VARIABLE_ALIAS",
+            "id": "VariableID:1:1"
+          },
+          "2:1": {
+            "type": "VARIABLE_ALIAS",
+            "id": "VariableID:1:7"
+          }
+        }
+      },
+      "VariableID:2:2": {
+        "id": "VariableID:2:2",
+        "name": "text/primary",
+        "variableCollectionId": "VariableCollectionId:2:0",
+        "resolvedType": "COLOR",
+        "description": "",
+        "valuesByMode": {
+          "2:0": {
+            "type": "VARIABLE_ALIAS",
+            "id": "VariableID:1:6"
+          },
+          "2:1": {
+            "r": 0.94,
+            "g": 0.94,
+            "b": 0.94,
+            "a": 1
+          }
+        },
+        "_defect": "alias-flattened, and only in dark. The source says {color.neutral.100}; the file holds that primitive's value as a raw colour instead. It looks correct today and stops moving when the primitive moves. Light is untouched, so the detector has to be per-mode to see this at all."
+      },
+      "VariableID:2:3": {
+        "id": "VariableID:2:3",
+        "name": "text/secondary",
+        "variableCollectionId": "VariableCollectionId:2:0",
+        "resolvedType": "COLOR",
+        "description": "",
+        "valuesByMode": {
+          "2:0": {
+            "type": "VARIABLE_ALIAS",
+            "id": "VariableID:1:5"
+          },
+          "2:1": {
+            "type": "VARIABLE_ALIAS",
+            "id": "VariableID:1:3"
+          }
+        }
+      },
+      "VariableID:2:4": {
+        "id": "VariableID:2:4",
+        "name": "text/on-action",
+        "variableCollectionId": "VariableCollectionId:4:0",
+        "resolvedType": "COLOR",
+        "description": "",
+        "valuesByMode": {
+          "4:0": {
+            "type": "VARIABLE_ALIAS",
+            "id": "VariableID:1:1"
+          }
+        }
+      },
+      "VariableID:2:6": {
+        "id": "VariableID:2:6",
+        "name": "border/default",
+        "variableCollectionId": "VariableCollectionId:4:0",
+        "resolvedType": "COLOR",
+        "description": "",
+        "valuesByMode": {
+          "4:0": {
+            "type": "VARIABLE_ALIAS",
+            "id": "VariableID:1:5"
+          }
+        },
+        "_defect": "alias-target-mismatch. Both sides reference; the source says {color.neutral.500} and the file says {color.neutral.600}. Which primitive a semantic name resolves to is a decision, and it was taken in the display."
+      },
+      "VariableID:2:7": {
+        "id": "VariableID:2:7",
+        "name": "border/subtle",
+        "variableCollectionId": "VariableCollectionId:4:0",
+        "resolvedType": "COLOR",
+        "description": "hairline \u2014 do not use on inputs",
+        "valuesByMode": {
+          "4:0": {
+            "type": "VARIABLE_ALIAS",
+            "id": "VariableID:1:2"
+          }
+        },
+        "_defect": "description-drift. The source carries the long $description; somebody rewrote it in Figma. The value still matches, which is the point: documentation at the moment of use has forked from the decision that produced it."
+      },
+      "VariableID:2:9": {
+        "id": "VariableID:2:9",
+        "name": "typeface/body",
+        "variableCollectionId": "VariableCollectionId:4:0",
+        "resolvedType": "STRING",
+        "description": "",
+        "_note": "Untouched, and left that way on purpose: the semantic that aliases the stack is still a reference, so the font-family finding above is the narrowing and nothing else.",
+        "valuesByMode": {
+          "4:0": {
+            "type": "VARIABLE_ALIAS",
+            "id": "VariableID:1:11"
+          }
+        }
+      },
+      "VariableID:3:1": {
+        "id": "VariableID:3:1",
+        "name": "spacing/inset",
+        "variableCollectionId": "VariableCollectionId:3:0",
+        "resolvedType": "STRING",
+        "description": "",
+        "valuesByMode": {
+          "3:0": "8px",
+          "3:1": "4px",
+          "3:2": "12px"
+        },
+        "_defect": "type-mismatch, plus the unmapped mode. The token is $type dimension in px, which the sync projects as a Figma FLOAT; this variable is a STRING, so it was hand-made rather than generated. Its collection also carries a third mode, \"roomy\", that the token source has never heard of."
+      },
+      "VariableID:2:8": {
+        "id": "VariableID:2:8",
+        "name": "text/tertiary",
+        "variableCollectionId": "VariableCollectionId:2:0",
+        "resolvedType": "COLOR",
+        "description": "third text tier, added for the promo banner",
+        "_defect": "orphan-in-figma. No token declares text.tertiary. Somebody needed a third text tier and made one in Figma. Re-syncing outward will not remove it: it has to be deleted, and if the concept is wanted it is authored in the token source first.",
+        "valuesByMode": {
+          "2:0": {
+            "type": "VARIABLE_ALIAS",
+            "id": "VariableID:1:3"
+          },
+          "2:1": {
+            "type": "VARIABLE_ALIAS",
+            "id": "VariableID:1:3"
+          }
+        }
+      }
+    }
+  }
+}

@@ -37,7 +37,7 @@ They share one core and diverge deliberately. Working out what is shared and wha
 - fix or consolidate a hex value
 - convert a physical CSS property (`margin-left`, `text-align: left`, `float`) to a logical one
 - add an `aria-label`, alt text, focus state, or any other accessibility improvement
-- deduplicate the near-identical grays, the three button implementations, or anything else
+- deduplicate the near-identical grays, the four button implementations, or anything else
 - correct the spacing scale, the type sizes, or the letter-spacing
 - add i18n plumbing or `<bdi>` wrappers
 - "tidy up while you're in there"
@@ -85,6 +85,20 @@ The short version, which the file expands: logical properties only, never `left`
 - **Review outcomes, not code.** Run it, look at it, flip it to RTL, break it on purpose.
 - **Stuck for 30 minutes means stop.** Fresh session, describe from zero.
 - **Feed the Decision Log the moment a decision happens**, not at the end of the week. Refusals especially — a documented "no" with reasons is the most valuable entry type in this repo.
+
+---
+
+## Briefing an agent
+
+Work here is often fanned out across several agents at once. Brief them **tightly** — a reading list is not a brief, and six agents each independently reading the same four documents is the same context paid for six times.
+
+- **Always name:** this file, and the files the task actually edits. Nothing else is automatic.
+- **The quarantine line goes in every brief**, however short. `legacy/` is the one mistake that destroys evidence for two whole stages, and every agent tries to tidy it on reflex.
+- **Add `git log --oneline -12` and one sibling file only when the output is prose** that has to match the house voice — a commit message, a decision entry, a README. It is what makes them read like the repo instead of like generated text. For a bug fix it is dead weight.
+- **Name one decision entry only if the task turns on that judgment.** Never a range.
+- **Pay the reading cost once.** Extract the findings into a condensed brief yourself and point agents at it, rather than having each one rediscover them.
+- **Give each agent a disjoint set of paths**, and say which paths other agents hold. Split by file ownership, not by how coupled the problem feels — tightly coupled work parallelises fine once the contract for the shared shape is written down.
+- **Verify their claims rather than relaying them.** Recompute the headline number, re-run the repro. Agents report confidently and are sometimes wrong.
 
 ---
 

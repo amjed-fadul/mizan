@@ -27,7 +27,11 @@ These are real and they shape every decision in this repo. They are not obstacle
 - **Limited engineering capacity in both product teams.** Any migration has to be incremental and mostly mechanical. A rewrite is not available.
 - **Figma Professional, not Enterprise.** No Variables REST write API and no official Code Connect. Both gaps have to be solved with plugins and open equivalents, or not at all.
 - **Two products that must stay different.** Market and Move serve different moments and different densities. A system that makes them look identical has failed, even if it is perfectly consistent.
-- **Arabic is not a locale checkbox.** It is a primary market. Right-to-left layout, Arabic-Indic numerals, currency placement, and mixed-direction content are core requirements, not a late-stage pass.
+- **Arabic is not a locale checkbox.** It is a primary market. Right-to-left layout, Arabic-Indic numerals, currency placement, and mixed-direction content were all written down here as core requirements, not a late-stage pass.
+
+  **One of those five was refused, and the refusal is left visible rather than edited out.** [Decision 012](../decisions/012-western-numerals-and-what-follows.md) ships **Western digits in both locales** — Arabic-Indic numerals are not what Mizan renders. The reasoning is in the entry: mixed-numeral columns become unscannable beside the Latin brand names that fill a Gulf grocery catalogue, and the same product's price stops being comparable between the two language versions of the same page. Most Gulf commercial software makes the same call.
+
+  This line is kept as originally written because **a brief edited to agree with its outcomes stops being evidence of anything.** What was asked for and what was decided are two different facts, and the gap between them is the part worth reading. Three things make the refusal defensible rather than convenient, and they belong beside it: the decision is stated as the *weaker* of the two arguments in its own entry and the one most likely to be revisited; the Arabic-Indic path is kept working and unused, so reversing it is a parameter rather than a rewrite; and the test is booked — research with Arabic-reading participants in Stage 8, where if participants read Western digits as untranslated rather than as normal, the argument inverts. The other four requirements on this line stand unchanged.
 
 ## What this brief is not
 
