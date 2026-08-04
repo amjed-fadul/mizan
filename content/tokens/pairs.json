@@ -1,5 +1,5 @@
 {
-  "$description": "Every foreground/background combination Mizan intends to render, with the WCAG context each is used in. machinery/scripts/check-contrast.mjs resolves both tokens in every mode combination and fails the build when a declared pair falls below its threshold. An undeclared pairing is an unchecked pairing: nothing here means nothing verified, so coverage matters as much as strictness. The escape hatch is an explicit exception with a stated reason, never a lowered threshold — and an exception is reported in the build output whether it passes or fails, because a silent exception defeats the point of having a list. See decisions/010-contrast-is-a-token-layer-guarantee.md.",
+  "$description": "Every foreground/background combination Mizan intends to render, with the WCAG context each is used in. machinery/scripts/check-contrast.mjs resolves both tokens in every mode combination and fails the build when a declared pair falls below its threshold. An undeclared pairing is an unchecked pairing: nothing here means nothing verified, so coverage matters as much as strictness. The escape hatch is an explicit exception with a stated reason, never a lowered threshold — and an exception is reported in the build output whether it passes or fails, because a silent exception defeats the point of having a list. The context \"decorative\" is not an escape hatch but the absence of a claim: it says WCAG sets no bar for this pairing, so the ratio is reported and nothing is gated. It is legitimate only where 1.4.11 genuinely does not apply, and every use has to argue that in its own $description. See decisions/010-contrast-is-a-token-layer-guarantee.md.",
   "pairs": [
     {
       "foreground": "text.primary",
@@ -34,8 +34,8 @@
     {
       "foreground": "border.default",
       "background": "surface.default",
-      "context": "ui",
-      "$description": "The 1px neutral hairline. A border is a non-text boundary, so the threshold is 3.0 — but it is a boundary a user has to be able to see, not decoration."
+      "context": "decorative",
+      "$description": "The 1px neutral hairline around a card, and the divider between list rows. Declared decorative, which means the ratio is measured and reported but nothing gates it. WCAG 1.4.11 governs the boundaries that identify user interface components and their states; a container hairline identifies no component and carries no state, so it is not one. Declaring it \"ui\" would be a category error with a visible cost — it would force every card border to roughly #949494 or darker, which is a boxed-in, heavily ruled interface nobody asked for. Leaving it undeclared would be worse: an undeclared pairing is an unchecked one, and this is the most-drawn line in either product. So it is declared, resolved in every mode, and printed on every run — visible to the system, and not wrongly failed by it. The moment a border starts identifying a control, it is border.control, and that one is gated."
     },
     {
       "foreground": "border.control",

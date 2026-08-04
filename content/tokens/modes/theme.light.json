@@ -1,0 +1,32 @@
+{
+  "$description": "theme: light. The same values the base layer holds, restated. Restating them is the point: base is light+market by convention, and if the light values existed only as the base then light would be the theme that cannot be read in one place and cannot be changed without editing the semantic layer. Every path here already exists in the base — a mode may only change a token that already exists, because a token present in one mode and absent in another is something nothing downstream can represent. Light is the binding case for almost every threshold in this system: white is the brightest ground either theme has, so a foreground that clears its bar here has headroom in dark, and the two places where that is not true are the two reds, which is exactly why the dark theme had to grow its own.",
+
+  "surface": {
+    "default": { "$value": "{neutral.0}" },
+    "sunken": { "$value": "{neutral.100}" }
+  },
+
+  "text": {
+    "primary": { "$value": "{neutral.900}" },
+    "on-action": { "$value": "{neutral.0}" },
+    "secondary-market": { "$value": "{neutral.700}" },
+    "secondary-move": { "$value": "{neutral.650}" }
+  },
+
+  "border": {
+    "default": { "$value": "{neutral.300}" },
+    "control": { "$value": "{neutral.600}" }
+  },
+
+  "commerce": {
+    "discount": { "$value": "{red.600}" },
+    "stock": {
+      "low": { "$value": "{amber.600}" }
+    }
+  },
+
+  "mobility": {
+    "safety": { "$value": "{red.700}" },
+    "surge": { "$value": "{amber.700}" }
+  }
+}

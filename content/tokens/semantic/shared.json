@@ -1,0 +1,67 @@
+{
+  "$description": "The shared semantic vocabulary — the concepts Market and Move both have, under one name each, resolved per mode. Decision 007 is the rule: a mode answers 'what value does this concept take here?', a namespace answers 'whose concept is this?'. Everything in this file passed the factual test — does the other product have this concept at all? — and everything that failed it lives in commerce.json or mobility.json instead. Nine tokens, deliberately: every shared semantic has to resolve in all four mode combinations, so each name added here is four decisions and four contrast checks, not one. Every value in this file is a reference. A semantic that restates a literal has stopped naming a decision and become a second copy of it, and machinery/scripts/check-schema.mjs rejects it as semantic-literal.",
+
+  "surface": {
+    "$type": "color",
+    "$description": "The grounds. Two of them, which is the minimum that lets a panel sit inside a page and still be seen as a separate plane.",
+    "default": {
+      "$value": "{neutral.0}",
+      "$description": "The page ground. Base is light, where it is pure white; the dark theme swaps it to neutral.1000. It is the background in eight of the eleven declared pairs, which makes it the single value most of the system's legibility hangs off."
+    },
+    "sunken": {
+      "$value": "{neutral.100}",
+      "$description": "A panel set into the page — a tinted card body, a filled input, a well. It is checked as a separate background from surface.default rather than assumed to behave like it, because it is the tighter of the two grounds in both themes and it is where text.secondary comes closest to failing."
+    }
+  },
+
+  "text": {
+    "$type": "color",
+    "$description": "Two neutral text tiers and one inverse, and no more. Decision 009 deleted the muted tier after the arithmetic showed a third step could be declared but not seen; de-emphasis below secondary is now a size and weight job, not a colour job.",
+    "primary": {
+      "$value": "{neutral.900}",
+      "$description": "Body and heading text. Not black in either theme — neutral.900 on white in light, neutral.0 on neutral.1000 in dark — which leaves 13.39:1 and 18.42:1, both far above the floor, and keeps the page from ringing on a bright screen."
+    },
+    "secondary": {
+      "$value": "{text.secondary-market}",
+      "$description": "The second and last neutral text tier. It is the one shared semantic that depends on BOTH dimensions: theme decides how light the ramp runs, product decides which step of it is taken. That is the density refusal from decision 008 kept alive as a mode difference — Market is browsed on a sofa and takes the heavier step, Move is read at a curb in one glance and takes the lighter one. Because a mode file belongs to exactly one dimension and cannot see the other, this token does not name a primitive directly: it aliases whichever of the two per-product slots below applies, and the theme dimension sets the slots. Components reference this name and stay product-agnostic; the slots are plumbing."
+    },
+    "secondary-market": {
+      "$value": "{neutral.700}",
+      "$description": "PLUMBING, NOT VOCABULARY. Market's secondary text value, resolved by the theme dimension alone: neutral.700 in light (6.90:1 on white), neutral.400 in dark (9.29:1 on neutral.1000). It exists only so that text.secondary can be selected by the product dimension after the theme dimension has already decided the value. No component may reference it — a component that does has become product-aware, which is exactly what decision 007 exists to prevent. Use text.secondary."
+    },
+    "secondary-move": {
+      "$value": "{neutral.650}",
+      "$description": "PLUMBING, NOT VOCABULARY, on the same terms as text.secondary-market. Move's secondary text value: neutral.650 in light (5.33:1 on white, and 4.76:1 on surface.sunken, the tightest text pairing in the system) and neutral.500 in dark (6.07:1). The two slots exist as a pair rather than one slot and one inline value, so that neither product's density is the default and the other the exception. Use text.secondary."
+    },
+    "on-action": {
+      "$value": "{neutral.0}",
+      "$description": "Label text sitting on a filled action. neutral.0 in both themes, because action.primary does not change with the theme — the fill is what carries the contrast, and both brand hues were set at the lightness that lets white sit on them at 4.5:1 (5.64:1 on green.600, 5.27:1 on blue.600). It is stated in both theme files rather than left to inherit, so that a future theme cannot silently invert it."
+    }
+  },
+
+  "action": {
+    "$type": "color",
+    "$description": "The primary action and its hover, resolved by product and not by theme. Decision 008's correction is the reason: the two greens that merged were both Market-lineage drift, so the merge was within Market and never across products. Market is green, Move is blue, and the audit was explicit that the two lineages stay independent.",
+    "primary": {
+      "$value": "{green.600}",
+      "$description": "The resting primary action fill. green.600 in Market, blue.600 in Move, and the same value in light and dark — a saturated fill carrying white text does not need the polarity flip a text colour does, and flipping it would make the brand two colours instead of one. This is the single-dimension case: product decides it, theme never touches it."
+    },
+    "primary-hover": {
+      "$value": "{green.700}",
+      "$description": "Hover and pressed on the primary action. The interval between 600 and 700 was set by decision 008 to the size a state change actually has to be — v0's two brand greens were 2.90 ΔE00 apart while a hover needs about 9.23 — and green and blue use the matched interval so a state change feels the same size in either product. Not declared as a pair in pairs.json: text.on-action clears 4.5:1 on the resting fill and both hover steps are darker still, so the resting pair is the binding case."
+    }
+  },
+
+  "border": {
+    "$type": "color",
+    "$description": "Two line tokens, split by what the line is doing rather than by how heavy it looks. The split is what makes the decorative context in pairs.json defensible: a divider is exempt from WCAG 1.4.11 and a control edge is not, so they cannot be the same token.",
+    "default": {
+      "$value": "{neutral.300}",
+      "$description": "The 1px neutral hairline — a card outline, a divider between list rows. Declared decorative in pairs.json, so its ratio is measured and printed in all four combinations and nothing gates it: it sits at 1.48:1 in light and 1.70:1 in dark, which is what a divider is supposed to look like. Gating it at 3:1 would force every card edge to roughly neutral.500 and produce a boxed-in interface nobody asked for. The moment a line starts identifying a control, it is border.control."
+    },
+    "control": {
+      "$value": "{neutral.500}",
+      "$description": "The boundary of an interactive control — an input, a checkbox, an unfilled button. Gated at the 1.4.11 non-text threshold, and it is the tightest gated pair in the whole system: neutral.500 on white is 3.03:1 against a 3.0 bar, 0.03 of headroom. neutral.500 exists at that value for exactly this reason and nothing lighter can hold this role on a white ground. Dark mode has room to spare at neutral.600 (4.29:1), so light is the binding case here as it is almost everywhere else."
+    }
+  }
+}

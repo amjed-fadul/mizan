@@ -35,3 +35,4 @@ Entries are numbered sequentially in the order decisions actually happen. Number
 | [008](./008-the-colour-consolidation.md) | Thirty-three colours walked in — the merges, and the three refusals | 2 |
 | [009](./009-the-text-ramp-loses-a-tier.md) | The neutral text ramp has two tiers, not three | 2 |
 | [010](./010-contrast-is-a-token-layer-guarantee.md) | Contrast is guaranteed at the token layer and enforced by a build gate | 2 |
+| [011](./011-a-hue-needs-both-ends-only-if-it-carries-text.md) | A hue gets steps at both ends of the ramp only if it carries text | 2 |

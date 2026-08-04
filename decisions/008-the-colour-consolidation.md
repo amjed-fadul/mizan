@@ -45,7 +45,9 @@ Merge on role, verified by distance. **33 values become 14.** Four consolidation
 | `surface.sunken` | `#f5f5f5` `#f2f2f2` `#eaeaea` | **0.62** | three names for a lightly tinted panel. |
 | `action.primary` | `#2e7d5a` `#2f8560` | **2.90** | **both are the brand.** See below. |
 
-The brand merge is the one that matters most and is easiest to miss. The gap between the two products' brand greens is **2.90**, while the gap a hover state is meant to signal is **9.23**. The brand was less distinct from itself than a button is from its own hover. That is a brand integrity problem, not a token cleanup, and it survives as **one value in both modes** — the only shared semantic deliberately given the same value in Market and Move.
+The brand merge is the one that matters most and is easiest to miss. The gap between the two greens is **2.90**, while the gap a hover state is meant to signal is **9.23**. The brand was less distinct from itself than a button is from its own hover.
+
+**Correction, made while authoring the primitives:** an earlier draft of this entry claimed `action.primary` resolves to the same value in both products. That was wrong, and it contradicted the audit's explicit instruction to leave Move's blue and Market's green alone. Both greens are Market-lineage — `--brand` from the ancestor stylesheet and `--color-brand-500` from Market's refresh — and Move never had a green at all. So the merge is **within Market's own drift**, not across products. `action.primary` still resolves per product mode: green in Market, blue in Move. The brand is now one green instead of two; it is not one colour instead of two products.
 
 ### The refusals
 

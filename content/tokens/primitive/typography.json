@@ -1,0 +1,90 @@
+{
+  "font-size": {
+    "$type": "dimension",
+    "$description": "The type scale. Decision 009 removed the third neutral text tier and moved de-emphasis onto size and weight, so this scale now carries hierarchy that colour used to carry and needs enough rungs to do it. Eight steps, closely spaced at the small end where the difference between a caption and a label has to be legible, and further apart at the top where a size change is a statement. The steps are numbered, not named, because a primitive must not know whether 400 is body text or a button label. These are Latin values; content/rules/rtl-arabic.md notes that Arabic and Latin at the same nominal size do not appear to be the same size, and the optical match is a decision for session 2.5, not an adjustment to make silently here.",
+    "100": {
+      "$value": { "value": 12, "unit": "px" },
+      "$description": "The floor. For dense metadata and the smallest legible label. Nothing goes below this, and anything at this size must still pass the full text contrast requirement — small is not a licence to be faint (decision 009)."
+    },
+    "200": {
+      "$value": { "value": 13, "unit": "px" },
+      "$description": "One point above the floor. A single-pixel step exists because at this size it is the difference between two tiers that a reader can actually see, and the alternative is jumping straight to 14 and losing a rung."
+    },
+    "300": {
+      "$value": { "value": 14, "unit": "px" },
+      "$description": "The de-emphasised body size — the step down that replaces the deleted muted grey when something needs to recede without becoming unreadable."
+    },
+    "400": {
+      "$value": { "value": 16, "unit": "px" },
+      "$description": "The base size, and the value the scale is built around. Comfortable for sustained reading on a phone, and the default that any other step is a deviation from."
+    },
+    "500": {
+      "$value": { "value": 18, "unit": "px" },
+      "$description": "One step of emphasis above the base, for a lead paragraph or a figure that should be noticed without becoming a heading."
+    },
+    "600": {
+      "$value": { "value": 20, "unit": "px" },
+      "$description": "The smallest step that reads as a heading rather than as emphasised body text."
+    },
+    "700": {
+      "$value": { "value": 24, "unit": "px" },
+      "$description": "A section heading, and the smallest step that qualifies as WCAG large text at regular weight — so it is the point below which the 3:1 large-text threshold stops being available."
+    },
+    "800": {
+      "$value": { "value": 30, "unit": "px" },
+      "$description": "The top of the scale. A page title or a single number that is the whole point of a screen — a fare, a total. Nothing above it, because a bigger size than this is a display decision belonging to one screen rather than a system step."
+    }
+  },
+
+  "font-weight": {
+    "$type": "fontWeight",
+    "$description": "Three weights, the other half of the hierarchy mechanism decision 009 chose over a third grey. Kept to three deliberately: weight is a coarse signal, and a fourth step invites distinctions that survive in the token file and disappear on screen — the exact failure the deleted text tier demonstrated. The ceiling is 600 rather than 700 for the same reason: with only two emphasis levels to express, a heavier top step buys nothing the 500/600 pair does not already give, and the system does not carry weights it cannot use.",
+    "regular": {
+      "$value": 400,
+      "$description": "The default. Everything is this weight unless it is being emphasised, so it is also the weight de-emphasis falls back to when a smaller size alone is not enough."
+    },
+    "medium": {
+      "$value": 500,
+      "$description": "The light emphasis step, for labels and for text that needs to be picked out of a dense block without shouting."
+    },
+    "bold": {
+      "$value": 600,
+      "$description": "The strong emphasis step, for headings and for the one value on a screen that must be read first. Named for its role, not its numeric value — 600 is semibold in most families, and calling it that would tie the token to a specific font's naming."
+    }
+  },
+
+  "line-height": {
+    "$type": "number",
+    "$description": "Unitless multipliers, never fixed pixel values: a ratio scales with the size it is applied to and with a user's text-size preference, and a fixed leading does neither. Three steps. Arabic needs more leading than Latin at the same size because ascenders, descenders and diacritics reach further, so these ratios are set to be adequate for Arabic rather than tuned for Latin and patched later.",
+    "tight": {
+      "$value": 1.25,
+      "$description": "For headings and short single-line text, where generous leading breaks the line into loose fragments instead of holding it together. Not for anything that wraps to more than about two lines."
+    },
+    "normal": {
+      "$value": 1.5,
+      "$description": "The default, for body text and anything a reader moves through line by line."
+    },
+    "relaxed": {
+      "$value": 1.7,
+      "$description": "For long-form passages, and for the smallest sizes where the extra leading is what keeps consecutive lines from interfering with each other."
+    }
+  },
+
+  "letter-spacing": {
+    "$type": "dimension",
+    "$description": "Exactly one value, and that is the point. Non-zero tracking breaks Arabic — it severs the cursive joins between letters, so a word stops being a word — and any tracking token that exists will eventually reach an Arabic string through a shared component (see content/rules/rtl-arabic.md and decision 008). A Latin-only exception may be worth having, but it has to arrive as a deliberate decision with a mechanism that keeps it off Arabic text, not as an unguarded primitive somebody reaches for. Until then there is nothing here to reach for.",
+    "none": {
+      "$value": { "value": 0, "unit": "px" },
+      "$description": "Zero tracking. Named and declared rather than left implicit, so that a component can state that it made the choice — and so that a review can tell the difference between a considered zero and a forgotten property."
+    }
+  },
+
+  "font-family": {
+    "$type": "fontFamily",
+    "$description": "Font stacks. One entry today, covering Latin. The Arabic face is deliberately absent and arrives in session 2.5 with the rest of the Arabic token layer, because choosing it is a typographic decision about matching optical size and colour across two scripts — not a line to be added here in passing. content/rules/rtl-arabic.md is explicit that the stack must contain a real Arabic face rather than a Latin face with a fallback, so the absence is a gap to be filled by a named token, never by letting Arabic fall through this one. Nothing should assume this group has only one member.",
+    "sans": {
+      "$value": ["system-ui", "-apple-system", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "sans-serif"],
+      "$description": "The Latin stack. Resolves to the host platform's interface face first, so text matches the surrounding OS and needs no download — which is the right default for a ride-booking screen read at a curb on a slow connection. It is a stack, not a face: Mizan has not committed to a licensed Latin typeface, and this token is where that commitment will land when it is made rather than a placeholder to be worked around."
+    }
+  }
+}

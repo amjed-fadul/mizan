@@ -1,0 +1,71 @@
+{
+  "space": {
+    "$type": "dimension",
+    "$description": "One spacing scale for both products, replacing the four independent rhythms the Stage 1 audit found in v0. The step number is the value in eighths of the base step — 100 is 8px, 200 is 16px — so a number carries a ratio rather than a position in a list, and inserting a step later does not renumber everything after it. Density differences between Market and Move are expressed by which step a component selects, never by a second scale. Every value is a multiple of 4 except space.25, which exists for hairline nudges.",
+    "0": {
+      "$value": { "value": 0, "unit": "px" },
+      "$description": "No space. A named zero, so that a component removing a gap in one density or one direction states it as a token rather than dropping out of the system."
+    },
+    "25": {
+      "$value": { "value": 2, "unit": "px" },
+      "$description": "The smallest step. For optical corrections and gaps between elements that are meant to read as one object — an icon and its immediately adjacent glyph, a badge and its border."
+    },
+    "50": {
+      "$value": { "value": 4, "unit": "px" },
+      "$description": "The tightest real gap. Separates parts within a single control: a label from its helper glyph, stacked lines inside one cell."
+    },
+    "100": {
+      "$value": { "value": 8, "unit": "px" },
+      "$description": "The base step, and the unit the numbering is derived from. The default gap between related items in a group and the inner padding of small controls."
+    },
+    "150": {
+      "$value": { "value": 12, "unit": "px" },
+      "$description": "The half step between 100 and 200. It exists because the gap between 8 and 16 is where compact layouts do most of their work, and Move needs a rung there rather than a choice between cramped and loose."
+    },
+    "200": {
+      "$value": { "value": 16, "unit": "px" },
+      "$description": "The comfortable default: inner padding of a card or a standard control, and the gap between sibling items in a list."
+    },
+    "250": {
+      "$value": { "value": 20, "unit": "px" },
+      "$description": "The half step between 200 and 300, for the same reason 150 exists — the comfortable range needs a rung between its default and its next size up."
+    },
+    "300": {
+      "$value": { "value": 24, "unit": "px" },
+      "$description": "Separates one group of related things from the next within a section. The first step that reads as a division rather than a gap."
+    },
+    "400": {
+      "$value": { "value": 32, "unit": "px" },
+      "$description": "Separates sections of a page. Large enough that a divider line becomes optional rather than necessary."
+    },
+    "500": {
+      "$value": { "value": 40, "unit": "px" },
+      "$description": "A major break between regions of a screen, and the outer margin of a roomy layout."
+    },
+    "600": {
+      "$value": { "value": 48, "unit": "px" },
+      "$description": "The largest step. The top of the scale is deliberately low: anything needing more room than this is a layout decision — a grid, a max width, a viewport unit — and not a spacing token."
+    }
+  },
+
+  "radius": {
+    "$type": "dimension",
+    "$description": "Corner radii. Four values, because a radius is a soft signal and more of them produces inconsistency rather than nuance. Numbered on the same eighths convention as space so the two scales read alike.",
+    "0": {
+      "$value": { "value": 0, "unit": "px" },
+      "$description": "Square. For anything that meets an edge or another element flush — a full-bleed image, a table cell, a sheet against the viewport."
+    },
+    "100": {
+      "$value": { "value": 4, "unit": "px" },
+      "$description": "The small radius, for controls and other elements the hand interacts with directly: inputs, buttons, chips."
+    },
+    "200": {
+      "$value": { "value": 8, "unit": "px" },
+      "$description": "The container radius, for things that hold other things: cards, panels, popovers, sheets."
+    },
+    "full": {
+      "$value": { "value": 9999, "unit": "px" },
+      "$description": "Fully rounded. Named rather than numbered because it is a shape instruction, not a measurement: it produces a pill or a circle at any size, which is what avatars, dots and pill badges actually want. The 9999 is an implementation detail of expressing that in px."
+    }
+  }
+}

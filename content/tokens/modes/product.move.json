@@ -1,0 +1,12 @@
+{
+  "$description": "product: move. Mizan Move — ride-booking, read at a curb in one glance, compact density. The same three tokens as product.market and the same mechanism: action.primary and its hover name primitives because they depend on this dimension alone, and text.secondary selects the Move slot because its value depends on the theme too. Move's secondary text is the lighter step in both themes — neutral.650 in light, neutral.500 in dark. That is decision 008's most consequential refusal made structural: the audit named merging Market's and Move's secondary text the most damaging cleanup available, and this file is where the refusal is enforced in every combination rather than only in the one somebody happened to screenshot. It shows up in the numbers as the tightest text pairing in the system — text.secondary on surface.sunken at 4.76:1 in light+move, against a 4.5 bar.",
+
+  "text": {
+    "secondary": { "$value": "{text.secondary-move}" }
+  },
+
+  "action": {
+    "primary": { "$value": "{blue.600}" },
+    "primary-hover": { "$value": "{blue.700}" }
+  }
+}

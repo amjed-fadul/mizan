@@ -1,0 +1,36 @@
+{
+  "shadow": {
+    "$type": "shadow",
+    "$description": "Three shadow recipes, replacing the three-plus-one v0 accumulated. Each step is a claim about how far an element sits above the page, and the three exist because there are exactly three such claims worth making: resting on the page, lifted off it, and floating over it. They are restrained on purpose — a shadow is a depth cue, and once it is heavy enough to be noticed as a graphic it has stopped being one. Depth is also the least reliable signal the system has: it disappears on a dark ground and for anyone with reduced contrast, so nothing may depend on a shadow alone to be understood. Every step is a single layer of pure black at low alpha, offset downward only, which is the one lighting direction that stays correct when the interface flips to RTL.",
+    "100": {
+      "$value": {
+        "color": { "colorSpace": "srgb", "components": [0, 0, 0], "alpha": 0.06, "hex": "#000000" },
+        "offsetX": { "value": 0, "unit": "px" },
+        "offsetY": { "value": 1, "unit": "px" },
+        "blur": { "value": 2, "unit": "px" },
+        "spread": { "value": 0, "unit": "px" }
+      },
+      "$description": "Resting. The element is part of the page and is separated from it, not lifted off it — a card in a list, a sticky header that has just begun to scroll. Tight and faint enough that it reads as an edge rather than as a shadow, which is why it can be used on every card in a long list without the page turning grey."
+    },
+    "200": {
+      "$value": {
+        "color": { "colorSpace": "srgb", "components": [0, 0, 0], "alpha": 0.1, "hex": "#000000" },
+        "offsetX": { "value": 0, "unit": "px" },
+        "offsetY": { "value": 2, "unit": "px" },
+        "blur": { "value": 8, "unit": "px" },
+        "spread": { "value": 0, "unit": "px" }
+      },
+      "$description": "Raised. The element has been picked up off the page and is temporarily above its neighbours — a hovered or dragged card, a menu attached to the control that opened it. Reserved for things that are lifted for a reason, so that the lift itself carries information."
+    },
+    "300": {
+      "$value": {
+        "color": { "colorSpace": "srgb", "components": [0, 0, 0], "alpha": 0.16, "hex": "#000000" },
+        "offsetX": { "value": 0, "unit": "px" },
+        "offsetY": { "value": 8, "unit": "px" },
+        "blur": { "value": 24, "unit": "px" },
+        "spread": { "value": 0, "unit": "px" }
+      },
+      "$description": "Overlay. The element is over the whole interface rather than over its neighbours — a dialog, a bottom sheet, a toast. The top of the scale: anything that needs to feel further away than this needs a scrim behind it, which is a separate mechanism and not a fourth shadow."
+    }
+  }
+}

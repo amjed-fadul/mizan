@@ -1,0 +1,15 @@
+{
+  "$description": "Semantics that belong to Mizan Move and have no Market counterpart, namespaced for the same factual reason commerce.* is: Market has no equivalent of a surge fare or a cancelled trip. Shared components must never reference a mobility.* token. If Market ever grows one of these concepts, the token is promoted to a shared semantic with a Market mode value — and that promotion is a Decision Log entry, not a rename.",
+
+  "mobility": {
+    "$type": "color",
+    "safety": {
+      "$value": "{red.700}",
+      "$description": "Trip cancellation and other destructive mobility messaging. Text, so 4.5:1: red.700 at 6.54:1 on white in light, red.400 at 6.17:1 on neutral.1000 in dark. Deliberately not the same token as commerce.discount and deliberately not the same value in any of the four combinations — decision 008 kept them apart at 4.21 ΔE00 because value coincidence is not semantic identity, and the dark theme honours that by giving each a different red rather than letting both land on one. It sits a step darker than discount in light and a step lighter in dark, which is the same relationship expressed against two grounds: the cancellation reads heavier than the saving in both."
+    },
+    "surge": {
+      "$value": "{amber.700}",
+      "$description": "INDICATOR ONLY, on exactly the same terms as commerce.stock.low — surge is signalled by a graphic element and the fare itself is text.primary. Never text, in any mode. 4.75:1 on white in light and 3.87:1 on neutral.1000 in dark, both clearing the 3.0 non-text bar; the light figure does clear 4.5:1, and that is arithmetic rather than permission. Kept separate from commerce.stock.low at 6.71 ΔE00 — not near-identical, and the audit was explicit that 'we are running out' and 'this costs more right now' stay independently tunable. They share a visual register and nothing else."
+    }
+  }
+}

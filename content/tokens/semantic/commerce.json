@@ -1,0 +1,18 @@
+{
+  "$description": "Semantics that belong to Mizan Market and have no Move counterpart. Namespaced rather than moded, because there is nothing for a Move mode to resolve them to — decision 007's test is factual, not stylistic: does the other product have this concept at all? Move has no discount and no stock level. These tokens still resolve in all four mode combinations, because the theme dimension applies to them like anything else; what they do not have is a Move value. Shared components must never reference a commerce.* token — that is a defect, and eventually a lint rule.",
+
+  "commerce": {
+    "$type": "color",
+    "discount": {
+      "$value": "{red.600}",
+      "$description": "A reduced price. Text, so it carries the full 4.5:1 threshold rather than the indicator bar: 5.62:1 on white in light, and 5.28:1 on neutral.1000 in dark, where it takes red.300. Decision 008 refused to merge this with mobility.safety at 4.21 ΔE00 — one means 'this costs less', the other 'this cancels your trip', and merging them would make it impossible to restyle destructive actions without restyling every discount badge in the catalogue. That refusal is why dark mode needed two light reds rather than one: a single dark red would have collapsed the distinction in two of the four combinations, and a refusal that only holds in light was never a refusal."
+    },
+    "stock": {
+      "$description": "Stock-level signalling. One step so far; the group exists because 'low' is one of several levels Market will eventually need, and a group with one member is cheaper than a rename later.",
+      "low": {
+        "$value": "{amber.600}",
+        "$description": "INDICATOR ONLY — a dot, a bar, a badge fill. Never text. Amber cannot reach 4.5:1 without turning brown and leaving the warning register entirely, so decision 008 narrowed the role rather than darkening the value: it is checked at the 3.0 non-text threshold precisely because the text use is forbidden, and any words beside it take text.primary. Unchanged between themes — 4.29:1 on white and 4.29:1 on neutral.1000, a coincidence of amber sitting near the middle of the luminance range, which is why this is the one hue that needed no dark-mode counterpart. If this pair is ever redeclared as context text, the token is being misused."
+      }
+    }
+  }
+}

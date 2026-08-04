@@ -1,0 +1,28 @@
+{
+  "$description": "theme: dark. The neutral ramp inverts and the two reds swap polarity. What does NOT appear here is as deliberate as what does: commerce.stock.low and mobility.surge are absent because both ambers are indicator-only at the 3.0 non-text bar and clear it on either ground (4.29:1 and 3.87:1 on neutral.1000), so there is nothing for dark mode to fix. Overriding them to identical values would be a line of file that claims a decision was made. text.on-action stays neutral.0 for the same kind of reason and IS stated, because there the temptation to invert it with everything else is real and the file should refuse it out loud rather than by omission. text.secondary is not here either — it is set by the product dimension, and the two slots this file overrides are how the theme still gets to decide its value.",
+
+  "surface": {
+    "default": { "$value": "{neutral.1000}" },
+    "sunken": { "$value": "{neutral.950}" }
+  },
+
+  "text": {
+    "primary": { "$value": "{neutral.0}" },
+    "on-action": { "$value": "{neutral.0}" },
+    "secondary-market": { "$value": "{neutral.400}" },
+    "secondary-move": { "$value": "{neutral.500}" }
+  },
+
+  "border": {
+    "default": { "$value": "{neutral.800}" },
+    "control": { "$value": "{neutral.600}" }
+  },
+
+  "commerce": {
+    "discount": { "$value": "{red.300}" }
+  },
+
+  "mobility": {
+    "safety": { "$value": "{red.400}" }
+  }
+}
