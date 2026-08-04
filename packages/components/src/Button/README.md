@@ -134,7 +134,7 @@ Until the tokens land, a Move screen that wants the geometry it had names the st
 
 ### Motion
 
-Every duration, cycle length and curve below resolves from `content/tokens/primitive/motion.json`. There are no literals: the note this section replaces said there were no state transitions *because there was no motion scale*, and the scale now exists.
+Every duration, cycle length and curve below resolves from `content/tokens/primitive/motion.json` — not one of them is written down here. The note this section replaces said there were no state transitions *because there was no motion scale*, and the scale now exists. (The one number this section does write is `0.97`, which is a ratio rather than a timing, and it is accounted for in Constraints with the other gaps.)
 
 **The instant tier, for everything a hand triggers.** `duration.100`. The token layer names hover, press and focus as exactly what that tier is for, and puts the line at roughly 160ms — past it, a change stops reading as a consequence of the input and starts reading as a response to it.
 

@@ -218,12 +218,14 @@
   Four rules govern the section, and each is a rule about what a control owes a
   hand rather than a preference about how a button should feel.
 
-  1. NOTHING THAT REFLOWS. Only `transform` is animated continuously, and the
-     one other property that transitions is a background colour, which repaints
-     the control's own box and cannot move anything else on the screen. No
-     geometry property transitions, so no state change in this file can cause a
-     layout. `transition: all` appears nowhere and must not: it is the
-     declaration that silently animates whichever property somebody adds next.
+  1. NOTHING THAT REFLOWS. Three properties move in this file and no others:
+     `transform` on the press, `rotate` on the busy indicator — both of them
+     transform properties, drawn after layout — and `background-color` on hover,
+     which repaints the control's own box and cannot move anything else on the
+     screen. No geometry property transitions, so no state change in this file
+     can cause a layout. `transition: all` appears nowhere and must not: it is
+     the declaration that silently animates whichever property somebody adds
+     next.
 
   2. THE PRESS IS THE ONE THAT MATTERS. A control that changes nothing between
      pointer-down and pointer-up has not told the hand it was heard, and on a
