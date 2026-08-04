@@ -32,6 +32,12 @@
       "$description": "Label text on the primary action. action.primary is one value in both products (decision 008), so this pair must hold in every mode."
     },
     {
+      "foreground": "text.on-action",
+      "background": "action.primary-hover",
+      "context": "text",
+      "$description": "The same label once the pointer is over it. A hover fill is a state of a control that is still being read, not a decoration, so it carries the full text threshold exactly as the resting state does. This pair was drawn in three places before it was declared anywhere — the preview's mode bar and both hover rules in the rebuilt pane — and it passed the whole time, at 8.09:1 on Market and 7.67:1 on Move, because the hover step goes darker under white. That is the argument for declaring it rather than against: it costs nothing today, and the day someone lightens a hover step to soften it, the gate is what notices. An undeclared pairing is an unchecked pairing whether or not it currently happens to pass."
+    },
+    {
       "foreground": "border.default",
       "background": "surface.default",
       "context": "decorative",
