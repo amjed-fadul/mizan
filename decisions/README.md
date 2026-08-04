@@ -38,3 +38,4 @@ Entries are numbered sequentially in the order decisions actually happen. Number
 | [011](./011-a-hue-needs-both-ends-only-if-it-carries-text.md) | A hue gets steps at both ends of the ramp only if it carries text | 2 |
 | [012](./012-western-numerals-and-what-follows.md) | Western numerals in both locales, and the formatted/transcribed split | 2 |
 | [013](./013-script-is-a-mode-not-a-parallel-scale.md) | The Arabic type scale is a mode, and script becomes a third dimension | 2 |
+| [018](./018-the-preview-reads-the-build-output.md) | The Stage 2 preview reads the build output, and the content seam it opens | 2 |
