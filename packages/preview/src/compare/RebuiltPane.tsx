@@ -71,14 +71,14 @@ function ProductCard({ product, lang }: { product: CatalogueItem; lang: Lang }) 
         </p>
       )}
 
-      <h3 className="rb-title">
+      <h5 className="rb-title">
         <a href="#" onClick={(event) => event.preventDefault()}>
           <Run text={product.name} ambient={lang} />
           <span className="rb-title__size">
             <Run text={product.size} ambient={lang} />
           </span>
         </a>
-      </h3>
+      </h5>
 
       <p className="rb-prices">
         <span className="rb-price">
@@ -131,9 +131,9 @@ export function RebuiltPane() {
       </nav>
 
       <div className="rb-header">
-        <h2 className="rb-h1">
+        <h4 className="rb-heading">
           <Run text={s(ui.screen.heading, lang)} ambient={lang} />
-        </h2>
+        </h4>
         <p className="rb-sub">
           <Run text={s(ui.screen.subheading, lang)} ambient={lang} />
         </p>

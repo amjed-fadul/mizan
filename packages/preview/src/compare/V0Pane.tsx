@@ -57,7 +57,12 @@ export function V0Pane() {
       </div>
 
       <div className="v0-header">
-        <h1 className="v0-h1">Grocery &amp; Everyday</h1>
+        {/* v0 wrote this as an <h1>. Inside this page it is an exhibit nested
+            under the comparison's <h3>, so a second <h1> here is an artefact of
+            transcription rather than one of v0's defects — the heading level is
+            the one thing about this element that is ours and not theirs. The
+            class, and so everything visible, is unchanged. */}
+        <h4 className="v0-h1">Grocery &amp; Everyday</h4>
         <p className="v0-muted">Delivered across Dubai and Sharjah, seven days a week.</p>
       </div>
 

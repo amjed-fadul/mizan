@@ -55,14 +55,19 @@
   margin-block-end: var(--space-250);
 }
 
-.rb-h1 {
+/* Named for what it is — the screen's heading — rather than for the level it
+   happens to render at. It was .rb-h1 while the element was an <h1>, and the
+   element is now an <h4> because this pane is an exhibit nested under the
+   comparison's <h3>. A class named after a level goes stale the moment the
+   document outline moves; this one does not. */
+.rb-heading {
   font-size: var(--font-size-700);
   font-weight: var(--font-weight-bold);
   line-height: var(--line-height-tight);
   color: var(--text-primary);
 }
 
-.rb-h1:has(.mz-run:lang(ar)) {
+.rb-heading:has(.mz-run:lang(ar)) {
   line-height: var(--line-height-arabic-tight);
 }
 
