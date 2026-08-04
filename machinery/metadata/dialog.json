@@ -1,0 +1,340 @@
+{
+  "$schema": "./component-contract.schema.json",
+  "name": "Dialog",
+  "status": "stable",
+  "source": "packages/components/src/Dialog/Dialog.tsx",
+  "propsType": "DialogProps",
+  "extends": [],
+  "purpose": "A modal built on the platform's <dialog>. It interrupts to ask for a decision whose consequences the user should see before making it, and it is the first component in the library that v0 has no version of at all — which is why Move cancels a trip in one press with a driver en route.",
+  "responsibilities": [
+    "Open and close a real <dialog> with showModal(), so the focus trap, the inertness of everything behind it, Escape and the top layer come from the platform.",
+    "Name itself. The title is the accessible name, wired with aria-labelledby, and there is no unlabelled variant.",
+    "Place initial focus on whichever action is the safe one, after the dialog is open.",
+    "Report every route out — the dismissing action, Escape, and the backdrop — through one callback.",
+    "Nothing about what confirming means. It renders two labels and calls two handlers.",
+    "Nothing about its own visibility. open is controlled, and the component never closes itself without saying so."
+  ],
+  "do": [
+    "Name the verb in both labels. \"Cancel trip\" and \"Keep trip\", never \"Yes\" and \"No\", and never \"Cancel\" in a dialog about cancelling something — it reads as either answer.",
+    "Put the consequence in description. It is announced on open through aria-describedby, and it is where the weight of a destructive action goes now that decision 020 has refused a destructive Button variant.",
+    "Leave confirmIsSafe false for anything irreversible, so a user who presses Enter out of habit keeps what they had.",
+    "Set confirmIsSafe true only where confirming cannot hurt — a retry, a save-before-leaving.",
+    "Open it from a real control, so the browser has somewhere to return focus when it closes."
+  ],
+  "dont": [
+    "Do not use the open attribute instead of showModal(). <dialog open> is a NON-modal dialog — no top layer, no focus trap, nothing inert, no Escape — and it looks identical on screen.",
+    "Do not draw anything on the scrim. Decision 025 gives surface.scrim no contrast pairing, because check-contrast.mjs refuses to measure a translucent background, and the rule that makes that safe is that nothing is read through it.",
+    "Do not use a dialog for something that is not a decision. A modal takes the whole screen away; a message that can be read and ignored is not one.",
+    "Do not make either action primary. A primary fill on the destructive choice is the refused variant arriving under another name, and a primary on the safe one pushes an answer at somebody who may want the other.",
+    "Do not animate it in. A dialog that fades is a dialog whose first frames are spent not being usable, and it delays the moment a keyboard user's focus is somewhere predictable.",
+    "Do not remove the way out. dismissLabel is required and Escape is never intercepted."
+  ],
+  "do_not_use_when": [
+    {
+      "when": "The message needs no decision and can be read and ignored — a save confirmation, a background sync finishing.",
+      "use_instead": "Nothing yet. A toast or an inline status region is the shape, and neither exists; both are less interrupting than this by design."
+    },
+    {
+      "when": "The content is a whole task rather than a question — a full form, a checkout step, a filter panel.",
+      "use_instead": "A page or a route. A modal that contains a task is a page with the browser's back button taken away."
+    },
+    {
+      "when": "The dialog would need to open another dialog.",
+      "use_instead": "A single dialog whose content changes, or a route. Stacked modals leave a user with no model of where they are and no reliable way back."
+    },
+    {
+      "when": "Something must be drawn on the backdrop itself.",
+      "use_instead": "Nothing. Give it an opaque ground inside the dialog — the scrim carries no contrast guarantee and a control on it would be unmeasurable."
+    },
+    {
+      "when": "The action is trivially reversible and the interruption buys nothing.",
+      "use_instead": "Just doing it, with an undo. A confirmation nobody reads trains people to dismiss the one that matters."
+    }
+  ],
+  "alternatives": [
+    {
+      "use": "Button",
+      "for": "the action itself, when it needs no confirmation",
+      "in_system": true
+    },
+    {
+      "use": "a page or route",
+      "for": "a whole task rather than a question",
+      "in_system": false
+    },
+    {
+      "use": "an inline status region or a toast",
+      "for": "a message that needs no decision",
+      "in_system": false
+    }
+  ],
+  "content": [
+    "The title, which asks the question or states what happened.",
+    "The description, which is where the consequence goes — the sentence that makes a destructive action a real decision.",
+    "The two labels, each naming what will happen rather than agreeing or disagreeing."
+  ],
+  "constraints": [
+    "No width and no fixed height. The dialog is sized against the viewport with a readable ceiling, never in fixed pixels.",
+    "No className and no style.",
+    "No prop shortens a string.",
+    "No destructive variant, no tone and no icon. Decision 020 refused the variant and the token layer has no action-danger semantic; this component works around neither.",
+    "No colour that content/tokens/pairs.json has not seen — with one deliberate exception argued in decision 025, the scrim, which carries no pairing because a translucent background cannot be measured.",
+    "No entrance animation. Decision 021's scale exists and is deliberately not reached for.",
+    "No way to suppress the dismissing action or intercept Escape.",
+    "No focus management beyond placing the initial focus. The trap and the restoration are the platform's.",
+    "One written number, the 1px edge, for the fifth time in the library."
+  ],
+  "rtl": {
+    "behaviour": [
+      "The actions sit at the reading END of their row through justify-content: flex-end, which is a position on the inline axis rather than a physical edge, so the row flips with the document.",
+      "The dismissing action is first in reading order and the committing action last, in both directions. Last is the last thing read before acting.",
+      "The title and description carry dir=\"auto\" as blocks, on the same §3 reasoning Input records: <bdi> isolates a run inside a sentence, but alignment belongs to the block, and this component cannot read a ReactNode.",
+      "Arabic line height on the title, because §6 measured مُخفَّض reaching above the font's declared ascent and a short heading is exactly where a tight leading looks safe and clips.",
+      "letter-spacing 0, always. There is no [dir='rtl'] selector anywhere.",
+      "Below a narrow breakpoint the actions stretch rather than huddling at one end, because §6 measured Arabic running to 117 per cent of English on some strings and a wrapped row of end-aligned buttons reads as a mistake."
+    ],
+    "mirrors": [
+      "The whole dialog, with the document.",
+      "The action row, which flips as a unit while keeping its reading order."
+    ],
+    "does_not_mirror": [
+      "Nothing. There is no glyph in this component whose form carries meaning."
+    ]
+  },
+  "accessibility": {
+    "guarantees": [
+      "A real <dialog> opened with showModal(), so the focus trap, the inertness of the rest of the page, Escape and the top layer are the platform's rather than a re-implementation's.",
+      "An accessible name, always. title is required and wired with aria-labelledby.",
+      "The consequence is announced on open, through aria-describedby on the description.",
+      "Initial focus lands on the safe action, placed after showModal() rather than with React's autoFocus — which silently does nothing here, because React focuses at mount and mount happens while the dialog is still closed.",
+      "Escape, the backdrop and the dismissing action are one event, so the way out is the same whichever a user reaches for.",
+      "Focus returns to whatever opened the dialog when it closes. That restoration is the platform's and is the reason to open one from a real control.",
+      "0 axe violations across all seven stories, checked in dark + RTL."
+    ],
+    "consumer_must": [
+      "Open the dialog from a real focusable control, or the browser has nowhere to return focus on close.",
+      "Write labels that name the verb. The component cannot check that \"Yes\" is a worse label than \"Cancel trip\", and the whole safety argument rests on the words.",
+      "Decide confirmIsSafe honestly. It moves where a habitual Enter lands, and defaulting it to true for convenience is how a confirmation stops being one.",
+      "Keep the dialog's content to a decision. Nothing prevents a whole form being passed as children, and a modal containing a task is a page with the back button removed."
+    ]
+  },
+  "stylesheet": "packages/components/src/styles/focus.css, packages/components/src/Dialog/Dialog.css",
+  "tokens": [
+    "border.default",
+    "focus.ring",
+    "focus.ring-contrast",
+    "font-family.sans",
+    "font-size.300",
+    "font-size.500",
+    "font-weight.medium",
+    "letter-spacing.none",
+    "line-height.normal",
+    "radius.200",
+    "shadow.300",
+    "space.100",
+    "space.150",
+    "space.25",
+    "space.300",
+    "space.400",
+    "surface.default",
+    "surface.scrim",
+    "text.primary",
+    "text.secondary"
+  ],
+  "tokens_absent": [],
+  "props": [
+    {
+      "name": "children",
+      "type": "ReactNode",
+      "values": null,
+      "required": false,
+      "default": null,
+      "description": "Anything more than a sentence. Most dialogs should not need it.",
+      "guidance": "Anything more than a sentence, and most dialogs should not need it. A modal that contains a task is a page with the back button removed.",
+      "figmaProperty": null
+    },
+    {
+      "name": "confirmIsSafe",
+      "type": "boolean",
+      "values": null,
+      "required": false,
+      "default": "false",
+      "description": "Whether confirming is the safe choice.",
+      "notes": [
+        "It decides **where focus lands when the dialog opens**, and nothing else — no colour, no icon, no variant. Defaults to `false`, which is the cautious reading: a dialog that had to be built usually exists because the action behind it is worth a second thought, so focus goes to the dismissing action and a user who hits Enter out of habit keeps what they had.",
+        "Set it `true` where the confirming action is the harmless one — \"Save before leaving?\", \"Retry?\" — so that habit lands on the outcome the user almost certainly wants."
+      ],
+      "guidance": "Decides where initial focus lands and nothing else. Defaults to false, which is the cautious reading: a dialog that had to be built usually exists because the action behind it is worth a second thought.",
+      "figmaProperty": null
+    },
+    {
+      "name": "confirmLabel",
+      "type": "ReactNode",
+      "values": null,
+      "required": false,
+      "default": null,
+      "description": "The label on the confirming action. Omit it — along with {@link DialogProps.onConfirm} — for a dialog that only has to be acknowledged.",
+      "notes": [
+        "**Name the verb.** `Cancel trip` and `Keep trip`, not `Yes` and `No`. Decision 020 refused a destructive Button variant and said the weight of an action lives in the label; this is the component where that stops being a principle and becomes the only mechanism available."
+      ],
+      "guidance": "Name the verb. Omit it, with onConfirm, for a dialog that only has to be acknowledged.",
+      "figmaProperty": "Confirm label"
+    },
+    {
+      "name": "description",
+      "type": "ReactNode",
+      "values": null,
+      "required": false,
+      "default": null,
+      "description": "The consequence, in a sentence. Linked with `aria-describedby`, so it is announced when the dialog opens rather than only seen.",
+      "notes": [
+        "This is where the weight of a destructive action goes — see the component docs. \"Your driver is two minutes away\" is what makes \"Cancel trip\" a real decision rather than a button somebody presses to make a box go away."
+      ],
+      "guidance": "The consequence, announced on open. This is where the weight of a destructive action lives now that decision 020 has refused a destructive variant — \"Your driver is two minutes away\" is a stronger signal than any colour, and it reaches a colour-blind user.",
+      "figmaProperty": "Description"
+    },
+    {
+      "name": "dismissLabel",
+      "type": "ReactNode",
+      "values": null,
+      "required": true,
+      "default": null,
+      "description": "The label on the dismissing action. **Required**, because there is always a way out — see {@link DialogProps.onDismiss}.",
+      "notes": [
+        "Say what not-doing-it means rather than \"Cancel\", which is ambiguous in exactly the dialog where ambiguity is most expensive: \"Cancel\" in a *cancel-the-trip* dialog can be read as either answer."
+      ],
+      "guidance": "Required, because there is always a way out. Say what not-doing-it means: \"Cancel\" is ambiguous in exactly the dialog where ambiguity is most expensive.",
+      "figmaProperty": "Dismiss label"
+    },
+    {
+      "name": "onConfirm",
+      "type": "() => void",
+      "values": null,
+      "required": false,
+      "default": null,
+      "description": "Called when the confirming action is pressed.",
+      "guidance": "Called by the committing action. The component has no opinion about what it does.",
+      "figmaProperty": null
+    },
+    {
+      "name": "onDismiss",
+      "type": "() => void",
+      "values": null,
+      "required": true,
+      "default": null,
+      "description": "Called when the dialog should close: the dismissing action, the Escape key, or a click on the backdrop.",
+      "notes": [
+        "All three routes are the same event on purpose. A dialog that can be escaped by one route and not another teaches a user that the box is unpredictable, and Escape is the one everybody already knows."
+      ],
+      "guidance": "Called by the dismissing action, Escape and the backdrop alike. One event for three routes, because a dialog that can be escaped one way and not another teaches a user that the box is unpredictable.",
+      "figmaProperty": null
+    },
+    {
+      "name": "open",
+      "type": "boolean",
+      "values": null,
+      "required": true,
+      "default": null,
+      "description": "Whether the dialog is showing. Controlled — the consumer owns the state, and this component never closes itself without saying so through {@link DialogProps.onDismiss}.",
+      "guidance": "Controlled. The component never closes itself without reporting it, so the prop and the DOM cannot drift — which is exactly what happens if Escape is left unhandled, because the element closes in its own eyes and the next open={true} is a no-op.",
+      "figmaProperty": null
+    },
+    {
+      "name": "title",
+      "type": "ReactNode",
+      "values": null,
+      "required": true,
+      "default": null,
+      "description": "What the dialog is asking or telling. Required, rendered as a real `<h2>`, and wired as the dialog's accessible name with `aria-labelledby`.",
+      "notes": [
+        "There is no `aria-label` escape hatch and no unlabelled variant. A modal takes the whole screen away from someone; arriving in one with no name is arriving somewhere with no idea what it is."
+      ],
+      "guidance": "The accessible name, via aria-labelledby, and a real <h2>. Required: a modal takes the whole screen away, and arriving in one with no name is arriving somewhere with no idea what it is.",
+      "figmaProperty": "Title"
+    }
+  ],
+  "figma": {
+    "component": "Dialog",
+    "properties": [
+      {
+        "property": "Confirm label",
+        "prop": "confirmLabel",
+        "values": null
+      },
+      {
+        "property": "Description",
+        "prop": "description",
+        "values": null
+      },
+      {
+        "property": "Dismiss label",
+        "prop": "dismissLabel",
+        "values": null
+      },
+      {
+        "property": "Title",
+        "prop": "title",
+        "values": null
+      }
+    ],
+    "unmapped": [
+      {
+        "prop": "open",
+        "why": "Whether a dialog is showing is a state of the screen rather than a property of the component. A Figma file draws the open one; the closed one is the screen without it."
+      },
+      {
+        "prop": "onDismiss",
+        "why": "A handler is behaviour. Figma properties describe what a component looks like."
+      },
+      {
+        "prop": "onConfirm",
+        "why": "A handler is behaviour."
+      },
+      {
+        "prop": "confirmIsSafe",
+        "why": "It moves initial focus and changes no pixel. A Figma variant for it would be two identical frames."
+      },
+      {
+        "prop": "children",
+        "why": "Arbitrary content has no property to mirror. In Figma it is a slot the designer fills directly."
+      }
+    ]
+  },
+  "aiHints": {
+    "keywords": [
+      "dialog",
+      "modal",
+      "confirm",
+      "confirmation",
+      "alert",
+      "prompt",
+      "are you sure",
+      "cancel trip",
+      "remove",
+      "destructive",
+      "overlay",
+      "scrim",
+      "backdrop"
+    ],
+    "use_when": [
+      "An action is irreversible and the user should see the consequence before committing.",
+      "A decision must be made before anything else can continue.",
+      "Something has happened that has to be acknowledged before the screen is usable again."
+    ],
+    "not_a": [
+      "A toast or an inline message. Those do not need a decision and do not take the screen away.",
+      "A page. A modal containing a whole task is a page with the back button removed.",
+      "A component with a destructive variant. There is no red button here and its absence is a decision.",
+      "A place to draw something on the backdrop."
+    ]
+  },
+  "deprecation": {
+    "policy": "The second component in the library with no v0 predecessor, so it is withdrawn only by a decision naming what replaces it. A prop is withdrawn ahead of the component: mark it @deprecated in the source with the replacement named in the tag, keep it working for one minor version, then remove it in a major one with the migration written down. confirmIsSafe is the prop most likely to move — if the answer ever needs to be \"neither\", that is a third state on one prop rather than a second prop, for the reason decision 020 gives about v0's three names for one axis."
+  },
+  "generated": {
+    "by": "machinery/scripts/gen-contract.mjs",
+    "from": "packages/components/src/Dialog/Dialog.tsx",
+    "authored": "machinery/metadata/authored/dialog.json",
+    "note": "Build output. Edit the component or the authored half and regenerate; an edit made here is overwritten by the next run and reported by check-contracts.mjs in the meantime."
+  }
+}

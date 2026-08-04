@@ -21,7 +21,7 @@
     "**/*.css"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.build.json && for f in src/*/*.css; do cp \"$f\" \"dist/${f#src/}\"; done",
+    "build": "tsc -p tsconfig.build.json && for f in src/*/*.css; do mkdir -p \"$(dirname \"dist/${f#src/}\")\" && cp \"$f\" \"dist/${f#src/}\"; done",
     "typecheck": "tsc --noEmit",
     "storybook": "storybook dev -p 6006",
     "build:storybook": "storybook build"

@@ -30,7 +30,9 @@
  * attributes are the application's to set.
  */
 export { Button } from './Button'
+export { Dialog } from './Dialog'
 export type { ButtonProps, ButtonSize, ButtonVariant } from './Button'
+export type { DialogProps } from './Dialog'
 export { Input } from './Input'
 export { ProductCard } from './ProductCard'
 export { RideCard, RideCardGroup } from './RideCard'
