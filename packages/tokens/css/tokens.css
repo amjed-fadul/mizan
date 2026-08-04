@@ -112,6 +112,7 @@
   --action-primary: var(--green-600);
   --action-primary-hover: var(--green-700);
   --border-default: var(--neutral-300);
+  --border-error: var(--red-600);
   --commerce-discount: var(--red-600);
   --control-lg-font-size: var(--font-size-400);
   --control-lg-padding-block: var(--space-200);
@@ -122,6 +123,7 @@
   --mobility-safety: var(--red-700);
   --surface-default: var(--neutral-0);
   --surface-sunken: var(--neutral-100);
+  --text-error: var(--red-600);
   --text-primary: var(--neutral-900);
   --text-secondary-market: var(--neutral-700);
   --text-secondary-move: var(--neutral-650);
@@ -132,6 +134,7 @@
   --action-primary: var(--blue-600);
   --action-primary-hover: var(--blue-700);
   --border-default: var(--neutral-300);
+  --border-error: var(--red-600);
   --commerce-discount: var(--red-600);
   --control-lg-font-size: var(--font-size-500);
   --control-lg-padding-block: var(--space-250);
@@ -142,6 +145,7 @@
   --mobility-safety: var(--red-700);
   --surface-default: var(--neutral-0);
   --surface-sunken: var(--neutral-100);
+  --text-error: var(--red-600);
   --text-primary: var(--neutral-900);
   --text-secondary-market: var(--neutral-700);
   --text-secondary-move: var(--neutral-650);
@@ -152,6 +156,7 @@
   --action-primary: var(--green-600);
   --action-primary-hover: var(--green-700);
   --border-default: var(--neutral-800);
+  --border-error: var(--red-300);
   --commerce-discount: var(--red-300);
   --control-lg-font-size: var(--font-size-400);
   --control-lg-padding-block: var(--space-200);
@@ -162,6 +167,7 @@
   --mobility-safety: var(--red-400);
   --surface-default: var(--neutral-1000);
   --surface-sunken: var(--neutral-950);
+  --text-error: var(--red-300);
   --text-primary: var(--neutral-0);
   --text-secondary-market: var(--neutral-400);
   --text-secondary-move: var(--neutral-500);
@@ -172,6 +178,7 @@
   --action-primary: var(--blue-600);
   --action-primary-hover: var(--blue-700);
   --border-default: var(--neutral-800);
+  --border-error: var(--red-300);
   --commerce-discount: var(--red-300);
   --control-lg-font-size: var(--font-size-500);
   --control-lg-padding-block: var(--space-250);
@@ -182,6 +189,7 @@
   --mobility-safety: var(--red-400);
   --surface-default: var(--neutral-1000);
   --surface-sunken: var(--neutral-950);
+  --text-error: var(--red-300);
   --text-primary: var(--neutral-0);
   --text-secondary-market: var(--neutral-400);
   --text-secondary-move: var(--neutral-500);

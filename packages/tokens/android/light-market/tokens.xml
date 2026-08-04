@@ -19,6 +19,7 @@
   <color name="blue_700">#ff14568c</color>
   <color name="border_control">#ff7a7a7a</color>
   <color name="border_default">#ffd4d4d4</color>
+  <color name="border_error">#ffc62828</color>
   <color name="commerce_discount">#ffc62828</color>
   <color name="commerce_stock_low">#ffc25e00</color>
   <dimen name="control_lg_font_size">16dp</dimen>
@@ -85,6 +86,7 @@
   <dimen name="space_600">48dp</dimen>
   <color name="surface_default">#ffffffff</color>
   <color name="surface_sunken">#fff2f2f2</color>
+  <color name="text_error">#ffc62828</color>
   <color name="text_on_action">#ffffffff</color>
   <color name="text_primary">#ff2f2f2f</color>
   <color name="text_secondary">#ff5a5a5a</color>
