@@ -1,12 +1,15 @@
 /*
   THE REPRODUCTION PANE — the only file in this package that contains a literal
-  colour, and it contains eleven of them.
+  colour, and it contains eleven greys among them.
 
   Every value below is transcribed from legacy/src/shared/styles.css,
   legacy/src/market/market.css and the inline styles in
-  legacy/src/market/screens/CategoryScreen.tsx. Nothing is imported from legacy/
-  and nothing in legacy/ is touched: it is quarantined evidence for the Stage 1
-  audit and the Stage 6 migration, and repairing it destroys both exercises.
+  legacy/src/market/screens/CategoryScreen.tsx, with one exception, argued where
+  it appears: .v0-quickview is given a fill that legacy/ never gave it, because
+  without one the overlay and the placeholder beneath it printed on top of each
+  other and neither could be read. Nothing is imported from legacy/ and nothing
+  in legacy/ is touched: it is quarantined evidence for the Stage 1 audit and
+  the Stage 6 migration, and repairing it destroys both exercises.
 
   What is faithfully reproduced: the four near-identical greys, the two brand
   greens, the 7/13/26 inline spacing rhythm, the global 0.01em tracking that
@@ -177,7 +180,18 @@
 }
 
 /* An absolutely positioned div with an onClick, over the whole image. Not in the
-   tab order, no role, no key handler: a screen reader announces it as text. */
+   tab order, no role, no key handler: a screen reader announces it as text.
+
+   The twelfth literal colour, and the only one here that is not transcribed.
+   The overlay and the IMG placeholder beneath it share a box and a 96px line
+   height, so with no fill of its own the overlay centred "Quick view" on the
+   exact baseline as "IMG" and the two words interleaved into QuiIMGiew — in
+   every mode, unreadable, and not in the defect list. An accident that reads as
+   a demonstration is worse than either, because the reader cannot tell which it
+   is meant to be. A period-appropriate translucent white is what a 2019 hover
+   scrim was, and it lets both strings be read for what they are: the real
+   defects here are the missing alt text and the unfocusable div, and neither
+   can be seen through glyph soup. */
 .v0-quickview {
   position: absolute;
   inset-block-start: 0;
@@ -187,6 +201,7 @@
   line-height: 96px;
   font-size: 13px;
   color: #767676;
+  background-color: rgba(255, 255, 255, 0.85);
   cursor: pointer;
 }
 
