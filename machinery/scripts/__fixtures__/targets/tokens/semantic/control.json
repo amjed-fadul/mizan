@@ -1,0 +1,18 @@
+{
+  "control": {
+    "$type": "dimension",
+    "$description": "Three fixture control steps, each a pair of floors. small clears the 24 minimum, stable clears 44 in every combination, and varies clears 44 in product.roomy and falls to 40 in product.tight — the step that proves the gate reads the floor per combination rather than once.",
+    "small": {
+      "min-block": { "$value": "{length.small}" },
+      "min-inline": { "$value": "{length.small}" }
+    },
+    "stable": {
+      "min-block": { "$value": "{length.big}" },
+      "min-inline": { "$value": "{length.big}" }
+    },
+    "varies": {
+      "min-block": { "$value": "{length.big}" },
+      "min-inline": { "$value": "{length.big}" }
+    }
+  }
+}

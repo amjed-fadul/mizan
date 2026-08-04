@@ -1,0 +1,12 @@
+{
+  "$description": "A footprint declaring a context the gate does not define. A context selects the bar; an unrecognised one has no bar, and the gate must reject it at the declaration rather than skip it.",
+  "targets": [
+    {
+      "step": "control.stable",
+      "block": "control.stable.min-block",
+      "inline": "control.stable.min-inline",
+      "context": "huge",
+      "$description": "huge is not pointer or inline."
+    }
+  ]
+}

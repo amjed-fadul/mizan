@@ -1,0 +1,12 @@
+{
+  "$description": "A footprint whose block floor points at a colour token. A tap target is a length; the gate must reject the wrong $type rather than coerce it.",
+  "targets": [
+    {
+      "step": "control.wrongtype",
+      "block": "ink",
+      "inline": "control.stable.min-inline",
+      "context": "pointer",
+      "$description": "block names ink, which is a colour. inline is a real dimension, so the block error is unambiguous."
+    }
+  ]
+}

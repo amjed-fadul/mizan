@@ -1,0 +1,7 @@
+{
+  "control": {
+    "varies": {
+      "min-block": { "$value": "{length.big}" }
+    }
+  }
+}

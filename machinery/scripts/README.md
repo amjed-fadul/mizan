@@ -20,32 +20,41 @@ Also not here: Mizan's values. A script may enforce that no raw hex appears in t
 | `lib/projection.mjs` | The one projection rule the drift detector and the Figma sync plugin cannot state separately. Imported by both. No CLI. |
 | `lib/ws-server.mjs` | A minimal WebSocket server, loopback only. Written rather than depended on: Node ships a client and no server, and a dependency here travels into every Stage 7 fork. No CLI. |
 | `lib/bridge.mjs` | The read bridge's protocol, server side. Asks a running plugin one question and has no vocabulary for a second. No CLI. |
+| `lib/component-source.mjs` | Reads a component's TypeScript and reports the API it declares. Parses a stated subset and refuses everything else by name. No CLI. |
+| `lib/contract.mjs` | The component contract: the JSON Schema subset it is validated against, the assembly that draws the derived/authored line, and the comparison that holds it. No CLI. |
 | `check-schema.mjs` | Structural gate over a token set. |
 | `check-contrast.mjs` | WCAG gate over the declared foreground/background pairs, in every mode combination. |
+| `check-tap-target.mjs` | WCAG target-size gate: every declared control footprint clears its floor in every mode combination. |
 | `check-drift.mjs` | Governance rung 2: compares a Figma variables snapshot against the token source. |
+| `gen-contract.mjs` | Writes a component's contract from its source and its authored half. Written once, run per component. |
+| `check-contracts.mjs` | Gate over the contracts: is each one still what the generator would write today? |
 | `health-dashboard.mjs` | All three gates rendered as one self-contained HTML page. |
 | `selftest.mjs` | Runs the gates against the fixture sets and asserts the specific defects that come back. |
 | `dtcg-adapt.mjs` | **Temporary.** Degrades DTCG 2025.10 values into what Style Dictionary can read today. Deleted when it can read them itself. |
 | `build-tokens.mjs` | The token build: gates, then adapt, then Style Dictionary, for every mode combination. |
-| `__fixtures__/` | One valid token set, one deliberately broken one, and two Figma snapshots of the valid one. See its README. |
+| `__fixtures__/` | One valid token set, one deliberately broken one, Figma snapshots of the valid one, and the component contracts the contract gate is proven against. See its README and `__fixtures__/contracts/README.md`. |
 
 The gates are Node 22, plain ESM, zero dependencies — Node built-ins only, and that is a constraint worth keeping: a governance gate that cannot run because an install failed is not a gate. The **build** is the one exception: it depends on `style-dictionary`. That is a deliberate line. A gate must run everywhere; a build only has to run where things are built.
 
 ## Running them
 
 ```
-npm run check           # schema, then contrast
+npm run check           # schema, then contrast, then tap-target
 npm run check:schema
 npm run check:contrast
+npm run check:tap-target                    # every declared control footprint against its size floor
 npm run check:drift -- --snapshot <file>    # rung 2: Figma against the source
 npm run check:drift -- --bridge             # the same, read live from the plugin
+npm run check:contracts                     # every component contract, against its component
+npm run gen:contract -- --source <file>     # write one component's contract
+npm run gen:contract -- --all               # rewrite every one of them
 npm run health -- --snapshot <file>         # the same three gates, as a page
 npm run selftest        # proves the gates reject things
 npm run adapt:tokens    # the adapter alone, for inspecting what SD is handed
 npm run build:tokens    # gates, then adapt, then build every mode combination
 ```
 
-Every gate takes `--root <dir>` (defaulting to `$TOKENS_ROOT`, then to the repository's token directory), `--json` for machine-readable output, and `--quiet` to suppress the passing summary. `check-contrast.mjs` additionally takes `--pairs <file>` and a repeatable `--mode <id>`; `check-drift.mjs` takes `--snapshot <file>`, `--bridge`, or `--file-key <key>`.
+Every gate takes `--root <dir>` (defaulting to `$TOKENS_ROOT`, then to the repository's token directory), `--json` for machine-readable output, and `--quiet` to suppress the passing summary. `check-contrast.mjs` additionally takes `--pairs <file>` and a repeatable `--mode <id>`; `check-tap-target.mjs` takes `--targets <file>` and the same repeatable `--mode <id>`; `check-drift.mjs` takes `--snapshot <file>`, `--bridge`, or `--file-key <key>`.
 
 An empty token root is reported as such and exits 0. There is nothing to reject, and that is stated in the output rather than implied by a green tick.
 
@@ -60,6 +69,7 @@ Structure, never values. The layout below is machinery's contract; everything in
 <root>/modes/*.json         per-mode overrides of existing token paths
 <root>/modes.json           optional mode manifest
 <root>/pairs.json           declared foreground/background pairings
+<root>/targets.json         declared control footprints and their size floors
 ```
 
 Format is DTCG 2025.10. A token is any object with `$value`; anything else with members is a group. `$type` inherits from the nearest ancestor group **within the same file** — files are separate documents, so a group type declared in one file does not reach tokens in another. Token paths come from the JSON structure alone: neither the filename nor the layer directory appears in a path, so two files may extend the same group and a duplicate path across files is an error.
@@ -363,6 +373,119 @@ stack and must land on the same family and the same warning text.
 The general rule this is an instance of: **a projection that discards information
 is shared code; a projection that does not can be stated twice.**
 
+## gen-contract.mjs and check-contracts.mjs — the component contract
+
+```
+node machinery/scripts/gen-contract.mjs --source <file> [--props-type <name>]
+                                        [--metadata <dir>] [--authored <file>]
+                                        [--schema <file>] [--root <dir>]
+                                        [--css-prefix <str>] [--out <file>]
+                                        [--stdout] [--all] [--json] [--quiet]
+
+node machinery/scripts/check-contracts.mjs [--metadata <dir>] [--schema <file>]
+                                           [--root <dir>] [--css-prefix <str>]
+                                           [--json] [--quiet]
+```
+
+A contract describes a component: what it is for, when not to reach for it, what
+it refuses to do, how it behaves when the direction flips, which properties are
+exposed, and how each of them maps to Figma. `machinery/metadata/README.md` says
+what one holds and where the two editing surfaces are.
+
+**Generated, never hand-authored.** A contract written by hand for the fifth
+component disagrees with the first one's in some small way nobody notices, and
+the agents that read them in Stage 5 inherit the disagreement. So the shape is
+decided once in `machinery/metadata/component-contract.schema.json` and produced
+once, here.
+
+**What the contract is *not* is a source.** Nothing is generated *from* a
+contract — no component, no stylesheet, no story. The contract describes and the
+gate verifies; the moment something starts being built out of one, this stops
+being a description of a component and becomes a specification a component has
+to be kept in step with, which is a different and much larger project.
+
+### The line
+
+Half of a contract is a fact and half is a judgment, and they live in different
+files. The derived half is read from the component's source and its stylesheet;
+the authored half lives in `metadata/authored/<component>.json` and is copied
+through unread. Neither half can write the other's fields: the schema marks
+every property with `x-origin`, and an authored file that states a prop's type
+or its default is refused with `authored-invalid` rather than merged.
+
+The interesting part is where they meet, which is deliberately structural rather
+than textual. A prop's Figma property is *named* by a person; the mapping is
+*assembled* by the generator from the props it derived. So a prop cannot stop
+having a Figma side by nobody mentioning it — every prop either names a property
+or appears under `figma.unmapped` with a reason, and generation fails otherwise.
+
+### Reading TypeScript without a parser
+
+There is no TypeScript dependency here, and the reason is the one this whole
+directory runs on: a gate that needs an install is not a gate. The repository
+*has* a TypeScript, behind `machinery/figma-plugin`'s own build step, and a gate
+that reached for it would stop running the moment that install had not happened
+— which is exactly the failure the plugin's `dist/core.mjs` sections in
+`selftest.mjs` already have to be honest about.
+
+So `lib/component-source.mjs` parses **a stated subset and refuses everything
+else by name**. It reads `interface X { … }` and `type X = A & { … }`, members
+of the form `name: T`, `name?: T` and `readonly name: T`, defaults out of a
+destructuring pattern annotated with the props type, JSDoc summaries, notes and
+`@deprecated` tags, and one level of local string-union alias. It refuses index
+signatures, call signatures, computed keys, inline object literals, a props type
+declared twice, and two patterns disagreeing about a default — each with the
+line it happened on.
+
+A refusal is a failure, not a smaller contract. A contract derived from the
+members this reader happened to understand looks exactly like one derived from
+all of them, which is the specific thing that must never be true of a file
+agents are going to trust.
+
+**When the subset stops being enough**, the honest fix is a devDependency —
+TypeScript's own parser, in `machinery/`, with the gate degrading to "cannot
+check" rather than "checks less" where it is absent. That is a decision with a
+cost and it is not taken here. Today the subset covers the component library as
+written, and the refusals say so out loud when it does not.
+
+### Which tokens a component consumes
+
+Read from the stylesheet beside the component — same directory, same basename —
+rather than listed by hand beside it. Every token in the root is projected to
+the custom property it is published as, and the stylesheet's `var(--…)`
+references are looked up among those.
+
+That projection lives inside Style Dictionary, which the build depends on and a
+gate may not, so it is mirrored here on the same terms `check-drift.mjs` mirrors
+the Figma projection. The mirror is safer than that one in a specific way: it is
+only ever run *forwards*. Nothing inverts a custom property back into a token
+path, which is the direction that would be a guess — `--a-b-c` could have come
+from `a.b-c` or from `a-b.c`.
+
+**A reference the token set cannot produce is declared or it fails.** Usually it
+is a typo. Occasionally it is a component naming a token the system has not
+decided yet and taking no fallback, so the gap is visible in the running app
+instead of a literal being hidden in a component — and that is a claim about the
+system, so it goes in `tokens_absent` with a reason. Declared, tracked,
+reported, ungated, which is the same shape `decorative` has in
+`check-contrast.mjs` and for the same reason: an undeclared thing is an
+unchecked thing.
+
+### What the gate reports
+
+A contract is correct exactly when it is what the generator would write today,
+and the gate answers that by regenerating and comparing. The prop-level findings
+are named individually anyway, because "the file differs" is not something
+anybody can act on and because each is a different mistake:
+`prop-missing-in-contract` is an unfinished contract, `prop-unknown-to-source`
+is a promise nothing keeps. `contract-stale` catches everything else, including
+the one edit no comparison against a source could ever catch — the authored half
+rewritten in the generated file. The full table is in the header of
+`check-contracts.mjs`.
+
+An empty metadata directory is reported as such and exits 0, on the same terms
+as an empty token root.
+
 ## health-dashboard.mjs — governance you can screenshot
 
 ```
@@ -420,6 +543,8 @@ Runs both gates against both fixture sets and asserts the valid set passes with 
 Two further snapshots hold the ninth code and the line beside it. `figma/mode-deleted.json` is the aligned file with one mode of a multi-mode collection removed — *every surviving value still agrees*, so the exit code cannot pass for any other reason, and the assertion is that the one finding is `mode-missing-in-figma` and names the source mode. `figma/dimension-flattened.json` is the aligned file with a whole dimension left unmodelled: it must report **no** missing mode, because a single-mode collection is invariant by design, and must still report the value finding the flattened dimension causes — in exactly the combinations where the source disagrees. Between them they assert both halves: that the silence is now caught, and that the convention is not mistaken for the defect.
 
 Every planted edit is attributable: repair one of them and exactly its own code stops being reported, which is what makes "the gate caught `description-drift`" a statement about the defect rather than about the pile.
+
+**The contract gate is held to the same standard**, one layer up: the token gates check a value against the rule that governs it, and this checks a *description* against the thing it describes. `contracts/aligned/` must report nothing at all with every prop compared and the token list read out of a stylesheet; `contracts/drifted/` must report **each of the eleven codes by name**, every prop-level finding carrying the prop it is about; and `contracts/refused/` covers the failures that happen before a comparison can. Two assertions carry more than their share. Regenerating the aligned fixture must change nothing, which is where a generator that has drifted from the checker shows up — rather than as a contract nobody can make green. And a schema keyword the validator does not implement must stop the run: the schema is interpreted rather than restated, and an unenforced constraint that looks enforced is the one failure mode that arrangement has and an off-the-shelf validator does not.
 
 The font-stack narrowing gets its own block, described under [check-drift.mjs](#kept-in-step-with-the-sync-plugin) above. It is the only projection rule shared as code rather than mirrored as a comment, so it is the only one whose two consumers are asserted to be the *same* two consumers.
 

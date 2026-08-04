@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "outDir": "dist",
+    "rootDir": "src",
+    "declaration": true,
+    "declarationMap": true
+  },
+  "//": "What ships. Stories and the Storybook config are excluded because they are documentation for humans and agents, not library surface.",
+  "include": ["src"],
+  "exclude": ["src/**/*.stories.tsx"]
+}

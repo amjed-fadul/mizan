@@ -1,0 +1,27 @@
+/*
+  The stylesheet beside the fixture component. The contract's token list is
+  read from these references, so this file is the fixture for that half of the
+  derivation.
+
+  `--motion-fast` is deliberate and is the fixture for the other half: a custom
+  property the token set does not define. It has to be declared under
+  `tokens_absent` in the authored half, with a reason, or generation fails.
+*/
+
+.fx-widget {
+  color: var(--text-primary);
+  background: var(--surface-default);
+  padding: var(--space-100) var(--space-200);
+  font-family: var(--font-family-sans);
+  transition: background var(--motion-fast) linear;
+}
+
+.fx-widget--loud {
+  color: var(--text-on-action);
+  background: var(--action-primary);
+}
+
+.fx-widget--quiet {
+  color: var(--text-secondary);
+  border: 1px solid var(--border-subtle);
+}

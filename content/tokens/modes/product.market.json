@@ -1,5 +1,5 @@
 {
-  "$description": "product: market. Mizan Market — grocery and everyday commerce, browsed on a sofa, comfortable density. This dimension is applied second, after theme, and it changes exactly three tokens. action.primary and its hover are the simple case: they depend on product alone, take the same value in both themes, and can therefore name a primitive outright. text.secondary is the cross-dimension case: its value depends on the theme as well, which this file cannot see, so it selects a slot instead of naming a value. The slot was already set by whichever theme file ran first — neutral.700 in light, neutral.400 in dark — and aliases resolve after every override is applied, so the selection lands on the right value in both. Market takes the heavier step of the two: it is read at leisure, so it can afford the contrast Move spends on glanceability.",
+  "$description": "product: market. Mizan Market — grocery and everyday commerce, browsed on a sofa, comfortable density. This dimension is applied second, after theme, and it changes three colour tokens and fifteen control-geometry ones. action.primary and its hover are the simple case: they depend on product alone, take the same value in both themes, and can therefore name a primitive outright. text.secondary is the cross-dimension case: its value depends on the theme as well, which this file cannot see, so it selects a slot instead of naming a value. The slot was already set by whichever theme file ran first — neutral.700 in light, neutral.400 in dark — and aliases resolve after every override is applied, so the selection lands on the right value in both. Market takes the heavier step of the two: it is read at leisure, so it can afford the contrast Move spends on glanceability. The control block is decision 022, and it is the first dimension token in the system that resolves by product. Every one of the fifteen is stated here even where it is identical to Move's, because control.json's argument turns on one of the three steps being deliberately the same in both products, and a step that is the same by omission is indistinguishable from a step nobody thought about. Market's values are also the base values, which is exactly why they are written out rather than inherited: modes.json's rule is that no combination is the privileged one.",
 
   "text": {
     "secondary": { "$value": "{text.secondary-market}" }
@@ -8,5 +8,29 @@
   "action": {
     "primary": { "$value": "{green.600}" },
     "primary-hover": { "$value": "{green.700}" }
+  },
+
+  "control": {
+    "sm": {
+      "padding-inline": { "$value": "{space.150}" },
+      "padding-block": { "$value": "{space.100}" },
+      "font-size": { "$value": "{font-size.200}" },
+      "min-block": { "$value": "{space.400}" },
+      "min-inline": { "$value": "{space.500}" }
+    },
+    "md": {
+      "padding-inline": { "$value": "{space.200}" },
+      "padding-block": { "$value": "{space.150}" },
+      "font-size": { "$value": "{font-size.300}" },
+      "min-block": { "$value": "{space.600}" },
+      "min-inline": { "$value": "{space.600}" }
+    },
+    "lg": {
+      "padding-inline": { "$value": "{space.300}" },
+      "padding-block": { "$value": "{space.200}" },
+      "font-size": { "$value": "{font-size.400}" },
+      "min-block": { "$value": "{space.600}" },
+      "min-inline": { "$value": "{space.600}" }
+    }
   }
 }

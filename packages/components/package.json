@@ -1,0 +1,49 @@
+{
+  "name": "@mizan/components",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Mizan's component library. Every value in it resolves from @mizan/tokens at runtime, so one component is correct in all four mode combinations and in both directions without a branch. Stage 4 — Button is the first, replacing v0's four implementations (decision 020).",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./styles.css": "./dist/Button/Button.css",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && cp src/Button/Button.css dist/Button/Button.css",
+    "typecheck": "tsc --noEmit",
+    "storybook": "storybook dev -p 6006",
+    "build:storybook": "storybook build"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "dependencies": {
+    "@mizan/tokens": "*"
+  },
+  "devDependencies": {
+    "@storybook/addon-a11y": "^10.5.6",
+    "@storybook/addon-docs": "^10.5.6",
+    "@storybook/react-vite": "^10.5.6",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "@vitejs/plugin-react": "^6.0.5",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "storybook": "^10.5.6",
+    "typescript": "^7.0.2",
+    "vite": "^8.2.0"
+  }
+}

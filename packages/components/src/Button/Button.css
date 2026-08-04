@@ -1,0 +1,720 @@
+/*
+  Button — the first component in Mizan's library, and the replacement for the
+  four button implementations in v0 (`.btn`, `.market-btn`, `.mk-btn`,
+  `.mv-action`).
+
+  Nothing in this file is a value. Every colour, space, radius and type value is
+  a custom property generated from content/tokens/ by `npm run build:tokens`.
+  packages/preview's rule — read the build output, never restate it — applies
+  here and is stricter, because this ships: a hex, a px or an em written down in
+  this file is the same defect as an edited generated file, arriving by hand.
+
+  One token gap is named where it arises rather than papered over with an
+  invented value: there is no density dimension (search for `density`). It is
+  recorded in ./README.md with what it would change. The other gap this file
+  used to carry — no motion scale — is closed: decision 021 added
+  content/tokens/primitive/motion.json, and everything under "the motion" below
+  resolves from it.
+
+  Two written numbers remain, both named at the point they are written: the 1px
+  control edge, and the 0.97 of the press scale.
+*/
+
+/* -------------------------------------------------------------- the control */
+
+.mz-button {
+  /*
+    box-sizing is border-box so that min-block-size below is a statement about
+    the hit target rather than about the content box. A tap target is measured
+    from the outside of the control by everybody who measures one.
+  */
+  box-sizing: border-box;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  /*
+    The label is not prevented from wrapping. content/rules/rtl-arabic.md §6
+    measured أضف إلى السلة at 117 per cent of "Add to cart" and إتمام الشراء
+    painting 16.5px of ink against "Checkout"'s 12.0 — a control sized to Latin
+    ink clips Arabic, and the vertical axis clips rather than reflows. So the
+    height comes from padding and line-height, never from a fixed value, and a
+    label that will not fit on one line is allowed to take two. `nowrap` here
+    would trade a taller button for a cut-off word.
+  */
+  border-radius: var(--radius-100);
+  border-style: solid;
+
+  /*
+    1px, and it is the one number in this file that is written rather than
+    resolved. There is no border-width scale in content/tokens/ — a hairline is
+    a hairline in every mode, `border.default` and `border.control` are colours
+    and not widths, and decision 019 and packages/tokens/docs/button.md both
+    describe the control edge as "1px" in prose and in their reference CSS. The
+    preview writes it the same way in eight places. Reaching for space.25 here
+    would be a 2px edge chosen because a spacing token happened to be nearby,
+    which is a worse answer than the honest literal. README records it.
+  */
+  border-width: 1px;
+
+  font-family: var(--font-family-sans);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-tight);
+
+  /*
+    letter-spacing is set here and never overridden. Arabic is cursive and
+    joined; any tracking at all breaks the joins and renders the text wrong
+    rather than differently styled. v0 carries a global 0.01em that reaches
+    every Arabic product title, and `.mv-action` restates it on the button
+    itself. There is one tracking token in the system and this is it.
+  */
+  letter-spacing: var(--letter-spacing-none);
+
+  cursor: pointer;
+
+  /*
+    Both mechanisms of the focus indicator paint outside the border box, and
+    box-shadow paints in document order — an unpositioned button's light band is
+    painted over by the next sibling's background. `position: relative` with a
+    z-index lifts it above both neighbours. It changes what paints on top, never
+    the shape or the box. Decision 019.
+  */
+  position: relative;
+  z-index: 0;
+}
+
+/* ---------------------------------------------------------------- the sizes */
+
+/*
+  DECIDED, AND NO LONGER OWED. This section used to select steps of the spacing
+  ramp directly and record, as a visible temporary regression, that both
+  products' buttons were therefore the same size at the same step. Decision 022
+  landed control geometry as a semantic that resolves by product, so each step
+  now names `control.<step>.<axis>` and the mode decides what it measures.
+
+  What changed here is only which names are written. Market's fifteen values are
+  byte for byte the fifteen this file shipped before — `control.md.padding-inline`
+  resolves to `space.200` in Market, which is what the declaration said — so
+  nothing in Market moves, and that is the proof the swap was a rename rather
+  than a redesign. Move is where the values differ, and it differs without this
+  file knowing that Move exists.
+
+  That last clause is the whole point rather than a nicety. There is no
+  [data-product] selector here, no branch, and no product named anywhere in this
+  component. A control that had to know which product it was in to size itself
+  would be the crack decision 007 exists to prevent, and it would arrive looking
+  like one small conditional.
+
+  The rule NOT to write here, because reading it off the product brief is the
+  mistake 020 caught and 022 encoded: Move is not the smaller of the two.
+  `.mv-action` is 17px type with 14px/22px padding against `.mk-btn--md`'s 15px
+  with 10px/18px — Move's single button is larger than Market's medium and lands
+  on Market's large. Move is compact in how much it puts on a screen and
+  generous in the one thing you have to hit at a curb with one thumb.
+  Per-product resolution decided per step against the role is the rule; "Move's
+  md is smaller" is not, and it is not encoded anywhere in this file — it is not
+  encoded here even by accident now, because the numbers are not here at all.
+*/
+
+.mz-button--sm {
+  padding-inline: var(--control-sm-padding-inline);
+  padding-block: var(--control-sm-padding-block);
+  font-size: var(--control-sm-font-size);
+
+  /*
+    sm is a step, not a product. It does not clear 44×44 and is not meant to,
+    and nothing about it says "Move". It clears WCAG 2.2 2.5.8
+    (Target Size Minimum, AA) at 24×24 with room to spare — 32px of block size
+    is the floor here — and it is documented as available only in the two places
+    2.5.8 itself exempts: inline within a run of text, and where an equivalent
+    full-size control for the same action exists elsewhere on the screen. It is
+    not the small variant of a primary action.
+
+    The inline floor is a step wider than the block floor for the reason §6
+    gives: تم sets 15.1px against "Done"'s 38.3, so a two-character Arabic label
+    in a button-shaped slab reads as a label that failed to load. The floor is
+    what stops that, and it is also what stops the busy indicator — which shares
+    the label's grid cell — from being the widest thing in the control. That
+    second clause is a constraint on the indicator's diameter, and it is what
+    decides the diameter further down: sm's floor leaves 14px of content box
+    between the paddings, so a ring of one em at sm's 13px type fits inside it
+    with a pixel to spare and a larger one would push the control past its own
+    floor. `sm` is the binding case for that in both products, because `sm` is
+    the one step 022 gives both products identically.
+  */
+  min-block-size: var(--control-sm-min-block);
+  min-inline-size: var(--control-sm-min-inline);
+}
+
+/*
+  md is the pair packages/tokens/docs/button.md writes in its own reference CSS
+  — space.200 inline, space.150 block — which is the geometry the token layer
+  described for a button before one existed. It is now reached by name rather
+  than by value, and in Move it resolves a rung up: `.mv-action` was Move's only
+  button, and it is Move's `md` rather than Move's large.
+*/
+.mz-button--md {
+  padding-inline: var(--control-md-padding-inline);
+  padding-block: var(--control-md-padding-block);
+  font-size: var(--control-md-font-size);
+
+  /*
+    44×44 CSS px is the floor md and lg guarantee, and it is a floor from WCAG
+    rather than a token. The spacing ramp has no 44 step; composing one out of
+    two steps would be a fourth spacing value existing in one file, and a
+    `size.tap-target` name would have to hold 48, which is a token whose name
+    and value disagree. So the floor is `control.md.min-block` at 48, and 48 ≥ 44
+    is arithmetic that decision 022 says is owed a gate and does not yet have
+    one. It is load-bearing in Market and not in Move: Market's natural height
+    at this step is 43.5px, so removing it misses the bar by half a pixel, while
+    Move's is 54 and the floor never binds. One declaration, two different jobs,
+    decided by the mode rather than by this file.
+  */
+  min-block-size: var(--control-md-min-block);
+  min-inline-size: var(--control-md-min-inline);
+}
+
+/*
+  lg is the step with the least evidence behind it, and 022 says so plainly:
+  Market's is `.mk-btn--lg`, measured, and Move has no large button in v0 at all
+  — its one button became Move's `md`, so Move's `lg` is one rung up by
+  extension. It exists because the API has three steps and every semantic has to
+  resolve in all four mode combinations, not because a Move screen asked for it.
+*/
+.mz-button--lg {
+  padding-inline: var(--control-lg-padding-inline);
+  padding-block: var(--control-lg-padding-block);
+  font-size: var(--control-lg-font-size);
+  min-block-size: var(--control-lg-min-block);
+  min-inline-size: var(--control-lg-min-inline);
+}
+
+/* ------------------------------------------------------------- the variants */
+
+/*
+  Three variants, and each of them renders a foreground/background pairing that
+  content/tokens/pairs.json declares. That is the constraint that decided them,
+  not taste: an undeclared pairing is an unchecked pairing (decision 010), so a
+  variant this component cannot express in declared tokens is a variant it does
+  not have. It is also why there is no destructive variant — the token layer has
+  no action-danger semantic, and one is not invented here.
+*/
+
+.mz-button--primary {
+  background-color: var(--action-primary);
+  color: var(--text-on-action);
+  border-color: transparent;
+}
+
+.mz-button--primary:enabled:not([aria-busy='true']):hover {
+  background-color: var(--action-primary-hover);
+}
+
+.mz-button--secondary {
+  background-color: transparent;
+  color: var(--text-primary);
+  border-color: var(--border-control);
+}
+
+.mz-button--ghost {
+  background-color: transparent;
+  color: var(--text-primary);
+  border-color: transparent;
+}
+
+.mz-button--secondary:enabled:not([aria-busy='true']):hover,
+.mz-button--ghost:enabled:not([aria-busy='true']):hover {
+  background-color: var(--surface-sunken);
+}
+
+/* --------------------------------------------------------------- the motion */
+
+/*
+  Everything in this section resolves from content/tokens/primitive/motion.json.
+  The note that used to sit here — no transition on any of the above, because
+  there is no motion scale and a duration written in a component is a system
+  decision taken in the wrong place — is gone because the scale exists.
+
+  Four rules govern the section, and each is a rule about what a control owes a
+  hand rather than a preference about how a button should feel.
+
+  1. NOTHING THAT REFLOWS. Three properties move in this file and no others:
+     `transform` on the press, `rotate` on the busy indicator — both of them
+     transform properties, drawn after layout — and `background-color` on hover,
+     which repaints the control's own box and cannot move anything else on the
+     screen. No geometry property transitions, so no state change in this file
+     can cause a layout. `transition: all` appears nowhere and must not: it is
+     the declaration that silently animates whichever property somebody adds
+     next.
+
+  2. THE PRESS IS THE ONE THAT MATTERS. A control that changes nothing between
+     pointer-down and pointer-up has not told the hand it was heard, and on a
+     touch screen — where there was no hover to have said it already — that is
+     the only acknowledgement available before the action resolves.
+
+  3. THE HOVER TRANSITION IS GATED. A touch device fires hover on tap and leaves
+     it applied after the finger has gone, so an ungated hover *animation* draws
+     the eye to a state that is already false. Note what is gated and what is
+     not: the gate is on the transition, not on the hover rule itself. The
+     sticky-hover-on-touch problem belongs to the rule and outlives this change;
+     it is named in README rather than fixed in a commit about motion.
+
+  4. ROTATION IS THE EXCEPTION TO "NEVER LINEAR". Argued where it applies, at
+     the busy indicator below.
+
+  What deliberately does NOT transition: the focus indicator. `outline` and
+  `box-shadow` are absent from every list here, so the indicator appears on the
+  frame the element takes focus. A ring that fades in is a ring that is not yet
+  there while a keyboard user is deciding whether they moved.
+*/
+
+.mz-button {
+  /*
+    duration.100 is the instant tier, and the token file names hover, press and
+    focus as precisely what it is for: past roughly 160ms a change stops reading
+    as a consequence of the input and starts reading as a response to it.
+
+    easing.entrance is the only strong ease-out in the scale, and an ease-out is
+    what a press wants — most of the movement done before the eye finds it, the
+    last of it settling. easing.move is eased at both ends and its slow start is
+    a delay on the leading edge of an answer to a finger; easing.exit
+    accelerates away, which is the one shape this must never have. The name is
+    the imperfect fit and it is recorded in README rather than worked around
+    here: a press is not an arrival, and the curve a press wants has no name of
+    its own in the scale yet.
+
+    Only `transform` is listed at this level. The colour is added inside the
+    hover query below, and the two lists are written out rather than composed,
+    because CSS has no way to append to a transition list.
+  */
+  transition: transform var(--duration-100) var(--easing-entrance);
+}
+
+/*
+  The press.
+
+  0.97 is a written number and it is the second one in this file after the 1px
+  control edge. There is no scale ramp in content/tokens/ — dimension.json holds
+  a space ramp and a radius ramp, both of them lengths — and a fraction of a
+  control's own size is not a length, so no spacing step could carry it even in
+  principle. Named here and recorded in README beside the other gaps, on the
+  same terms as the border width: an honest literal with the gap written down
+  beats a token invented backwards from one component.
+
+  It scales rather than moving, and that is an RTL decision as much as a motion
+  one. A translate has a direction and every directional value in this component
+  is derived (§6); a scale is the one transform with no side, so the press is
+  identical under `dir="rtl"` for exactly the reason the focus indicator is —
+  there is nothing in it to mirror.
+
+  The selector matches hover's, deliberately. A busy or disabled control does
+  not acknowledge a press it is about to refuse: `cursor: progress` and
+  `cursor: not-allowed` already say why nothing happened, and a control that
+  animates and then does nothing has said two things at once.
+
+  On the focus indicator, which this was checked against rather than assumed
+  past: both mechanisms paint outside the border box and both are part of the
+  element's own rendering, so a transform scales them with it. Measured at md,
+  the 8px outer extent of the three bands becomes 7.76px and the 2px outline
+  becomes 1.94px while the pointer is down. The indicator stays present, stays
+  proportional, keeps every tone and every ratio decision 019 argued — those are
+  colours and a scale does not touch them — and returns on release. What it does
+  not do is disappear, clip, or change shape, which are the three ways a
+  transform is normally found to have broken a ring.
+*/
+.mz-button:enabled:not([aria-busy='true']):active {
+  transform: scale(0.97);
+}
+
+/*
+  The hover transition, and the gate rule 3 describes.
+
+  The transitioned property is `background-color` and not the opacity of an
+  overlay, and that is decision 010 deciding it rather than a performance
+  preference. A translucent layer over a declared fill renders a colour no token
+  declares, which is the exact defect the disabled state was rebuilt to avoid —
+  the README's "no state uses opacity to produce a colour". So the cheap
+  compositor-only property is unavailable here on principle, and the honest
+  answer is a paint on the control's own box: it repaints one element, it cannot
+  reflow anything, and it is the only non-transform property in this file's
+  transition lists.
+
+  Same tier and same curve as the press. At 100ms the shape of a curve is not
+  perceptible; what is perceptible is whether the change starts at once, which
+  is what an ease-out gives. Two curves here would imply a distinction nobody
+  can see.
+*/
+@media (hover: hover) and (pointer: fine) {
+  .mz-button {
+    transition:
+      transform var(--duration-100) var(--easing-entrance),
+      background-color var(--duration-100) var(--easing-entrance);
+  }
+}
+
+/*
+  Reduced motion — fewer and gentler, not zero.
+
+  The blanket `animation-duration: 0.01ms !important` that circulates as the
+  reduced-motion snippet is refused here. It is a single statement about every
+  animation on a page, and the user's setting is not a request for a page with
+  no feedback in it — it is a request not to be moved. So this component removes
+  movement one property at a time, which is what duration.0 exists for: the
+  token file says selecting it is a component deciding, one property at a time,
+  that the thing being removed is movement, and that a global substitution
+  decides nothing because it cannot tell a slide from a spinner.
+
+  REMOVED: the press scale. It is the only movement in the component, it is
+  polish rather than information, and `transform: none` is the substantive half
+  — a duration of zero on its own would leave the control still snapping to 97
+  per cent, which is a scale that merely happens instantly. Both halves are
+  written: the transform goes, and the transition that carried it is stated as
+  duration.0 rather than dropped out of the system.
+
+  The cost, stated rather than glossed: a reduced-motion user gets no press
+  acknowledgement at all. The fix is not a smaller scale — a small movement is
+  still movement — it is a non-motion cue, and the only honest one is a colour,
+  and there is no `action.pressed` ground in content/tokens/ to draw it with.
+  Inventing one here would be designing a token backwards from a component.
+  README records it as the gap this section opened.
+
+  KEPT: the hover colour. It aids comprehension — it says which control the
+  pointer is on — and nothing about it moves. This is the half of the "fewer and
+  gentler" reading that the blanket snippet gets wrong in the other direction.
+
+  KEPT UNCHANGED, and this is the argument rather than an oversight: the busy
+  indicator keeps rotating at cycle.spin. Three reasons, in the order they
+  decided it.
+
+    A busy indicator that stops indicating is a bug, not an accommodation. The
+    rotation is the state's only visible carrier — `aria-busy` carries it to
+    assistive technology, but a sighted user with the preference set would be
+    left looking at a static ring, which is indistinguishable from a decorative
+    border on a control that has simply stopped responding.
+
+    The preference is about being moved, and this does not move. Every point on
+    a 16px ring rotating about its own centre stays inside that 16px box: there
+    is no translation across the viewport, no parallax, and no change of scale —
+    the three things the vestibular case is actually about.
+
+    Every alternative costs a token that does not exist. Slowing it needs a
+    second cycle value; swapping the rotation for an opacity pulse needs a
+    `cycle.pulse`, because the length of an endless animation is a cycle and not
+    a duration tier — that separation is the whole of motion.json's second
+    group, and reaching for duration.500 to time a pulse is precisely the
+    substitution it was written to prevent. Neither token is invented here.
+
+  So the deliberate absence below is the decision: there is no rule overriding
+  `.mz-button__busy`, and one must not be added without a `cycle` token to
+  point it at.
+*/
+@media (prefers-reduced-motion: reduce) {
+  .mz-button:enabled:not([aria-busy='true']):active {
+    transform: none;
+  }
+
+  .mz-button {
+    transition-duration: var(--duration-0);
+  }
+}
+
+/*
+  The hover half of it, restated because the list it overrides is longer. The
+  positions are `transform, background-color` from the query above, so this
+  removes the movement and leaves the colour at the instant tier rather than
+  taking both to zero.
+*/
+@media (prefers-reduced-motion: reduce) and (hover: hover) and (pointer: fine) {
+  .mz-button {
+    transition-duration: var(--duration-0), var(--duration-100);
+  }
+}
+
+/* ---------------------------------------------------------- the full-width  */
+
+/*
+  fullWidth is not a width. §6 says a component does not take one — width is
+  content plus padding with a floor from the token layer — and this prop does
+  not hand the caller a number, it says "fill the container you are in". The
+  min-inline-size above still applies underneath it.
+*/
+.mz-button--full-width {
+  inline-size: 100%;
+}
+
+/* ------------------------------------------------------------- the disabled */
+
+/*
+  A disabled state is a declared pair of tokens. v0 carries `opacity: 0.5` on
+  the disabled button in all three stylesheets, which produces a rendered colour
+  that no token declares — one unreviewable contrast ratio per product, sitting
+  outside the guarantee in decision 010.
+
+  All three variants collapse to one disabled appearance, and it is the same
+  pair in every case: text.secondary on surface.sunken, declared in pairs.json
+  and gated at the full 4.5 text threshold. The border goes transparent rather
+  than to border.default, because border.default on surface.sunken is a pairing
+  pairs.json does not declare and this component does not get to add one.
+
+  There is no `action.disabled` or `text.disabled` semantic. This is what the
+  system can currently say about a disabled control without inventing a token.
+*/
+.mz-button:disabled {
+  background-color: var(--surface-sunken);
+  color: var(--text-secondary);
+  border-color: transparent;
+  cursor: not-allowed;
+}
+
+/* --------------------------------------------------------------- the focus  */
+
+/*
+  The two-tone indicator from decision 019, reused rather than reinvented — the
+  same three bands the preview draws, measured outward from the border box:
+
+    0–2px   focus.ring-contrast   box-shadow spread
+    2–4px   focus.ring            outline, painted over the shadow
+    4–8px   focus.ring-contrast   the rest of the same box-shadow
+
+  This is the component decision 019 was written for. A single ring in focus.ring
+  meets action.primary at 2.37:1 in light Market and 2.54:1 in light Move,
+  against 1.4.11's 3.0 — and `primary` is a brand fill with a ring drawn on it
+  every time focus lands there. Flanking the dark band with the light one puts
+  focus.ring-contrast against the fill at 5.64:1 / 5.27:1 in light and 3.27:1 /
+  3.50:1 in dark, so every ground meets a tone above 3.0 in all four mode
+  combinations. The losing tone is declared and excepted in pairs.json rather
+  than left undeclared, and the exception is void the moment the light bands
+  stop being drawn on both sides. They are drawn on both sides here.
+
+  z-index rather than nothing: see the note on `position` at the top. No
+  border-radius and no offset change — both mechanisms follow the element's own
+  corners, so the indicator mirrors with `dir` for free, and a control may not
+  change shape at the moment it is being pointed at.
+*/
+.mz-button:focus-visible {
+  z-index: 1;
+  outline: var(--space-25) solid var(--focus-ring);
+  outline-offset: var(--space-25);
+  box-shadow: 0 0 0 var(--space-100) var(--focus-ring-contrast);
+}
+
+/* ------------------------------------------------------ label, icon, busy   */
+
+/*
+  The stack is one grid cell with two occupants. It is how the control holds its
+  size while it is busy.
+
+  The label keeps its box the whole time — it is hidden by opacity, not removed,
+  not replaced and not measured in JavaScript — so the inline size of a loading
+  button is max(label, indicator), which is the label, which is the width it had
+  a moment before the press. v0's `.mv-action` swaps the label for the string
+  "Please wait" and adds a spinner beside it, so the control changes width under
+  the finger that is pressing it, in English only.
+
+  On opacity, because content/rules/rtl-arabic.md has a rule about it and this
+  looks like a violation: that rule is about a *rendered* colour no token
+  declares — `opacity: 0.5` on a disabled control produces a foreground the
+  contrast gate cannot see. At exactly 0 there is no rendered foreground and so
+  no pairing to declare. The reason it is opacity and not `visibility: hidden`
+  is the accessibility tree: visibility would take the label out of it, and the
+  button would lose its accessible name at the exact moment it is announcing
+  that it is busy.
+*/
+.mz-button__stack {
+  display: grid;
+  grid-template-areas: 'stack';
+  align-items: center;
+  justify-items: center;
+}
+
+.mz-button__content {
+  grid-area: stack;
+  display: inline-flex;
+  align-items: center;
+
+  /*
+    The icon sits before the label in reading order and the gap is between them.
+    That is the whole mirroring implementation: flex flips with `dir`, so there
+    is no second rule, no [dir='rtl'] selector and nothing physical to get wrong.
+    Whether the icon's own glyph mirrors is the icon's flag (§5), never this
+    component's business — a Button that mirrored its icon would mirror a map
+    pin and a play triangle along with an arrow.
+  */
+  gap: var(--space-100);
+}
+
+.mz-button[aria-busy='true'] .mz-button__content {
+  opacity: 0;
+}
+
+.mz-button[aria-busy='true'] {
+  cursor: progress;
+}
+
+.mz-button__icon {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+}
+
+.mz-button__busy {
+  grid-area: stack;
+  flex: none;
+
+  /*
+    Measured from the outside, for the reason the control is: box-sizing does
+    not inherit, so without this the em below is the content box and the drawn
+    ring is one em plus twice the stroke. A diameter is the outside of a circle
+    to everybody who measures one, and the arithmetic that bounds the diameter
+    below is arithmetic about the drawn ring rather than about a box inside it.
+  */
+  box-sizing: border-box;
+
+  border-radius: var(--radius-full);
+  border-style: solid;
+
+  /*
+    The stroke does not scale and the diameter does. A ring's stroke is a
+    hairline-class value like the control edge — it reads as a stroke at 2px on
+    a 13px ring and at 2px on an 18px one, and scaling it would make Move's
+    indicator a thicker ring rather than a bigger one. space.25 is a token, so
+    this is a named value rather than a written number, unlike the border width
+    at the top of the file.
+  */
+  border-width: var(--space-25);
+
+  /*
+    THE DIAMETER IS ONE EM, AND THE em IS THE POINT.
+
+    This used to be three declarations — space.150 at sm, space.200 at md,
+    space.250 at lg — and they were three values chosen one at a time rather
+    than a rule: 12/13, 16/14 and 20/16 against their own type sizes, which is
+    not a ratio, it is three ratios. That survived only while one geometry
+    served both products. Decision 022 made `control.md.font-size` resolve to
+    14px in Market and 16px in Move, so a per-step pixel diameter meant Move's
+    control grew and the ring inside it did not. The token agent declined to fix
+    it from the token side and was right to: a busy indicator's diameter is a
+    component part, and naming one in a layer meant to describe any control is
+    how a semantic layer starts holding component vocabulary.
+
+    So the diameter is stated as a relation instead of a value. One em is the
+    type size the label beside it is set at, and the indicator stands in that
+    label's place in the same grid cell — the ring is the size of the thing it
+    replaces. It follows the product, follows the step, and follows any fourth
+    step somebody adds later, with nothing to keep in step by hand.
+
+    One em rather than some larger multiple, and the bound is arithmetic rather
+    than taste. `sm` is the binding case and the same in both products: 40px
+    inline floor, 12px of padding each side, 1px of border each side, leaving
+    14px of content box. At sm's 13px type a one-em ring is 13px and fits;
+    anything above about 1.08em makes the indicator the widest thing in the
+    control and pushes it past the floor the §6 argument put there. The comment
+    on sm's floor above states the same constraint from the other end.
+
+    It is not affected by the Arabic optical correction, and must not be: that
+    correction is on .mz-button__label, so 1em here is the step's own size in
+    both scripts. The correction is about how glyphs sit on a line, and a circle
+    has no glyphs.
+  */
+  inline-size: 1em;
+  block-size: 1em;
+
+  /*
+    currentColor, so the indicator is whatever the variant's declared label
+    token resolved to — text.on-action on primary, text.primary on the other
+    two. Not a fourth colour, and not a pairing pairs.json has not seen.
+  */
+  border-color: currentColor;
+  border-block-start-color: transparent;
+
+  /*
+    THE TOKEN THIS COMPONENT ASKED FOR AND DID NOT FIND, NOW FOUND.
+
+    The declaration used to name `--duration-500` with no fallback, which made
+    the shorthand invalid at computed-value time and left the ring static — the
+    honest rendering of a system with no motion tokens, and a placeholder rather
+    than a value. It resolves to two different tokens now, and both changes are
+    corrections rather than substitutions.
+
+    cycle.spin, not duration.500. The length of an endless animation is a cycle
+    and not a transition tier: every value in the duration ramp is the length of
+    a change that has a start and an end, and a rotation has neither. The two
+    groups are also chosen against different questions — a tier against how much
+    of the screen is changing, a cycle against how fast the loop reads — so the
+    old name was not merely long, it was a value from the wrong group. It is
+    800ms, and the number is chosen: a faster rotation makes an identical wait
+    feel shorter, and there is nothing to be won by a stately one. Below roughly
+    600ms a 2px ring stops reading as something rotating and starts reading as
+    something flickering, which is the floor. 800ms also sits above the 600ms
+    ceiling the duration ramp sets for itself, which is the clearest available
+    evidence that it is not a tier.
+
+    easing.continuous, and this is the one place in this file where a constant
+    speed is right. The standing advice about easing is "never linear", and that
+    advice is about transitions: an eased spinner visibly speeds up and slows
+    down once per revolution and reads as struggling rather than working. So the
+    rule and its exception are the same rule — a curve describes the shape of a
+    change between two states, and a rotation has no two states to be between.
+    The token resolves to cubic-bezier(0, 0, 1, 1), which is the definition of
+    the `linear` keyword rather than an approximation of it; writing the keyword
+    instead would be a value decided inside a component, however small, and a
+    bare `linear` reads as no choice having been made where `continuous` reads
+    as a choice somebody can disagree with.
+
+    It keeps spinning under prefers-reduced-motion, and the argument for that is
+    with the reduced-motion rules above rather than here, because the decision
+    is the deliberate absence of a rule and an absence cannot carry a comment.
+
+    Rotation is not mirrored under RTL and must not be: clockwise is clockwise
+    in every locale (§5, the same reason a clock does not mirror).
+  */
+  animation: mz-button-spin var(--cycle-spin) var(--easing-continuous) infinite;
+}
+
+@keyframes mz-button-spin {
+  to {
+    rotate: 1turn;
+  }
+}
+
+/*
+  The three per-step diameter rules that used to sit here are gone. They are the
+  declaration above, once, in em. Nothing replaces them and nothing should: a
+  per-step override is how the drift decision 022 exposed got in, and the next
+  one would arrive the same way.
+*/
+
+/* -------------------------------------------------------- the script subtree */
+
+/*
+  Decision 013 makes script a mode of the type scale, scoped by :lang() to the
+  subtree that sets the language rather than attached to :root — an Arabic page
+  contains Latin runs and an English page contains Arabic ones. It is decided
+  and not yet in the token layer, so this is the same approximation the preview
+  uses in src/app.css: :lang() says which, and the two sides are separately
+  named primitives rather than one resolved name.
+
+  The button carries the face and the leading. Arabic needs more line-height at
+  the same size — 1.45 against Latin's 1.25 — because ascenders, descenders and
+  diacritics occupy more vertical space, and مُخفَّض reaches higher above the
+  baseline than the font's own declared ascent.
+
+  The optical size correction is on the label rather than here, and that is not
+  a stylistic choice. In a font-size declaration `1em` is the *parent's* size,
+  so applying the correction on the element that also sets the size would
+  multiply the wrong number. The label is always an inner element inside
+  whatever set the size, so its 1em is the step being corrected and the
+  correction lands exactly once. 1.08 is bounded rather than chosen: the
+  tightest step in the Latin scale is 12px to 13px, a ratio of 1.083, and a
+  larger correction would make one rung's Arabic indistinguishable from the next
+  rung's Latin.
+*/
+.mz-button:lang(ar) {
+  font-family: var(--font-family-arabic);
+  line-height: var(--line-height-arabic-tight);
+}
+
+.mz-button__label:lang(ar) {
+  font-size: calc(1em * var(--font-size-arabic-scale));
+}

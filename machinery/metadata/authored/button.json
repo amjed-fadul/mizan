@@ -1,0 +1,195 @@
+{
+  "status": "stable",
+  "purpose": "The one control that performs an action. It replaces the four button implementations Mizan v0 grew behind three contradictory APIs, and carries one variant vocabulary that describes appearance only.",
+  "responsibilities": [
+    "Render a native <button> with an explicit HTML type, always.",
+    "Carry one of three visual weights, and no fourth one that names an action.",
+    "Hold a label, optionally preceded in reading order by an icon it does not draw.",
+    "Refuse activation while loading or disabled, and say so to assistive technology rather than only in paint.",
+    "Take its geometry from a size step and let the product mode decide what that step resolves to.",
+    "Nothing about layout beyond the one escape hatch below, and nothing at all about what pressing it means."
+  ],
+  "do": [
+    "Say what pressing it does, in the label. The label is where the weight of an action lives.",
+    "Set type explicitly at every call site — button, submit or reset — and choose it rather than inheriting it.",
+    "Use primary for the one action a screen is asking for, secondary for the others, ghost where a control must be present without competing.",
+    "Reach for primary where v0 said confirm, and for secondary where v0 said cancel.",
+    "Pass loading for work the press started, and leave the label describing the action rather than the wait.",
+    "Let the size step be the whole geometry decision, and let the product mode resolve it."
+  ],
+  "dont": [
+    "Do not use it to navigate. A button that changes the address is a link wearing the wrong element, and it loses the middle-click, the copy-link, the open-in-new-tab and the status bar preview that came free.",
+    "Do not name a variant after a verb. The moment two actions with opposite meanings need the same appearance — and that moment is immediate — an action-named vocabulary has to grow a term per verb.",
+    "Do not paint a routine reversal red. Backing out of a booking nobody has taken is the most ordinary thing a rider does.",
+    "Do not reach for fullWidth to fill a cell. It exists for the bottom-anchored mobile call to action; anything else is layout leaking into a control.",
+    "Do not decide whether the icon it was handed should mirror. That flag belongs to the icon.",
+    "Do not fix a height to fit Latin ink. Arabic descends below the baseline as a matter of course and its diacritics reach above the declared ascent."
+  ],
+  "do_not_use_when": [
+    {
+      "when": "The control takes the user somewhere — another screen, another document, anywhere with an address.",
+      "use_instead": "A link. If it navigates, it is an <a>, however much it looks like a button."
+    },
+    {
+      "when": "The action is genuinely destructive — it cannot be undone by the user and it loses something they own.",
+      "use_instead": "Put the weight in the label. There is deliberately no destructive variant: a shared component may not reference a mobility.* token, so the value v0's cancel button borrowed is out of reach by design, and no action semantic has been decided to replace it."
+    },
+    {
+      "when": "The control selects one option from a group rather than performing an action.",
+      "use_instead": "A radio group or a segmented control. A pressed button that stays pressed is a selection with no accessible name for its state."
+    },
+    {
+      "when": "The control toggles a setting on and off.",
+      "use_instead": "A switch or a checkbox. A button reports that something happened; a toggle reports what is currently true."
+    },
+    {
+      "when": "You want a button that is wide because the parent will not lay it out.",
+      "use_instead": "Layout in the parent. fullWidth is for a call to action that genuinely spans the viewport, and a fullWidth that is wrong looks fine, which is why it is worth naming."
+    }
+  ],
+  "alternatives": [
+    { "use": "a link (<a>)", "for": "anything that changes the address", "in_system": false },
+    { "use": "variant=\"primary\"", "for": "what Move v0 called confirm", "in_system": false },
+    { "use": "variant=\"secondary\", plus a label that carries the weight", "for": "what Move v0 called cancel, and for a destructive action until a destructive semantic is decided in content/tokens/ and its pairing gated", "in_system": false },
+    { "use": "a radio group or a segmented control", "for": "choosing between options rather than acting", "in_system": false },
+    { "use": "a switch", "for": "a setting that is on or off", "in_system": false }
+  ],
+  "content": [
+    "The label, which is a verb phrase naming what will happen.",
+    "The weight of the action, which lives in the words rather than in the colour: \"Cancel booking\" against \"Keep booking\" is a clearer control than any hue makes it.",
+    "Whether an icon accompanies the label, and which one."
+  ],
+  "constraints": [
+    "No fourth variant. Adding one to serve a single screen is designing a token backwards from a component; the order is decide the semantic, declare its pairing, gate it, then give the button a variant.",
+    "No width prop and no fixed height. Width is content plus padding with a token floor where a control needs to stay a tap target; height comes from padding and the Arabic line height.",
+    "No prop shortens a string. There is no maxChars, no truncate and no abbreviation, in any language — Arabic has none, and an API that shortens by character count is untranslatable by construction.",
+    "No className and no style. The props type deliberately does not extend ButtonHTMLAttributes, because that hands back style, className and width, and a component does not take a width.",
+    "No colour that content/tokens/pairs.json has not seen. The disabled appearance is a declared pair, not an opacity over one.",
+    "No density prop. size names the step and the product mode decides what it resolves to, so a Market screen cannot ask for Move's geometry.",
+    "No decision about the icon it is handed. Mirroring is a three-valued flag on the icon — does not mirror, mirrors by transform, mirrors by asset — and the button neither reads it nor overrides it. It cannot: a \"turn right\" glyph in a Move button describes a physical manoeuvre and stays as drawn, a \"next\" chevron flips, and the difference is a property of the glyph that nothing at this layer can see.",
+    "Both products' buttons are the same size until the product-density token work lands. The decision is taken and the mode files do not carry it yet — a visible temporary regression against v0 rather than a quiet one.",
+    "The variant vocabulary is visual. Nothing in this API names what an action means.",
+    "No motion value is decided inside the component. Every duration, cycle length and curve resolves from content/tokens/primitive/motion.json; a transition list names its properties and never says all; and nothing that could cause a layout is transitioned. The press acknowledgement is a transform and the hover change is a background colour, which is a paint on the control's own box and the only non-transform property in any list.",
+    "Under prefers-reduced-motion the press scale is removed and the hover colour transition is kept — fewer and gentler, not zero — and the busy indicator keeps rotating, because an indicator that stops indicating is a bug rather than an accommodation. The blanket animation-duration override is refused: it cannot tell a slide from a spinner."
+  ],
+  "rtl": {
+    "behaviour": [
+      "Layout is logical throughout. Padding, the gap between icon and label, and the focus ring are inline and block properties, never left and right, so the whole control flips with the document.",
+      "The icon sits before the label in reading order, which is the left in a Latin page and the right in an Arabic one. It is ordered by the flow, not positioned by a side.",
+      "Arabic sets at letter-spacing 0, always, and takes the Arabic line height rather than the Latin one.",
+      "There is no [dir='rtl'] selector anywhere in the component. Every directional value in it is derived — logical properties and flex order — which is the test §6 sets for a component rather than \"does it look mirrored\".",
+      "The busy indicator rotates and its rotation is not mirrored. Clockwise is clockwise in every locale.",
+      "The press feedback is a scale and not a translate. A translate has a direction and a scale has none, so the pressed control is identical under either direction with no rule of its own — the same reason the focus indicator needs none.",
+      "The control has no width and no fixed height, because the same label is not the same size in Arabic — measured in one face at one size, تم is 39 per cent of the width of \"Done\" and أضف إلى السلة is 117 per cent of \"Add to cart\"."
+    ],
+    "mirrors": [
+      "The whole control, by flipping with the document rather than by any rule of its own."
+    ],
+    "does_not_mirror": [
+      "The icon it is handed. Mirroring is the icon's own three-valued flag — does not mirror, mirrors by transform, mirrors by asset — and the button neither reads it nor overrides it. A \"turn right\" glyph inside a Move button describes a physical manoeuvre and stays as drawn; a \"next\" chevron flips. The button cannot tell the difference and must not try."
+    ]
+  },
+  "accessibility": {
+    "guarantees": [
+      "A native <button> element, so keyboard activation, the disabled state, form association and focus behaviour come from the platform rather than from a re-implementation that gets one of them subtly wrong.",
+      "An explicit HTML type at every call site, so no button submits a form by accident.",
+      "A visible focus indicator on every variant, including primary, where the ring meets a brand fill. Two tones.",
+      "A hit target of at least 44 by 44 CSS px at md and lg.",
+      "The disabled state reaches assistive technology through the platform attribute, and is drawn with a declared token pair rather than an opacity — an opacity renders a colour no token declares and therefore a contrast ratio the gate cannot see.",
+      "A loading button keeps its focus, its accessible name and its size: aria-busy carries the state, activation is blocked in the handler rather than by disabling the element, and the indicator shares the label's grid cell.",
+      "Padding and line height sized so Arabic diacritics are not clipped."
+    ],
+    "consumer_must": [
+      "Write a label that names the action. children is required precisely so an icon-only button cannot end up unnamed, and the icon is decorative.",
+      "Decide what a loading button says, and in which language. v0's ActionButton replaced its children with the hard-coded English string \"Please wait\" in a product that ships Arabic; this component keeps the label it was given and carries the busy state through aria-busy instead, which is the one channel already localised.",
+      "Use md or lg wherever WCAG 2.5.5 applies. sm clears 2.5.8 but not 2.5.5, and belongs only where 2.5.8 itself grants an exception — inline in a run of text, or beside an equivalent full-size control for the same action.",
+      "Wrap a label whose direction differs from the page in <bdi>. The component renders the label it is handed and does not isolate it.",
+      "Supply an icon that carries its own mirroring flag."
+    ]
+  },
+  "tokens_absent": [],
+  "aiHints": {
+    "keywords": [
+      "button",
+      "action",
+      "cta",
+      "call to action",
+      "submit",
+      "confirm",
+      "cancel",
+      "primary",
+      "secondary",
+      "ghost",
+      "loading",
+      "add to cart",
+      "book ride",
+      "control"
+    ],
+    "use_when": [
+      "A press performs an action on the current screen.",
+      "A form needs submitting or resetting.",
+      "A screen has one action it is asking for and others it will accept.",
+      "You are migrating a v0 call site off shared/Button, PrimaryButton, ActionButton or a bare .btn.btn-cta."
+    ],
+    "not_a": [
+      "A link. If it navigates, it is not this.",
+      "A toggle or a selection control. This reports that something happened, not what is currently true.",
+      "A destructive-action control. There is no danger variant and its absence is a decision, not an omission.",
+      "A place to put a product's vocabulary. confirm and cancel are semantics of the action and map to primary and secondary."
+    ]
+  },
+  "deprecation": {
+    "policy": "This component is the destination of a consolidation, so it is withdrawn only by a decision that names what replaces it. A prop is withdrawn ahead of the component: mark it @deprecated in the source with the replacement named in the tag, which this contract derives and any agent reading it sees, keep it working for one minor version, then remove it in a major one with the migration written down. A variant is never removed while a call site can still name it in a string."
+  },
+  "figma": {
+    "component": "Button",
+    "unmapped": [
+      {
+        "prop": "type",
+        "why": "The HTML type attribute has no visual form. Figma has nothing to mirror, and a variant property named type is exactly the shadowing this API exists to undo."
+      },
+      {
+        "prop": "onClick",
+        "why": "A handler is behaviour. Figma properties describe what a component looks like."
+      }
+    ]
+  },
+  "props": {
+    "variant": {
+      "figmaProperty": "Variant",
+      "guidance": "A variant names how a control looks; it does not name what pressing it means. confirm is primary and cancel is secondary — v0's own CSS already drew them identically. There is no destructive variant and the reason is structural: a shared component may not reference a mobility.* token."
+    },
+    "size": {
+      "figmaProperty": "Size",
+      "guidance": "Names the step, not the pixels. What a step resolves to is a product decision the mode layer makes, so a call site never names a product. Move's control is compact in what surrounds it and generous in the thing a thumb has to hit at a curb, which is why per-product resolution is the rule rather than \"Move is smaller\". md and lg guarantee the 44 by 44 hit target; sm does not, and is for the places WCAG 2.5.8 grants an exception."
+    },
+    "type": {
+      "figmaProperty": null,
+      "guidance": "The real HTML attribute, always set explicitly. In v0 seventeen of twenty-five call sites rendered a submit button by omission, which never fired only because legacy/src contains no <form> at all. A prop that shadows a platform attribute does not risk confusion; it deletes a capability the platform already gave you."
+    },
+    "loading": {
+      "figmaProperty": "Loading",
+      "guidance": "Refuses activation and announces that work is under way. What the button says while loading is deliberately not decided here — v0 hard-coded an English string into an Arabic product, and taking the prop without taking that behaviour leaves the question at the call site where the language is known."
+    },
+    "icon": {
+      "figmaProperty": "Icon",
+      "guidance": "A slot, not a drawing. It sits before the label in reading order and the button does not decide whether it mirrors: that flag is the icon's own and is three-valued — does not mirror, mirrors by transform, mirrors by asset."
+    },
+    "fullWidth": {
+      "figmaProperty": "Full width",
+      "guidance": "The one layout escape hatch in this API. It survives because Move did not avoid the problem by omitting it — .mv-action is width: 100% unconditionally, so the choice existed and was merely invisible. If it spreads past the bottom-anchored call to action, layout has leaked into the control."
+    },
+    "disabled": {
+      "figmaProperty": "Disabled",
+      "guidance": "Refuses activation. A disabled control that gives no reason is a dead end; the reason belongs beside it, not inside it."
+    },
+    "children": {
+      "figmaProperty": "Label",
+      "guidance": "The label, and the place the weight of an action lives. Nothing in this API shortens it, and the same words are not the same width in Arabic."
+    },
+    "onClick": {
+      "figmaProperty": null,
+      "guidance": "The action. Everything this contract refuses to say about meaning is said here instead, at the call site."
+    }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "$description": "One footprint that clears 44 in product.roomy and falls to 40 in product.tight. The gate must pass it in the first combination and fail it in the second — the proof that the floor is read per combination and not once. A gate that resolved the base value and stopped would report this as a pass.",
+  "targets": [
+    {
+      "step": "control.varies",
+      "block": "control.varies.min-block",
+      "inline": "control.varies.min-inline",
+      "context": "pointer",
+      "$description": "block is 48 in roomy and 40 in tight; inline is 48 throughout. So the binding axis is block, and only in tight."
+    }
+  ]
+}

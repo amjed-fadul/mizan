@@ -1,0 +1,80 @@
+{
+  "$description": "Control geometry — the footprint of an interactive control at each size step, resolved by product. This is the token half of decision 020's `size` judgment and the subject of decision 022. It is a separate file from shared.json rather than more names inside it, because shared.json's count is an argument about itself: every name there is four contrast decisions and four gated pairings, and fifteen dimension tokens that no pair can ever name would falsify that claim about the file while adding nothing to it. The ownership axis is unchanged — this is shared vocabulary, Market and Move both have controls, and nothing here may be referenced from commerce.* or mobility.*. Only the burden differs. What resolves per product is the geometry and not the vocabulary. `sm`, `md` and `lg` mean the same thing in both products — a step, chosen against the role the control plays on the screen — and the product mode decides what the step measures. That is decision 007's shape applied to dimension for the first time: one name, four resolutions, components product-agnostic. A component that needed to know which product it was in to size itself would be the crack 007 exists to prevent. Every value here is a reference, like every semantic. The base values are Market's, and both product mode files state all fifteen explicitly rather than letting either product be the default that the other departs from — modes.json's convention, and it matters more here than it does for colour, because the interesting fact about this scale is that one of the three steps is deliberately identical in both products and an omission would read as an oversight.",
+
+  "control": {
+    "$type": "dimension",
+    "$description": "One group per size step, five axes each: the two paddings that produce the control's size, the type size the label is set at, and the two floors that stop a short label from producing a control nobody can hit. Height is not among them. A control's block size comes from its padding and its leading, never from a fixed value — a fixed height is a control that stops growing when a user raises their text size, and min-block is a floor under that growth rather than a replacement for it. What is NOT here, and why: the busy indicator's diameter and the icon gap. Both are per-step and both are proportions *inside* the control rather than the control's footprint, and naming a busy indicator in the semantic layer is naming a component part in a layer that is supposed to be able to describe any control. They are component tokens, the system has no component layer yet, and decision 022 records what that costs — a Move control that grew without its indicator growing with it. The 44×44 tap-target floor is not a token here and is not a token anywhere. Decision 022 argues it: the space ramp has no 44 step, the nearest rungs are 40 and 48, and a `size.tap-target` name would have to hold 48 — a token whose name and value disagree. A floor is a relation between a geometry and a threshold, which is the shape decision 010 already settled for contrast, where the threshold lives in the gate and the token layer declares what to check. The floors below are stated in the descriptions with their arithmetic, and the gate that would check them is owed.",
+
+    "sm": {
+      "$description": "The small step, and the one step that is DELIBERATELY IDENTICAL IN BOTH PRODUCTS. That is not an omission in the mode files, which state it twice for exactly this reason. `sm` is defined by the WCAG 2.2 exemption it lives in rather than by a product's density — 2.5.8's 24×24 minimum, and the two places 2.5.8 itself exempts: inline within a run of text, and where an equivalent full-size control for the same action exists elsewhere on the screen. That definition does not vary between a sofa and a curb. Move being the compact product is not a licence to spend its compactness on the smallest control, which is the one place where a lost pixel is a missed tap rather than a tighter screen.",
+      "padding-inline": {
+        "$value": "{space.150}",
+        "$description": "12px. The half step between 8 and 16, which is the rung compact layouts do most of their work on."
+      },
+      "padding-block": {
+        "$value": "{space.100}",
+        "$description": "8px, the base step of the spacing scale."
+      },
+      "font-size": {
+        "$value": "{font-size.200}",
+        "$description": "13px. One rung below the 14px a control label is normally set at, and the smallest size in the system that is still a label rather than a caption."
+      },
+      "min-block": {
+        "$value": "{space.400}",
+        "$description": "32px. Natural height here is 8 + 8 + 13×1.25 + 2px of border, which is 34.25 — so this floor does not bind at the default text size and exists for the case where it does. It clears 2.5.8's 24×24 with room and does not reach 44×44, which is the whole of what `sm` is: not the small variant of a primary action."
+      },
+      "min-inline": {
+        "$value": "{space.500}",
+        "$description": "40px, a step wider than the block floor, and the reason is script rather than product. content/rules/rtl-arabic.md §6: تم sets 15.1px against \"Done\"'s 38.3, so a two-character Arabic label in a button-shaped slab reads as a label that failed to load. This floor is what stops that, in both products and both directions, which is why it does not vary by product either."
+      }
+    },
+
+    "md": {
+      "$description": "The default step, and the first place the two products genuinely part. Market's `md` is where `.mk-btn--md` sat in v0 — 44.5px of rendered height there, 43.5px here, floored to 48 by min-block. Move's `md` is `.mv-action`, Move's only button, 55.5px in v0, which lands on Market's LARGE and not on Market's medium. That is the finding decision 020 recorded and this file encodes: Move is compact in how much it puts on a screen and generous in the one thing you hit with a thumb at a curb, so \"Move's md is smaller\" is the rule that reading the density brief alone would have produced, and it is backwards. Move's default control is a rung up, not a rung down.",
+      "padding-inline": {
+        "$value": "{space.200}",
+        "$description": "16px in Market, 24px in Move. Move's v0 button had 22px and 24 is the ramp's nearest rung; the ramp is not adjusted to hit a v0 value exactly, because v0's values were not chosen, they accumulated. Move's inline padding is also the axis that matters least in practice — `.mv-action` was `width: 100%` unconditionally, so 22px was doing nothing that could be seen."
+      },
+      "padding-block": {
+        "$value": "{space.150}",
+        "$description": "12px in Market, 16px in Move. This is the axis that carries most of the height difference between the two products' default buttons: 41.5px of content box against 52."
+      },
+      "font-size": {
+        "$value": "{font-size.300}",
+        "$description": "14px in Market, 16px in Move. v0 had 15px and 17px, and both round inward onto the type scale one rung apart — the gap between the two products survives the rounding, which is the part that had to survive. Type size is the axis the v0 evidence is loudest about and the one a density scale that only moved padding would have missed."
+      },
+      "min-block": {
+        "$value": "{space.600}",
+        "$description": "48px in both products, and load-bearing in Market only. Market's natural height at this step is 43.5px, so without this floor the default control misses the 44×44 tap target by half a pixel; Move's natural height is 54 and the floor never binds. 48 rather than 44 because 44 is not on the space ramp and composing it from two steps would be a fourth spacing rhythm existing in one place, which is the defect v0 died of. What the system therefore guarantees is 48, and 48 ≥ 44 is arithmetic nothing currently checks — see the group description."
+      },
+      "min-inline": {
+        "$value": "{space.600}",
+        "$description": "48px in both products, for the §6 reason `sm`'s floor exists and at the size this step's block floor sets, so a one-word Arabic label on a default control is square rather than a slot."
+      }
+    },
+
+    "lg": {
+      "$description": "The large step, and the step with the LEAST EVIDENCE BEHIND IT — worth saying plainly, because everything else in this file is measured off v0 and this half is not. Market's `lg` is `.mk-btn--lg`, 54px, real. Move has no large button in v0 at all: its one button became Move's `md`, so Move's `lg` is defined by extension rather than by evidence — one rung up from Move's `md` on each axis, because a step that does not differ from the one below it is not a step. It exists because the API has three sizes and every semantic must resolve in all four mode combinations, not because a Move screen has asked for it. The first Move screen that does is the thing that will tell us whether these numbers are right.",
+      "padding-inline": {
+        "$value": "{space.300}",
+        "$description": "24px in Market, 32px in Move."
+      },
+      "padding-block": {
+        "$value": "{space.200}",
+        "$description": "16px in Market, 20px in Move. Market's pair here is exactly Move's `md` pair, which is the arithmetic behind decision 020's finding stated as a value: the two products' scales overlap by a step rather than running parallel."
+      },
+      "font-size": {
+        "$value": "{font-size.400}",
+        "$description": "16px in Market — the base size of the type scale, and the largest a control label goes in a product read at leisure — and 18px in Move."
+      },
+      "min-block": {
+        "$value": "{space.600}",
+        "$description": "48px in both, and binding in neither: natural height is 54px in Market and 64.5px in Move. It is stated anyway rather than dropped, because a floor that only exists where it currently binds is a floor that disappears the first time somebody shortens the padding, and the guarantee is meant to be about the step and not about today's values."
+      },
+      "min-inline": {
+        "$value": "{space.600}",
+        "$description": "48px in both, on the same terms as `md`. The inline floor stops at 48 rather than continuing up the ramp because past that it stops being a floor under a short label and starts being a width, and a control does not take a width — decision 020, §6."
+      }
+    }
+  }
+}

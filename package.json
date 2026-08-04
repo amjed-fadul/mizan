@@ -9,16 +9,22 @@
     "packages/*"
   ],
   "scripts": {
-    "check": "npm run check:schema && npm run check:contrast",
+    "check": "npm run check:schema && npm run check:contrast && npm run check:tap-target",
     "check:schema": "node machinery/scripts/check-schema.mjs",
     "check:contrast": "node machinery/scripts/check-contrast.mjs",
+    "check:tap-target": "node machinery/scripts/check-tap-target.mjs",
     "check:drift": "node machinery/scripts/check-drift.mjs",
+    "check:contracts": "node machinery/scripts/check-contracts.mjs",
+    "gen:contract": "node machinery/scripts/gen-contract.mjs",
     "health": "node machinery/scripts/health-dashboard.mjs --title \"Mizan Health\"",
     "selftest": "node machinery/scripts/selftest.mjs",
     "adapt:tokens": "node machinery/scripts/dtcg-adapt.mjs",
     "build:tokens": "node machinery/scripts/build-tokens.mjs",
     "preview": "npm run dev --workspace @mizan/preview",
     "build:preview": "npm run build --workspace @mizan/preview",
+    "storybook": "npm run storybook --workspace @mizan/components",
+    "build:components": "npm run build --workspace @mizan/components",
+    "build:storybook": "npm run build:storybook --workspace @mizan/components",
     "figma:bundle": "node machinery/figma-plugin/bundle.mjs",
     "figma:build": "npm --prefix machinery/figma-plugin run build",
     "figma:dry-run": "npm --prefix machinery/figma-plugin run dry-run"

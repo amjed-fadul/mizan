@@ -1,0 +1,6 @@
+{
+  "$description": "One dimension, product, with two modes. The fixture needs a floor that resolves differently by mode, the way Mizan's control geometry resolves by product, so that the tap-target gate can be proven to catch a footprint that clears its bar in one combination and falls under it in another. Two modes, two combinations — enough to straddle a threshold, no more.",
+  "dimensions": [
+    { "name": "product", "modes": ["product.roomy", "product.tight"] }
+  ]
+}

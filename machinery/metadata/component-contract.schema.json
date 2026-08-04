@@ -1,0 +1,347 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "component-contract.schema.json",
+  "title": "Component contract",
+  "description": "The shape every component's metadata must satisfy. Brand-agnostic: it names no component, no token, no product and no value. Half of a contract is derived from the component's source and half is authored by a person in metadata/authored/<component>.json; which half is which is recorded on each property as \"x-origin\".",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "name",
+    "status",
+    "source",
+    "purpose",
+    "responsibilities",
+    "do",
+    "dont",
+    "do_not_use_when",
+    "alternatives",
+    "content",
+    "constraints",
+    "rtl",
+    "accessibility",
+    "props",
+    "figma",
+    "aiHints",
+    "deprecation",
+    "generated"
+  ],
+  "properties": {
+    "$schema": {
+      "description": "Relative path to this file.",
+      "type": "string",
+      "minLength": 1,
+      "x-origin": "generated"
+    },
+    "name": {
+      "description": "The component's exported name.",
+      "type": "string",
+      "pattern": "^[A-Z][A-Za-z0-9]*$",
+      "x-origin": "derived"
+    },
+    "status": {
+      "description": "Where the component sits in its lifecycle.",
+      "enum": ["draft", "stable", "deprecated"],
+      "x-origin": "authored"
+    },
+    "source": {
+      "description": "Repository-relative path to the file this contract's props were read from.",
+      "type": "string",
+      "minLength": 1,
+      "x-origin": "derived"
+    },
+    "propsType": {
+      "description": "The name of the type the props were read from.",
+      "type": "string",
+      "minLength": 1,
+      "x-origin": "derived"
+    },
+    "extends": {
+      "description": "Types the props declaration inherits from. Inherited members are deliberately not enumerated as props: this contract describes what the component decided, not what the platform already provides.",
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "x-origin": "derived"
+    },
+    "purpose": {
+      "description": "What the component is for, in one or two sentences.",
+      "type": "string",
+      "minLength": 1,
+      "x-origin": "authored"
+    },
+    "responsibilities": {
+      "description": "What the component owns, and by omission what it does not.",
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 },
+      "x-origin": "authored"
+    },
+    "do": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 },
+      "x-origin": "authored"
+    },
+    "dont": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 },
+      "x-origin": "authored"
+    },
+    "do_not_use_when": {
+      "description": "Boundaries, not instructions. Each entry is a situation this component is the wrong answer to, and what the right answer is instead.",
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/boundary" },
+      "x-origin": "authored"
+    },
+    "alternatives": {
+      "description": "What to reach for instead, at the boundaries above. An entry naming a component in this system is checked against the other contracts.",
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/alternative" },
+      "x-origin": "authored"
+    },
+    "content": {
+      "description": "What a content designer controls.",
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 },
+      "x-origin": "authored"
+    },
+    "constraints": {
+      "description": "What a consumer may not customise, and why.",
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 },
+      "x-origin": "authored"
+    },
+    "rtl": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["behaviour"],
+      "properties": {
+        "behaviour": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "mirrors": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "does_not_mirror": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        }
+      },
+      "x-origin": "authored"
+    },
+    "accessibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["guarantees"],
+      "properties": {
+        "guarantees": {
+          "description": "What the component guarantees without the consumer doing anything.",
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "consumer_must": {
+          "description": "What the component cannot guarantee on the consumer's behalf.",
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        }
+      },
+      "x-origin": "authored"
+    },
+    "stylesheet": {
+      "description": "Repository-relative path to the stylesheet beside the component, when there is one. The token list below is read from it.",
+      "type": "string",
+      "minLength": 1,
+      "x-origin": "derived"
+    },
+    "tokens": {
+      "description": "Tokens this component consumes, by name. Read from the stylesheet's custom property references rather than listed by hand: names only, and a contract that restated what a token resolves to would be a second source for that value.",
+      "type": "array",
+      "items": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*(\\.[a-z0-9]+(-[a-z0-9]+)*)*$" },
+      "x-origin": "derived"
+    },
+    "tokens_absent": {
+      "description": "Custom properties the stylesheet names deliberately and the token set does not define — a token the component asked for and the system has not decided. Declared, tracked, reported, ungated; an undeclared one fails generation.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/absentToken" },
+      "x-origin": "authored"
+    },
+    "props": {
+      "description": "Every prop the component's own props type declares. Derived from the source; the authored half may annotate a prop but may not name, type or default one.",
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/prop" },
+      "x-origin": "derived"
+    },
+    "figma": {
+      "description": "The Figma-to-code mapping. Property names are authored — they are what the library actually calls things — and the list of props they map to is derived, so a prop cannot quietly stop having a Figma side.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["component", "properties"],
+      "properties": {
+        "component": { "type": "string", "minLength": 1 },
+        "properties": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/figmaProperty" }
+        },
+        "unmapped": {
+          "description": "Props with no Figma property, and why not.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/unmapped" }
+        }
+      }
+    },
+    "aiHints": {
+      "description": "The component's identity for an agent. Keywords are what let one find this component instead of scaffolding a duplicate.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["keywords"],
+      "properties": {
+        "keywords": {
+          "type": "array",
+          "minItems": 3,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 2 }
+        },
+        "use_when": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "not_a": {
+          "description": "What this component is repeatedly mistaken for.",
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        }
+      },
+      "x-origin": "authored"
+    },
+    "deprecation": {
+      "description": "How this component would be withdrawn. Written before it is needed, because the version written afterwards is a negotiation.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["policy"],
+      "properties": {
+        "policy": { "type": "string", "minLength": 1 },
+        "replaced_by": { "type": "string", "minLength": 1 }
+      },
+      "x-origin": "authored"
+    },
+    "generated": {
+      "description": "Where this file came from. It is build output: edit the source or the authored half, then regenerate.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["by", "from", "authored", "note"],
+      "properties": {
+        "by": { "type": "string", "minLength": 1 },
+        "from": { "type": "string", "minLength": 1 },
+        "authored": { "type": "string", "minLength": 1 },
+        "note": { "type": "string", "minLength": 1 }
+      },
+      "x-origin": "generated"
+    }
+  },
+  "$defs": {
+    "boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["when", "use_instead"],
+      "properties": {
+        "when": { "type": "string", "minLength": 1 },
+        "use_instead": { "type": "string", "minLength": 1 }
+      }
+    },
+    "absentToken": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["property", "why"],
+      "properties": {
+        "property": { "type": "string", "pattern": "^--[A-Za-z0-9_-]+$" },
+        "why": { "type": "string", "minLength": 1 }
+      }
+    },
+    "alternative": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["use", "for"],
+      "properties": {
+        "use": {
+          "description": "What to use instead. When it is a component in this system, spell it exactly as that component's contract names it.",
+          "type": "string",
+          "minLength": 1
+        },
+        "for": { "type": "string", "minLength": 1 },
+        "in_system": {
+          "description": "True when `use` names a component this system publishes. Checked against the other contracts.",
+          "type": "boolean"
+        }
+      }
+    },
+    "prop": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "type", "required", "default", "description"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1, "x-origin": "derived" },
+        "type": { "type": "string", "minLength": 1, "x-origin": "derived" },
+        "values": {
+          "description": "The members of a closed string union, when the type is one.",
+          "type": ["array", "null"],
+          "items": { "type": "string" },
+          "x-origin": "derived"
+        },
+        "required": { "type": "boolean", "x-origin": "derived" },
+        "default": { "type": ["string", "null"], "x-origin": "derived" },
+        "description": {
+          "description": "The prop's JSDoc in the source. Authored in the component, derived into here: a description a person could edit in this file would be a second copy of a sentence that already exists.",
+          "type": "string",
+          "minLength": 1,
+          "x-origin": "derived"
+        },
+        "notes": {
+          "description": "The rest of the prop's JSDoc prose, one entry per paragraph. Derived like the summary above it, and kept as paragraphs because a twenty-line explanation collapsed into one string is faithful and unreadable.",
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "x-origin": "derived"
+        },
+        "deprecated": { "type": ["string", "boolean", "null"], "x-origin": "derived" },
+        "guidance": {
+          "description": "What a person knows about the prop that its type does not say.",
+          "type": "string",
+          "minLength": 1,
+          "x-origin": "authored"
+        },
+        "figmaProperty": {
+          "description": "The Figma property this prop mirrors, or null when it has none.",
+          "type": ["string", "null"],
+          "x-origin": "authored"
+        }
+      }
+    },
+    "figmaProperty": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["property", "prop"],
+      "properties": {
+        "property": { "type": "string", "minLength": 1 },
+        "prop": { "type": "string", "minLength": 1 },
+        "values": { "type": ["array", "null"], "items": { "type": "string" } }
+      }
+    },
+    "unmapped": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["prop", "why"],
+      "properties": {
+        "prop": { "type": "string", "minLength": 1 },
+        "why": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

@@ -52,7 +52,7 @@ import {
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 
 /** The gates, in the order `npm run check` runs them. */
-const GATES = ['check-schema.mjs', 'check-contrast.mjs'];
+const GATES = ['check-schema.mjs', 'check-contrast.mjs', 'check-tap-target.mjs'];
 
 /**
  * Types the mobile targets emit.

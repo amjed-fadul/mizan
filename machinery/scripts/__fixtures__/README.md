@@ -47,6 +47,37 @@ in, and what happens when the answer is none.
 - `unknown-mode.json` — a mode id misspelt on a pair and another on an
   exception. Do not correct the spellings; they are the test.
 
+## `targets/` — a floor read in every combination
+
+A self-contained token root and five declaration files for `check-tap-target.mjs`.
+Unlike `pairs/`, this set carries its own tiny token root under `targets/tokens/`
+rather than reusing `valid/`: the gate's whole subject is a floor that resolves
+differently by mode, and `valid/`'s dimensions top out at 8px, far below the 24
+and 44 bars. So `tokens/` has one `product` dimension whose two modes make one
+control step resolve to 48px in `product.roomy` and 40px in `product.tight` — the
+one arrangement that lets a footprint clear its bar in one combination and fall
+under it in another. The values are chosen for that straddle, not for any real
+scale.
+
+The declaration files sit beside `tokens/`, not inside it, for the same reason
+the `pairs/` files sit outside `valid/`: every `.json` under a root is loaded as
+a token document.
+
+- `aligned.json` — two steps that clear their floors in both modes. Accepted, four
+  checks, exit 0. The fixture that proves the gate does not cry wolf.
+- `mode-dependent.json` — the one step that is 48 in `roomy` and 40 in `tight`.
+  It must **pass** the first combination and **fail** the second, which is the
+  claim arithmetic cannot make for the gate: that the floor is read per
+  combination and not once. Do not "fix" the tight mode; the divergence is the
+  test.
+- `not-dimension.json` — a floor pointed at a colour token. A tap target is a
+  length; the wrong `$type` is rejected rather than coerced.
+- `not-px.json` — a floor that is a dimension in `rem`. A bar in CSS px cannot be
+  met by a length that scales with the font, so the unit is checked, not the
+  number.
+- `bad-context.json` — a context the gate does not define. A context selects the
+  bar, and an unrecognised one has none.
+
 ## `figma/` — the display side
 
 Four Figma variable snapshots of the **same** `valid/` token set, for
