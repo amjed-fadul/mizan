@@ -161,7 +161,8 @@ const SEMANTIC_GROUPS: GroupRule[] = [
   { group: 'surface', test: /^--surface-/ },
   { group: 'text', test: /^--text-/ },
   { group: 'action', test: /^--action-/ },
-  { group: 'border', test: /^--border-/ }
+  { group: 'border', test: /^--border-/ },
+  { group: 'focus', test: /^--focus-/ }
 ]
 
 const PRODUCT_GROUPS: GroupRule[] = [

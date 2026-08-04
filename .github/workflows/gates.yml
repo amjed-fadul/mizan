@@ -1,0 +1,185 @@
+# gates.yml — the governance gates, run where somebody other than the maintainer
+# can see them fail.
+#
+# Every gate in this repository already ran before this file existed. It ran on
+# one laptop, at whatever moment that laptop's owner remembered to run it, and
+# the documentation has been describing the result as "what runs in CI" for two
+# stages. That sentence was aspirational. This file is what makes it true.
+#
+# It adds no gate and invents no rule. Every step below is a script that already
+# lives in machinery/, invoked exactly the way machinery/scripts/README.md
+# documents it. If a gate is wrong it is wrong in that script — this file is a
+# schedule, not a check, and the moment it starts holding a fact of its own it
+# has become a second source of truth for the thing it is supposed to be running.
+#
+# The one exception is deliberate and argued at "Assertion floors" below.
+
+name: gates
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# Read-only. This workflow proves things about the tree; it does not write to it,
+# comment on anything, or publish. A token that can do more than the job needs is
+# a standing offer to whatever ends up running here later.
+permissions:
+  contents: read
+
+# A superseded run on the same branch is answering a question nobody is asking
+# any more. Pushes to main are not cancelled: main's history is the build log,
+# and a gap in it is indistinguishable from a gate that was never run.
+concurrency:
+  group: gates-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+defaults:
+  run:
+    # `bash` rather than the default `bash -e`, because this is what gets
+    # `-o pipefail` with it. Every gate below is piped into `tee` so its output
+    # can be both read and counted, and without pipefail a pipe reports the exit
+    # status of `tee`, which succeeds at writing a file describing a failure.
+    shell: bash
+
+jobs:
+  # One job, not five.
+  #
+  # Five jobs would put five rows in the pull request's check list, which is the
+  # nicer failure display — but each would pay for its own checkout, its own two
+  # `npm ci` runs and its own plugin build, to run a gate that takes seconds. The
+  # trade is roughly four minutes of runner time for one line of legibility, and
+  # the legibility is recoverable: every step below is named for its gate, and
+  # every count assertion emits a `::error::` annotation that surfaces on the
+  # pull request without opening a log. If the install cost ever drops or the
+  # gates ever get slow enough to want parallelism, splitting is a small edit.
+  gates:
+    name: gates (node 22, ubuntu)
+    runs-on: ubuntu-latest
+
+    # The assertion floors.
+    #
+    # Every gate here reports how much it checked, and each of those numbers is a
+    # floor rather than a description. A gate whose count silently drops has
+    # stopped checking something and is still green, which is the failure mode
+    # this whole repository is built to refuse — the check-drift gate lost a
+    # dimension exactly this way (see the note at selftest.mjs's scope section)
+    # and reported a smaller number and passed.
+    #
+    # The rule: these numbers go up when work is added and never down to make
+    # something pass. If a gate legitimately checks less — a fixture retired, an
+    # assertion merged into another — that is a decision, and it gets argued in
+    # the commit message that lowers the number here, not fixed in passing.
+    #
+    # This is the one place this file holds a fact rather than a schedule, and it
+    # is held here because there is nowhere better: each number is a property of
+    # a script's output that the script itself cannot assert about its own run.
+    env:
+      CHECK_FLOOR: 44
+      SELFTEST_FLOOR: 164
+      DRY_RUN_FLOOR: 187
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Node 22 because package.json's engines says >=22 and the gates use
+      # `WebSocket` and `node:test`-era built-ins without a polyfill anywhere.
+      #
+      # Two cache paths because there are two lockfiles. machinery/figma-plugin
+      # is not a workspace of the root package — it is a separate npm project
+      # with its own dependency set (esbuild, the Figma typings), deliberately,
+      # so that the plugin's build-time dependencies never travel into anything
+      # that consumes the token package.
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            machinery/figma-plugin/package-lock.json
+
+      - name: Install — repository root
+        run: npm ci
+
+      # The second install, and the first of the two things that make a green
+      # run a lie if you skip it. Without this, esbuild is absent, the plugin
+      # cannot be built, and `selftest` drops from 164 assertions to 140 — it
+      # says so in its output rather than passing quietly, but a CI log nobody
+      # reads is exactly where a printed note goes to die. The floor below is
+      # what actually catches it.
+      - name: Install — machinery/figma-plugin (separate lockfile, not a workspace)
+        run: npm ci --prefix machinery/figma-plugin
+
+      # The second one. selftest imports machinery/figma-plugin/dist/core.mjs to
+      # prove that the built plugin and the drift detector narrow a font stack
+      # through the same function, and to stand up a real plugin against a real
+      # socket for the read-bridge round trip. No build, no dist/core.mjs, and
+      # both sections skip.
+      #
+      # selftest will build the core itself if esbuild resolves — but relying on
+      # that makes the assertion count depend on install order, which is the kind
+      # of thing that is true until somebody reorders two steps. Built here,
+      # explicitly, so the dependency is visible.
+      - name: Build the plugin core (selftest reads dist/core.mjs)
+        run: npm --prefix machinery/figma-plugin run build
+
+      # The gates, in the order that makes a failure readable: structure before
+      # colour maths, the gates before the proof that the gates reject things,
+      # and the build after both, because a build that consumed a token set no
+      # gate had accepted would be reporting on nothing.
+
+      - name: 'Gate 1/5 — npm run check (schema + contrast)'
+        run: |
+          npm run check 2>&1 | tee "$RUNNER_TEMP/check.log"
+          count=$(sed -nE 's/^Result: pass\. ([0-9]+) check\(s\) passed.*/\1/p' "$RUNNER_TEMP/check.log" | tail -n 1)
+          echo "check: ${count:-no} check(s) reported, floor $CHECK_FLOOR"
+          if [ -z "$count" ] || [ "$count" -lt "$CHECK_FLOOR" ]; then
+            echo "::error title=Gate 1: check count regressed::npm run check reported ${count:-no} check(s); the floor is $CHECK_FLOOR. An assertion count is a floor and is never lowered to make something pass — see the env block in .github/workflows/gates.yml."
+            exit 1
+          fi
+
+      - name: 'Gate 2/5 — npm run selftest (proves the gates reject things)'
+        run: |
+          npm run selftest 2>&1 | tee "$RUNNER_TEMP/selftest.log"
+          count=$(sed -nE 's/^Result: pass\. ([0-9]+) assertion\(s\)\..*/\1/p' "$RUNNER_TEMP/selftest.log" | tail -n 1)
+          echo "selftest: ${count:-no} assertion(s) reported, floor $SELFTEST_FLOOR"
+          # 140 here rather than 164 means dist/core.mjs is missing and the
+          # read-bridge sections skipped — check the two steps above, not this one.
+          if [ -z "$count" ] || [ "$count" -lt "$SELFTEST_FLOOR" ]; then
+            echo "::error title=Gate 2: selftest count regressed::npm run selftest reported ${count:-no} assertion(s); the floor is $SELFTEST_FLOOR. A count near 140 means machinery/figma-plugin/dist/core.mjs was not built and the read-bridge sections were skipped."
+            exit 1
+          fi
+
+      - name: 'Gate 3/5 — npm run build:tokens'
+        run: npm run build:tokens
+
+      # Nothing in dry-run is conditional the way selftest's read-bridge sections
+      # are, so there is no known way for this count to fall silently today. The
+      # floor is here anyway: it is the file most likely to grow assertions, and
+      # a floor that only exists where a regression has already happened once is
+      # a record of past incidents rather than a rule.
+      - name: 'Gate 4/5 — npm run figma:dry-run (the plugin against the real token root)'
+        run: |
+          npm run figma:dry-run 2>&1 | tee "$RUNNER_TEMP/dry-run.log"
+          count=$(sed -nE 's/^([0-9]+) assertion\(s\) passed, .*/\1/p' "$RUNNER_TEMP/dry-run.log" | tail -n 1)
+          echo "figma:dry-run: ${count:-no} assertion(s) reported, floor $DRY_RUN_FLOOR"
+          if [ -z "$count" ] || [ "$count" -lt "$DRY_RUN_FLOOR" ]; then
+            echo "::error title=Gate 4: dry-run count regressed::npm run figma:dry-run reported ${count:-no} assertion(s); the floor is $DRY_RUN_FLOOR. An assertion count is a floor and is never lowered to make something pass."
+            exit 1
+          fi
+
+      - name: 'Gate 5/5 — npm run build:preview'
+        run: npm run build:preview
+
+# On the sockets, since it is the question a reader of this file will have:
+# `selftest` binds real loopback listeners on 58791–58794 and dials them with
+# Node's own WebSocket client at 127.0.0.1 explicitly, never through the name
+# `localhost`, so nothing here depends on how a runner orders 127.0.0.1 against
+# ::1. lib/ws-server.mjs additionally tries a `::1` listener alongside the IPv4
+# one and swallows the failure if the machine has no IPv6 loopback, which is the
+# behaviour a hosted runner needs and already has. Port 8791 — the real bridge —
+# is never bound by any gate; it appears only in string assertions that four
+# files still agree about the number. No flags, no services, no ports opened to
+# anything off the machine.

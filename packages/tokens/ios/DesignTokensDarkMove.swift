@@ -21,6 +21,8 @@ public enum DesignTokensDarkMove {
     public static let borderDefault = UIColor(red: 0.239, green: 0.239, blue: 0.239, alpha: 1)
     public static let commerceDiscount = UIColor(red: 0.937, green: 0.325, blue: 0.314, alpha: 1)
     public static let commerceStockLow = UIColor(red: 0.761, green: 0.369, blue: 0.000, alpha: 1)
+    public static let focusRing = UIColor(red: 1.000, green: 1.000, blue: 1.000, alpha: 1)
+    public static let focusRingContrast = UIColor(red: 0.078, green: 0.078, blue: 0.078, alpha: 1)
     public static let fontSize100 = CGFloat(12)
     public static let fontSize200 = CGFloat(13)
     public static let fontSize300 = CGFloat(14)

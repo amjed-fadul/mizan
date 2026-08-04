@@ -85,6 +85,8 @@
   --commerce-stock-low: var(--amber-600);
   --mobility-surge: var(--amber-700);
   --text-on-action: var(--neutral-0);
+  --focus-ring: var(--text-primary);
+  --focus-ring-contrast: var(--surface-default);
 }
 
 :root[data-theme="light"][data-product="market"] {

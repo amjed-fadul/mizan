@@ -30,6 +30,21 @@ export const PRIMITIVE_LAYER = 'primitive';
 /** Token path grammar: dot-separated, lowercase kebab-case segments. */
 export const SEGMENT_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
+/**
+ * The one `$extensions` namespace this loader reads.
+ *
+ * DTCG reserves `$extensions` for precisely this: a fact about a token that the
+ * standard has no field for, carried under a namespace so two tools cannot
+ * collide. The fact here is a **sample** — a short string a specimen can be set
+ * in, for a token whose value is a way of rendering text rather than text.
+ *
+ * The namespace is this package's own name and nothing else. It is not a brand,
+ * because the brand is on the other side of the wall; and it is not a script or
+ * a language, because this loader has no opinion about either. A token root that
+ * has never heard of this plugin states nothing here and loses nothing by it.
+ */
+export const SPECIMEN_EXTENSION = 'figma-token-sync.specimen';
+
 const ALIAS_PATTERN = /^\{([^{}]+)\}$/;
 
 export interface Diagnostic {
@@ -75,6 +90,18 @@ export interface TokenNode {
   type?: string;
   description?: string;
   deprecated?: unknown;
+  /**
+   * A sample string the token states for rendering itself. Optional, and absent
+   * on almost every token: only a token whose value decides *how* text is set
+   * has anything to demonstrate. See `SPECIMEN_EXTENSION`.
+   *
+   * `machinery/scripts/lib/tokens.mjs` does not carry this field, and the port
+   * is not drifting by having it. That library feeds the drift detector, which
+   * compares values and never renders one; this field is read only by something
+   * drawing a specimen, which that gate does not do. The two loaders still agree
+   * on every fact a value is made of, which is what `dry-run.mjs` asserts.
+   */
+  sample?: string;
 }
 
 export interface ModeRecord {
@@ -116,6 +143,48 @@ export function aliasTarget(value: unknown): string | null {
 /* ------------------------------------------------------------------ *
  * Flattening
  * ------------------------------------------------------------------ */
+
+/**
+ * The sample a token states for rendering itself, or nothing.
+ *
+ * Two malformed shapes are possible and both are warnings rather than errors.
+ * A sample is documentation: it decides what a specimen *says*, never what a
+ * variable *holds*, so a token root that mistypes one should still sync. An
+ * error here would block a whole projection over a caption, and — because
+ * `check-schema.mjs` does not read `$extensions` at all — it would block it at a
+ * gate the repository's own schema gate had already passed.
+ *
+ * It is not silent either way. The warning names the token and the shape wanted,
+ * and the specimen falls back to what it drew before samples existed.
+ */
+function readSample(
+  node: Record<string, unknown>,
+  path: string,
+  file: string,
+  diagnostics: Diagnostics,
+): string | undefined {
+  const extensions = node.$extensions;
+  if (extensions === undefined) return undefined;
+  if (!isPlainObject(extensions)) {
+    diagnostics.warn(
+      'invalid-extensions',
+      `Token "${path}" has a $extensions that is ${Array.isArray(extensions) ? 'an array' : typeof extensions}. DTCG requires an object keyed by namespace, so nothing in it can be read.`,
+      { file, token: path },
+    );
+    return undefined;
+  }
+  const entry = extensions[SPECIMEN_EXTENSION];
+  if (entry === undefined) return undefined;
+  if (!isPlainObject(entry) || typeof entry.sample !== 'string' || entry.sample.trim() === '') {
+    diagnostics.warn(
+      'invalid-specimen-extension',
+      `Token "${path}" carries "${SPECIMEN_EXTENSION}" but not as { "sample": "<a non-empty string>" }, so there is nothing to render. Anything drawing a specimen for this token falls back to writing its own name.`,
+      { file, token: path },
+    );
+    return undefined;
+  }
+  return entry.sample;
+}
 
 /**
  * Walk one DTCG document into flat token nodes.
@@ -189,6 +258,7 @@ function flattenDocument(
         type: ownType || inheritedType,
         description: typeof node.$description === 'string' ? node.$description : undefined,
         deprecated: node.$deprecated,
+        sample: readSample(node, path, file, diagnostics),
       });
       return;
     }

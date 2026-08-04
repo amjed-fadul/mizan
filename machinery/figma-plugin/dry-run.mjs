@@ -42,18 +42,25 @@
  *      operating system will choose one — becomes a planned skip with a stated
  *      reason, visible in the diff before anything is written, rather than a
  *      failure afterwards. Told no font list, the planner filters nothing.
- *  15. The REST projection is faithful and lossless: every collection and every
+ *  15. A `fontFamily` specimen is set in a sample the *token root* states, under
+ *      one `$extensions` namespace, so a face is shown setting a script it can
+ *      actually set rather than a Latin variable name the application quietly
+ *      substitutes another face for. Nothing this plugin ships holds one of
+ *      those strings. A token stating none keeps writing its own name, which is
+ *      the old behaviour kept on purpose: inferring a script from a token name
+ *      would be a guess, and a wrong guess is worse than the plain fallback.
+ *  16. The REST projection is faithful and lossless: every collection and every
  *      variable arrives under its own id, `variableIds` is derived rather than
  *      trusted, every alias lands on a variable in the same payload, and a
  *      colour's four channels come through with no rounding at all.
- *  16. The real plan, applied, exported in the REST read shape and handed to the
+ *  17. The real plan, applied, exported in the REST read shape and handed to the
  *      real `machinery/scripts/check-drift.mjs`, is reported as aligned with no
  *      drift. The plugin and the detector agree on every convention, and they
  *      say so to each other rather than in two comments.
- *  17. Both of those can fail: a payload missing a variable, one whose alias
+ *  18. Both of those can fail: a payload missing a variable, one whose alias
  *      points nowhere, and one whose colour moved by a billionth are each
  *      caught, and a corrupted snapshot fails the detector.
- *  18. The bridge has four message types, none of them a word for writing, and
+ *  19. The bridge has four message types, none of them a word for writing, and
  *      an unrecognised instruction parses to nothing rather than to something
  *      to interpret.
  *
@@ -64,7 +71,7 @@
  */
 
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -101,6 +108,7 @@ const {
   REST_PAYLOAD_ORIGIN,
   SHEET_PAGE_NAME,
   SINGLE_MODE_NAME,
+  SPECIMEN_EXTENSION,
   SPECIMEN_NODE,
   applyPlan,
   applySheet,
@@ -990,7 +998,183 @@ assert(!threeSheet.specimens.some((s) => s.token === 'shadow.raised'),
   'a composite type is absent from the sheet, exactly as it is absent from the sync');
 
 /* ================================================================== *
- * 16. The REST projection
+ * 16. What a fontFamily specimen is actually set in
+ *
+ * Binding a family to a TEXT node proves the binding and nothing else. What the
+ * node *says* decides whether the specimen can fail: a family for a script that
+ * is not Latin, set in a Latin variable name, is rendered by whatever face the
+ * application substitutes for the glyphs the bound one lacks — and it looks
+ * fine. The sheet's third job is being readable enough that a wrong face shows
+ * at a glance, so a specimen that cannot look wrong is the one specimen worth
+ * nothing.
+ *
+ * The sample therefore comes from the token root, under one `$extensions`
+ * namespace, and never from this directory: deciding what a family should be
+ * shown setting means knowing its script, and machinery/ holds no script. What
+ * is asserted below is that split, from both ends — the string arrives verbatim
+ * from the JSON and reaches the drawn page, and no file this plugin ships or
+ * this harness is written in contains it.
+ *
+ * And the case with no sample, which is most token roots and one of the two
+ * fontFamily tokens in this one: the specimen falls back to its own name, the
+ * way every specimen did before samples existed. That is abstention rather than
+ * a guess, and it is asserted as deliberate so that nobody later reads it as an
+ * omission and infers a script from a token name.
+ * ================================================================== */
+
+process.stdout.write('\n14. What a fontFamily specimen is set in\n');
+
+/** Every sample the bundle *states*, read out of the raw JSON. The loader is
+ *  what is being checked here, so quoting the loader back would prove nothing. */
+const declaredSamples = (files) => {
+  const found = [];
+  const walk = (node) => {
+    if (!node || typeof node !== 'object' || Array.isArray(node)) return;
+    const entry = node.$extensions && node.$extensions[SPECIMEN_EXTENSION];
+    if (entry && typeof entry.sample === 'string' && !found.includes(entry.sample)) found.push(entry.sample);
+    for (const key of Object.keys(node)) walk(node[key]);
+  };
+  for (const name of Object.keys(files)) walk(files[name]);
+  return found;
+};
+
+/** A copy of a bundle with every specimen extension rewritten. For the mutations. */
+const withSamplesRewritten = (source, rewrite) => {
+  const copy = JSON.parse(JSON.stringify(source));
+  const walk = (node) => {
+    if (!node || typeof node !== 'object' || Array.isArray(node)) return;
+    if (node.$extensions && node.$extensions[SPECIMEN_EXTENSION] !== undefined) rewrite(node.$extensions);
+    for (const key of Object.keys(node)) walk(node[key]);
+  };
+  for (const name of Object.keys(copy.files)) walk(copy.files[name]);
+  return copy;
+};
+
+/** The text a drawn swatch's specimen node carries, by variable name. */
+const specimenTextOn = (page, variableName) => {
+  let found = null;
+  const walk = (node) => {
+    if (node.name === variableName) {
+      const specimen = node.children.filter((child) => child.name === SPECIMEN_NODE)[0];
+      if (specimen && found === null) found = specimen;
+    }
+    for (const child of node.children) walk(child);
+  };
+  walk(page);
+  return found;
+};
+
+const stated = declaredSamples(bundle.files);
+const sampled = fontSpecimens.filter((s) => s.sample !== undefined);
+const unsampled = fontSpecimens.filter((s) => s.sample === undefined);
+
+/* Placeholders so that one empty branch below reports as one failed assertion
+ * rather than throwing and taking every assertion after it with it. */
+const NO_SPECIMEN = { name: '(none)', token: '(none)', sample: '(none)', reason: '(none)', field: null, kind: null };
+const sampledOne = sampled[0] || NO_SPECIMEN;
+const unsampledOne = unsampled[0] || NO_SPECIMEN;
+
+assert(sampled.length > 0 && unsampled.length > 0,
+  'the real token root exercises both branches: a fontFamily token that states a sample and one that states none',
+  `${sampled.length} with a sample, ${unsampled.length} without`);
+assert(sampled.every((s) => stated.includes(s.sample)),
+  'every sample on the sheet is a string the token root states, read back out of the raw JSON rather than out of the loader',
+  JSON.stringify(sampled.map((s) => s.sample)));
+assert(sampled.every((s) => s.field === 'fontFamily' && s.kind === 'TEXT'),
+  'a sample changes what the specimen says and not what it binds — the family is still bound to the node');
+assert(unsampled.every((s) => s.reason !== sampledOne.reason),
+  'and the diff distinguishes the two: a specimen states whether the token supplied its text or it fell back',
+  JSON.stringify([sampledOne.reason, unsampledOne.reason]));
+
+/* On the page that got drawn, not on the plan that described it. */
+const sampledPage = nodes.readSheet().page;
+const sampledNode = specimenTextOn(sampledPage, sampledOne.name);
+assert(Boolean(sampledNode) && sampledNode.text === sampledOne.sample,
+  'the drawn specimen carries the sample verbatim, so the face is set in a script it can actually set',
+  sampledNode && JSON.stringify(sampledNode.text));
+assert(Boolean(sampledNode) && Object.keys(sampledNode.bindings).length === 1
+  && sampledNode.bindings.fontFamily.name === sampledOne.name,
+  'and is still the bound node rather than a caption drawn beside one',
+  sampledNode && JSON.stringify(sampledNode.bindings));
+
+const unsampledNode = specimenTextOn(sampledPage, unsampledOne.name);
+assert(Boolean(unsampledNode) && unsampledNode.text === unsampledOne.name,
+  'a family whose token states no sample keeps setting its own name — the status quo, because a script inferred from a token name would be a guess',
+  unsampledNode && JSON.stringify(unsampledNode.text));
+
+/* The wall, from both sides. */
+const pageText = [];
+const collectText = (node) => {
+  if (typeof node.text === 'string') pageText.push(node.text);
+  for (const child of node.children) collectText(child);
+};
+collectText(sampledPage);
+const foreign = pageText.filter((text) => !/^[\x20-\x7e]*$/.test(text));
+assert(foreign.length > 0 && foreign.every((text) => stated.includes(text)),
+  'every character on the sheet outside plain ASCII arrived in a sample the token root states — the page is no longer ASCII-only and every non-ASCII byte on it has one origin',
+  JSON.stringify(foreign.slice(0, 3)));
+
+/* Read off the *authored* files rather than off the build. An unused string in
+ * src/ is tree-shaken out of code.js, so a bundle that does not contain one
+ * proves only that nothing reached for it today — and the rule is that machinery
+ * does not hold the string at all, not that it currently declines to emit it. */
+const authoredText = (dir, into = []) => {
+  for (const entry of readdirSync(dir)) {
+    const full = join(dir, entry);
+    if (statSync(full).isDirectory()) authoredText(full, into);
+    else if (/\.(ts|mjs|html|json)$/.test(entry)) into.push(readFileSync(full, 'utf8'));
+  }
+  return into;
+};
+const machineryText = authoredText(join(HERE, 'src'))
+  .concat(readFileSync(join(HERE, 'ui.html'), 'utf8'), readFileSync(join(HERE, 'dry-run.mjs'), 'utf8'))
+  .join('\n');
+assert(stated.every((sample) => !machineryText.includes(sample)),
+  'and no sample is written in this plugin\'s own sources or in this harness — machinery holds the mechanism and none of the content');
+
+/* A token root that states nothing anywhere still draws every specimen. */
+const threeSamples = declaredSamples(threeBundle.files);
+const threeFontSpecimens = threeSheet.specimens.filter((s) => s.field === 'fontFamily');
+const threeFontOne = threeFontSpecimens[0] || NO_SPECIMEN;
+const threeFontNode = specimenTextOn(threeNodes.readSheet().page, threeFontOne.name);
+assert(threeSamples.length === 0 && threeFontSpecimens.length > 0
+  && threeFontSpecimens.every((s) => s.sample === undefined),
+  'a token root that has never heard of the sample extension still gets its fontFamily specimens',
+  `${threeSamples.length} sample(s) stated, ${threeFontSpecimens.length} specimen(s)`);
+assert(Boolean(threeFontNode) && threeFontNode.text === threeFontOne.name
+  && Object.keys(threeFontNode.bindings).length === 1,
+  'drawn, bound, and set in its own name — nothing is withheld from a root that supplies nothing',
+  threeFontNode && JSON.stringify(threeFontNode.text));
+
+/* The sample is doing the work: take it away and the sheet changes back. */
+const strippedBundle = withSamplesRewritten(bundle, (extensions) => { delete extensions[SPECIMEN_EXTENSION]; });
+const strippedSheet = planSheet(strippedBundle, synced, new MemoryNodes(synced).readSheet());
+const strippedSpecimen = strippedSheet.specimens.filter((s) => s.name === sampledOne.name)[0];
+const strippedOne = strippedSpecimen || NO_SPECIMEN;
+assert(strippedSheet.signature !== sheet.signature
+  && strippedOne.sample === undefined && strippedOne.reason === unsampledOne.reason,
+  'removing the extension puts the specimen back to writing its own name and moves the plan — the sample is the thing doing the work, not an assertion that could never fail',
+  `${strippedSheet.signature} vs ${sheet.signature}`);
+
+/* A malformed one is a warning and a fallback, never a rendered object. */
+const malformedBundle = withSamplesRewritten(bundle, (extensions) => {
+  extensions[SPECIMEN_EXTENSION] = { sample: 42 };
+});
+const malformedPlan = planSync(malformedBundle, emptySnapshot());
+const malformedWarning = malformedPlan.warnings.filter((w) => w.code === 'invalid-specimen-extension')[0];
+assert(Boolean(malformedWarning) && malformedWarning.token === sampledOne.token,
+  'a sample that is not a non-empty string is a warning naming the token, not a silent nothing',
+  JSON.stringify(malformedPlan.warnings.map((w) => w.code)));
+assert(malformedPlan.errors.length === 0,
+  'and only a warning: a caption cannot block a projection, least of all at a gate check-schema.mjs does not have',
+  JSON.stringify(malformedPlan.errors.slice(0, 2)));
+const malformedSheet = planSheet(malformedBundle, synced, new MemoryNodes(synced).readSheet());
+assert(malformedSheet.signature === strippedSheet.signature,
+  'and the specimen falls back to exactly what it draws with no extension at all, rather than rendering whatever was written there',
+  `${malformedSheet.signature} vs ${strippedSheet.signature}`);
+
+/* ================================================================== *
+ * 17. The REST projection
  *
  * `toRestPayload` is the one place that turns a variable backend's state into
  * the shape `GET /v1/files/<key>/variables/local` returns, and the drift
@@ -999,7 +1183,7 @@ assert(!threeSheet.specimens.some((s) => s.token === 'shadow.raised'),
  * colour channel that arrives rounded is drift nobody caused.
  * ================================================================== */
 
-process.stdout.write('\n14. The REST projection: everything arrives, nothing is tidied\n');
+process.stdout.write('\n15. The REST projection: everything arrives, nothing is tidied\n');
 
 const restSource = figma.readRestSource();
 const payload = toRestPayload(restSource);
@@ -1087,7 +1271,7 @@ assert(restSource.variables.some((v) => v.description.length > 0)
   'and at least one description actually made the trip, so that check is looking at something');
 
 /* ================================================================== *
- * 17. The plugin and the drift detector, run against each other
+ * 18. The plugin and the drift detector, run against each other
  *
  * This is the only assertion in the repo that runs both sides of the
  * projection at once, and it is the reason `rest.ts` exists.
@@ -1109,7 +1293,7 @@ assert(restSource.variables.some((v) => v.description.length > 0)
  * an assertion instead of as a paragraph somebody ran once.
  * ================================================================== */
 
-process.stdout.write('\n15. Against the real drift detector, end to end\n');
+process.stdout.write('\n16. Against the real drift detector, end to end\n');
 
 const scratch = mkdtempSync(join(tmpdir(), 'mizan-dry-run-'));
 const snapshotFile = join(scratch, 'variables-local.json');
@@ -1152,7 +1336,7 @@ if (drift.report) {
 }
 
 /* ================================================================== *
- * 18. Breaking both on purpose
+ * 19. Breaking both on purpose
  *
  * An assertion nothing can break is not an assertion. Everything above passes
  * on a good payload; below, a deliberately corrupted one is built in memory and
@@ -1161,7 +1345,7 @@ if (drift.report) {
  * would do with incorrect input.
  * ================================================================== */
 
-process.stdout.write('\n16. Breaking the projection on purpose\n');
+process.stdout.write('\n17. Breaking the projection on purpose\n');
 
 /* One variable dropped before the projection: the payload is short by one, and
  * the check that counts them says which. */
@@ -1223,7 +1407,7 @@ rmSync(scratch, { recursive: true, force: true });
 assert(!existsSync(scratch), 'the harness leaves no snapshot behind — the temporary directory is removed');
 
 /* ================================================================== *
- * 19. The bridge vocabulary
+ * 20. The bridge vocabulary
  *
  * [016] chose a bridge of this plugin's own over a general Figma-over-MCP
  * dependency, and the argument was attribution: a second write path into Figma
@@ -1234,7 +1418,7 @@ assert(!existsSync(scratch), 'the harness leaves no snapshot behind — the temp
  * can claim.
  * ================================================================== */
 
-process.stdout.write('\n17. The bridge: four words, none of them a write\n');
+process.stdout.write('\n18. The bridge: four words, none of them a write\n');
 
 assert(same([...BRIDGE_MESSAGE_TYPES], BRIDGE_VOCABULARY),
   'the bridge knows exactly four message types: hello, snapshot-request, snapshot, error',

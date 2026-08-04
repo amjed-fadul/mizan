@@ -137,6 +137,7 @@
   var MODES_DIR = "modes";
   var MODES_MANIFEST = "modes.json";
   var SEGMENT_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+  var SPECIMEN_EXTENSION = "figma-token-sync.specimen";
   var ALIAS_PATTERN = /^\{([^{}]+)\}$/;
   var Diagnostics = class {
     constructor() {
@@ -167,6 +168,29 @@
     if (typeof value !== "string") return null;
     const match = ALIAS_PATTERN.exec(value.trim());
     return match ? match[1].trim() : null;
+  }
+  function readSample(node, path, file, diagnostics) {
+    const extensions = node.$extensions;
+    if (extensions === void 0) return void 0;
+    if (!isPlainObject(extensions)) {
+      diagnostics.warn(
+        "invalid-extensions",
+        `Token "${path}" has a $extensions that is ${Array.isArray(extensions) ? "an array" : typeof extensions}. DTCG requires an object keyed by namespace, so nothing in it can be read.`,
+        { file, token: path }
+      );
+      return void 0;
+    }
+    const entry = extensions[SPECIMEN_EXTENSION];
+    if (entry === void 0) return void 0;
+    if (!isPlainObject(entry) || typeof entry.sample !== "string" || entry.sample.trim() === "") {
+      diagnostics.warn(
+        "invalid-specimen-extension",
+        `Token "${path}" carries "${SPECIMEN_EXTENSION}" but not as { "sample": "<a non-empty string>" }, so there is nothing to render. Anything drawing a specimen for this token falls back to writing its own name.`,
+        { file, token: path }
+      );
+      return void 0;
+    }
+    return entry.sample;
   }
   function flattenDocument(data, options) {
     const { file, layer, diagnostics, into } = options;
@@ -214,7 +238,8 @@
           inheritedType,
           type: ownType || inheritedType,
           description: typeof node.$description === "string" ? node.$description : void 0,
-          deprecated: node.$deprecated
+          deprecated: node.$deprecated,
+          sample: readSample(node, path, file, diagnostics)
         });
         return;
       }
@@ -926,7 +951,14 @@
             collection: variable.collection,
             type: variable.type,
             dtcgType: effectiveType(variable.token, set.base),
-            description: variable.description
+            description: variable.description,
+            // The base node's, not the node in some mode. A specimen is one node
+            // per combination frame but one *string* across all of them, because
+            // what varies by mode here is the family bound to it rather than the
+            // text set in it. A mode that stated its own sample would have
+            // nowhere on the sheet to put it, so the base statement is the only
+            // one read and a mode override of it is ignored rather than merged.
+            sample: sampleOf(variable.token, set)
           }))
         ),
         []
@@ -962,6 +994,10 @@
         message: `"${first}" and "${variable.token}" both become the Figma variable name "${variable.name}" in collection "${variable.collection}". Figma has no way to tell the two apart and this plugin matches variables by name, so they would share one variable and every run would flip its value back to whichever token it read last. Figma groups names on "/" exactly as the token path separates on ".", so rename one of the two so that the paths differ by more than a separator.`
       });
     }
+  }
+  function sampleOf(path, set) {
+    const node = set.base.get(path);
+    return node ? node.sample : void 0;
   }
   function orderCollections(collections, set) {
     const layers = Array.from(collections.values()).filter((c) => c.origin === "layer").sort((a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0);
@@ -1072,12 +1108,13 @@
     }
     if (variable.type === "STRING") {
       if (variable.dtcgType === "fontFamily") {
+        const sample = variable.sample;
         return {
           kind: "TEXT",
           field: "fontFamily",
-          reason: "the specimen renders in the family the token names",
+          reason: sample === void 0 ? "the specimen renders in the family the token names, setting the variable name because the token states no sample" : "the specimen renders the sample the token states, in the family the token names",
           props: { fontSize: TITLE_SIZE },
-          text: variable.name
+          text: sample === void 0 ? variable.name : sample
         };
       }
       return {
@@ -1215,7 +1252,8 @@
         dtcgType: variable.dtcgType,
         kind: rendering.kind,
         field: rendering.field,
-        reason: rendering.reason
+        reason: rendering.reason,
+        sample: variable.sample
       });
       if (rendering.field === "fontFamily") {
         for (const family of live.values) if (fonts.indexOf(family) === -1) fonts.push(family);

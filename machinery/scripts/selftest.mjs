@@ -66,6 +66,22 @@ const args = parseArgs(process.argv.slice(2), { flags: ['verbose'] });
 const failures = [];
 const passes = [];
 
+/**
+ * Sections that could not run, and the claim each of them would have proved.
+ *
+ * Two sections need the plugin core built, which needs esbuild installed. When
+ * it is absent they print a note and are stepped over — and that was fine until
+ * the summary at the bottom went on claiming, unconditionally, that the read
+ * bridge is "proven to do its job end to end". A run with 140 assertions and a
+ * skipped bridge exited 0 and said the same sentence as a run with 164 and a
+ * real socket. The notes admitting it were four lines above and easy to miss.
+ *
+ * So a skip is recorded rather than only printed, and the summary is assembled
+ * from what actually ran. A gate that overstates its own coverage is worse than
+ * one that fails: a failure is read, and an inflated pass is filed.
+ */
+const skipped = [];
+
 function assert(condition, description, detail) {
   if (condition) {
     passes.push(description);
@@ -583,6 +599,7 @@ if (existsSync(CORE)) {
     + '        against machinery/figma-plugin was not run. The import assertions above still\n'
     + '        hold: there is one definition of the rule and both files import it.\n',
   );
+  skipped.push('the lossy projection agreeing across both ends at run time');
 }
 
 /* No snapshot and no credentials is a failure, not a quiet pass. -------- */
@@ -946,6 +963,7 @@ if (!existsSync(CORE) || !existsSync(LIVE_ROOT)) {
     + '        are proven. What is skipped is the proof that what crosses the wire is a table\n'
     + '        the gate can compare.\n',
   );
+  skipped.push('the bridge carrying a real variable table the gate can compare');
 } else {
   const core = await import(pathToFileURL(CORE).href);
   const { bundleTokenRoot } = await import(pathToFileURL(join(PLUGIN_DIR, 'bundle.mjs')).href);
@@ -1271,12 +1289,20 @@ if (failures.length === 0) {
   process.stdout.write(
     `Result: pass. ${passes.length} assertion(s). Rung 1 proven to accept the valid token set and reject the broken one; `
     + 'rung 2 proven to accept a Figma snapshot that agrees and to catch each way one can disagree; '
-    + 'the one lossy projection proven to be a single function both ends import; '
     + 'and the read bridge proven read-only by construction — one port agreed across four files, '
-    + 'a vocabulary of four words none of which is a verb, and a round trip over a real socket; '
-    + 'and proven to do its job end to end — the gate reading a real variable table off the wire, '
-    + 'passing it, catching a hand-edit in it unrounded, saving it as an offline fixture, and '
-    + 'naming each way the far end can fail rather than reporting any of them as drift.\n',
+    + 'a vocabulary of four words none of which is a verb, and a round trip over a real socket.\n'
+    + (skipped.length === 0
+      ? 'The one lossy projection is proven to be a single function both ends import, and the '
+        + 'bridge proven to do its job end to end — the gate reading a real variable table off '
+        + 'the wire, passing it, catching a hand-edit in it unrounded, saving it as an offline '
+        + 'fixture, and naming each way the far end can fail rather than reporting any of them '
+        + 'as drift.\n'
+      /* Named, not counted. "2 sections skipped" is a number somebody scrolls
+       * past; the sentence below is the claim this run is not entitled to make,
+       * which is the thing a reader has to know. */
+      : `NOT PROVEN BY THIS RUN — ${skipped.length} section(s) did not run, so this pass does `
+        + `not cover: ${skipped.join('; ')}. Build the plugin core `
+        + '(npm --prefix machinery/figma-plugin run build) and run again for the full set.\n'),
   );
   process.exitCode = 0;
 } else {

@@ -82,9 +82,24 @@ export function formatRatio(ratio: number): string {
   return ratio.toFixed(2)
 }
 
-export type Verdict = 'pass' | 'fail' | 'reported'
+export type Verdict = 'pass' | 'fail' | 'reported' | 'excepted'
 
-export function verdict(ratio: number, context: PairContext): Verdict {
+/**
+ * `excepted` is the fourth verdict because pairs.json grew its first exceptions
+ * and a matrix that did not know about them would have printed Fail on six cells
+ * of a build that passes. That is the one thing this page may never do: decision
+ * 018 puts it here to make the gate's guarantee inspectable, and a matrix that
+ * disagrees with the gate is worse than no matrix.
+ *
+ * It is deliberately not a pass. check-contrast.mjs prints every exception
+ * whether it currently clears its threshold or not — "a silent exception is not
+ * an exception, it is a hole" — so the verdict says the bar was set aside, the
+ * ratio stays on screen next to it, and the reason is printed on the card. What
+ * a reader must be able to do is find every exception in the system by looking,
+ * which is why this is its own word rather than a footnote on Pass.
+ */
+export function verdict(ratio: number, context: PairContext, excepted = false): Verdict {
+  if (excepted) return 'excepted'
   const threshold = thresholdFor(context)
   if (threshold === null) return 'reported'
   return ratio >= threshold ? 'pass' : 'fail'

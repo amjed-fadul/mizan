@@ -167,6 +167,16 @@ export interface ProjectedVariable {
   /** The token's effective DTCG `$type`, already walked through any alias chain. */
   dtcgType: string | undefined;
   description: string;
+  /**
+   * A sample string the token states for rendering itself, if it states one.
+   *
+   * The sync never reads this — a sample is not a value and nothing is written
+   * from it. It travels here because the proof sheet is downstream of this same
+   * projection and is the one reader that has to *draw* a token rather than
+   * write it, and a second pass over the token root to fetch one string would be
+   * a second projection to keep in step with this one.
+   */
+  sample?: string;
 }
 
 export interface Plan {
@@ -317,6 +327,12 @@ export interface SheetSpecimen {
   field: SheetBindField;
   /** Why this field, in one sentence, for the diff. */
   reason: string;
+  /**
+   * The sample this specimen renders, when the token root stated one. Absent
+   * means the specimen falls back to writing the variable's own name, which is
+   * what every specimen did before samples existed.
+   */
+  sample?: string;
 }
 
 export interface SheetPlan {
