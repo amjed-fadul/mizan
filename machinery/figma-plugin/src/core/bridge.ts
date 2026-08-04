@@ -62,7 +62,7 @@ export const BRIDGE_PROTOCOL = 'mizan-bridge@1';
  * The default port.
  *
  * A constant in four places — here, `ui.html`, `machinery/scripts/lib/
- * bridge.mjs`, and twice in the manifest's `devAllowedDomains`. A manifest
+ * bridge.mjs`, and the manifest's `devAllowedDomains`. A manifest
  * cannot take a variable and `ui.html` is loaded by Figma rather than bundled,
  * so there is no single definition the others could import. What keeps them
  * equal is `machinery/scripts/selftest.mjs`, which parses the number out of

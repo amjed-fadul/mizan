@@ -314,15 +314,23 @@
    *   dropped. Text arriving on a socket is data, never a command.
    *
    * The port is a constant in four places: here, `src/core/bridge.ts`,
-   * `machinery/scripts/lib/bridge.mjs`, and twice in the manifest's
-   * `devAllowedDomains`. A manifest cannot take a variable, and this file is
+   * `machinery/scripts/lib/bridge.mjs`, and the manifest's `devAllowedDomains`
+   * entry. A manifest cannot take a variable, and this file is
    * loaded by Figma rather than bundled, so neither can import the number from
    * anywhere. `machinery/scripts/selftest.mjs` parses it out of all four and
    * asserts they agree, which is what stops a partial change producing a
    * bridge that silently never connects.
+   *
+   * **The host has to be the word `localhost`, not `127.0.0.1`.** Figma
+   * refuses `ws://127.0.0.1:8791` in the manifest as "not a valid URL" — its
+   * validator wants a hostname, whatever the URL spec says — so the manifest
+   * permits `ws://localhost:8791` and this must dial the string the manifest
+   * permits. The server binds the loopback address itself; `localhost`
+   * resolves to it, and a browser trying the IPv6 loopback first falls back.
    * ---------------------------------------------------------------- */
 
   var BRIDGE_PORT = 8791;
+  var BRIDGE_HOST = 'localhost';
   var BRIDGE_PROTOCOL = 'mizan-bridge@1';
   var RETRY_MS = 2000;
 
@@ -364,9 +372,9 @@
    */
   function connect() {
     if (!bridgeOn) return;
-    bridgeStatus('Waiting for a reader on 127.0.0.1:' + BRIDGE_PORT + '…');
+    bridgeStatus('Waiting for a reader on ' + BRIDGE_HOST + ':' + BRIDGE_PORT + '…');
     try {
-      socket = new WebSocket('ws://127.0.0.1:' + BRIDGE_PORT);
+      socket = new WebSocket('ws://' + BRIDGE_HOST + ':' + BRIDGE_PORT);
     } catch (error) {
       socket = null;
       scheduleRetry();
@@ -416,7 +424,7 @@
 
   function scheduleRetry() {
     if (!bridgeOn || retryTimer) return;
-    bridgeStatus('No reader on 127.0.0.1:' + BRIDGE_PORT + '. Retrying…');
+    bridgeStatus('No reader on ' + BRIDGE_HOST + ':' + BRIDGE_PORT + '. Retrying…');
     retryTimer = setTimeout(function () {
       retryTimer = null;
       connect();

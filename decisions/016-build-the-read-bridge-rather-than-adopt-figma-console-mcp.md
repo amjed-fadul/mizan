@@ -82,7 +82,7 @@ This is [006](./006-agents-are-consumers-of-the-contribution-flow.md) applied on
 
 *Added while building the bridge, because the first consequence above claims a permission the plugin does not actually hold.*
 
-That consequence states flatly that **the plugin's `networkAccess` widens from `["none"]` to localhost**. What shipped is `"allowedDomains": ["none"]` beside `"devAllowedDomains": ["ws://localhost:8791", "ws://127.0.0.1:8791"]`.
+That consequence states flatly that **the plugin's `networkAccess` widens from `["none"]` to localhost**. What shipped is `"allowedDomains": ["none"]` beside `"devAllowedDomains": ["ws://localhost:8791"]`.
 
 Figma's manifest has two domain lists, not one. `allowedDomains` governs the plugin as published. `devAllowedDomains` takes the same pattern rules but applies only when the plugin runs as a development plugin — imported from a manifest, which is the only way this plugin is ever run and the way its README already describes it. So production network access stays at `["none"]`, and the socket exists for a development plugin, to one port on the loopback interface, and nowhere else. If this plugin were ever published to the Community the bridge would stop working — by construction rather than by policy, which is the only way a constraint holds. Localhost in `allowedDomains` is permitted with a `reasoning` field; the point is that it was not needed.
 

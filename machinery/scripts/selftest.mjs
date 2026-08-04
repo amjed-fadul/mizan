@@ -481,9 +481,25 @@ const LOOPBACK_WS = /^ws:\/\/(?:localhost|127\.0\.0\.1):(\d+)$/;
  * with whatever it was last told — which is the failure it exists to catch. */
 const devDomains = manifest.networkAccess?.devAllowedDomains ?? [];
 const manifestPorts = devDomains.map((entry) => LOOPBACK_WS.exec(String(entry))?.[1]);
-assert(manifestPorts.length === 2 && manifestPorts[0] !== undefined && manifestPorts[1] === manifestPorts[0],
-  'bridge port: the manifest names one port, spelled both ways a loopback address is spelled',
+assert(manifestPorts.length > 0 && manifestPorts.every((port) => port !== undefined && port === manifestPorts[0]),
+  'bridge port: every development domain the manifest permits names the same port',
   JSON.stringify(devDomains));
+
+/* Figma's validator refuses `ws://127.0.0.1:8791` as "not a valid URL" — it
+ * wants a hostname, whatever the URL specification says about IP literals. The
+ * manifest therefore permits the `localhost` spelling only, and `ui.html` has
+ * to dial the string the manifest permits rather than the address the server
+ * binds. Asserted because the two are easy to drift apart and the symptom is a
+ * plugin that will not load at all, discovered at the moment somebody tries to
+ * use it. */
+assert(devDomains.every((entry) => /^ws:\/\/localhost:\d+$/.test(String(entry))),
+  'manifest: development domains are spelled with the host name Figma will accept, not an IP literal',
+  JSON.stringify(devDomains));
+
+const uiHost = /var BRIDGE_HOST = '([^']+)';/.exec(uiSource)?.[1];
+assert(devDomains.some((entry) => String(entry) === `ws://${uiHost}:${manifestPorts[0]}`),
+  'bridge host: ui.html dials exactly a URL the manifest permits — anything else is refused before the socket opens',
+  `ui.html dials ws://${uiHost}:${manifestPorts[0]}, manifest permits ${JSON.stringify(devDomains)}`);
 
 const manifestPort = Number(manifestPorts[0]);
 const pluginPort = /export const BRIDGE_PORT = (\d+);/.exec(bridgeSource)?.[1];
@@ -525,6 +541,17 @@ assert(devDomains.length > 0 && devDomains.every((entry) => LOOPBACK_WS.test(Str
 const reasoning = manifest.networkAccess?.reasoning ?? '';
 assert(typeof reasoning === 'string' && reasoning.length > 200,
   'manifest: the reasoning field argues the permission rather than naming it',
+  `${reasoning.length} character(s)`);
+
+/* Figma's own ceiling, and the only one of these limits nothing in this
+ * repository could have told us about. It was found the way such things
+ * usually are — the desktop app refused to load the plugin, with an error that
+ * named the field and the number. A manifest is not something the gates here
+ * parse for validity, so a length that fails on import fails at the worst
+ * possible moment: in front of the one person who was about to use the thing.
+ * That is a fact a script can hold, so a script holds it. */
+assert(reasoning.length < 1000,
+  'manifest: and stays under the 1000 characters Figma will accept, or the plugin does not load at all',
   `${reasoning.length} character(s)`);
 assert(/carries no command/i.test(reasoning) && /create, update, rename or delete/i.test(reasoning),
   'manifest: and says on the record that the socket carries no command that changes anything',

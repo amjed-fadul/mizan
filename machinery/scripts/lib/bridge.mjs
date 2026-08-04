@@ -68,7 +68,7 @@ export const BRIDGE_PROTOCOL = 'mizan-bridge@1';
 
 /**
  * Must match `BRIDGE_PORT` in the plugin's `src/core/bridge.ts`, the port in
- * its `ui.html`, and the two entries in its manifest's `devAllowedDomains`. A
+ * its `ui.html`, and its manifest's `devAllowedDomains`. A
  * manifest cannot take a variable, so this number is a constant in four places
  * and changing it means changing all four. `selftest.mjs` parses it out of each
  * and asserts they agree — duplication a script watches, rather than
@@ -194,6 +194,7 @@ export async function readSnapshotOverBridge({
   };
 
   let server;
+  let secondary = null;
   try {
     server = await createWebSocketServer({
       port,
@@ -202,6 +203,35 @@ export async function readSnapshotOverBridge({
       onRefusal,
       onError: () => {},
     });
+
+    /* Both spellings of the loopback address, not one.
+     *
+     * The plugin dials the *name* `localhost`, because Figma's manifest
+     * validator refuses an IP literal — and a name resolves to whichever of
+     * `127.0.0.1` and `::1` the machine's resolver puts first. Browsers
+     * generally try the other on failure, but "generally" is doing real work in
+     * that sentence, and the symptom of being wrong is the worst-shaped failure
+     * this component has: a plugin that connects to nothing, forever, with
+     * nothing to read. Binding both costs one extra listener and removes the
+     * question.
+     *
+     * This is not a widening. `::1` is the loopback interface, the same
+     * machine, reachable from nowhere else — it is the same guarantee spelled
+     * the other way. A machine with IPv6 disabled refuses the bind, and that is
+     * fine: the IPv4 listener is the one that was going to answer anyway. */
+    if (host === '127.0.0.1') {
+      try {
+        secondary = await createWebSocketServer({
+          port,
+          host: '::1',
+          onConnection: (conn) => connectionHandler(conn),
+          onRefusal,
+          onError: () => {},
+        });
+      } catch (error) {
+        secondary = null; // no IPv6 loopback here; the IPv4 listener stands alone
+      }
+    }
   } catch (error) {
     return {
       ok: false,
@@ -323,6 +353,8 @@ export async function readSnapshotOverBridge({
     connectionHandler = handle;
   });
 
-  await server.close();
+  // Both listeners, or the port stays held after the run and the next one
+  // reports it busy — a failure that would look like somebody else's fault.
+  await Promise.all([server.close(), secondary ? secondary.close() : Promise.resolve()]);
   return result;
 }
