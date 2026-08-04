@@ -89,7 +89,7 @@ import {
   fileNameFor,
   loadSchema,
   readStylesheet,
-  stylesheetBeside,
+  componentStylesheets,
   unsupportedKeywords,
   validate,
 } from './lib/contract.mjs';
@@ -142,8 +142,15 @@ export function generate({ sourceFile, authoredFile, metadataDir, propsType, sch
     return { ok: false, contract: null, errors: [{ code: 'authored-invalid-json', message: error.message, file: authoredRef }] };
   }
 
-  const cssFile = stylesheetBeside(sourceFile);
-  const stylesheet = cssFile ? readStylesheet(readFileSync(cssFile, 'utf8'), tokenPaths, cssPrefix) : null;
+  // Every stylesheet the source imports, concatenated before being read. A
+  // component's tokens are the union of what all of its stylesheets name — the
+  // shared focus indicator lives in one of them, and a contract that saw only
+  // the file beside the source would report a component that has stopped
+  // drawing a focus ring.
+  const cssFiles = componentStylesheets(sourceFile);
+  const stylesheet = cssFiles.length > 0
+    ? readStylesheet(cssFiles.map((file) => readFileSync(file, 'utf8')).join('\n'), tokenPaths, cssPrefix)
+    : null;
 
   const outFile = join(metadataDir, `${fileNameFor(read.api.component)}.json`);
   const { contract, problems } = buildContract({
@@ -155,7 +162,7 @@ export function generate({ sourceFile, authoredFile, metadataDir, propsType, sch
     generator: GENERATOR,
     authoredRef,
     stylesheet,
-    stylesheetRef: cssFile ? displayPath(cssFile) : null,
+    stylesheetRef: cssFiles.length > 0 ? cssFiles.map(displayPath).join(', ') : null,
   });
 
   for (const problem of problems) {

@@ -1,14 +1,21 @@
 /**
  * @mizan/components — Mizan's component library.
  *
- * Two components. The library exists at all because decision 020 settled that
- * v0's four button implementations become one, and a consolidated component
- * needs somewhere to live that is neither the token build output nor the
- * preview app. Input is the second, and it is the test of whether the
- * vocabulary Button established generalises: it reads the same
- * `control.{sm,md,lg}.*` steps decision 022 made per-product, and it needed one
- * name the token layer did not have — decision 023 added `text.error` and
- * `border.error` for it.
+ * Four components, and the set is deliberately not five.
+ *
+ * The library exists at all because decision 020 settled that v0's four button
+ * implementations become one. Input is the second, and it tested whether the
+ * vocabulary generalised: it reads the same `control.{sm,md,lg}.*` steps
+ * decision 022 made per-product, and it needed one name the token layer did not
+ * have — decision 023 added `text.error` and `border.error` for it.
+ *
+ * `ProductCard` and `RideCard` are the third and fourth, and they are two
+ * rather than one on purpose. Decision 024 refused the merge on a structural
+ * argument: a radio may not contain a button, so Market's container — a link
+ * and an action, two tab stops — and Move's control — one option in an
+ * exclusive choice, one tab stop — cannot be one component with a variant.
+ * That refusal is what lets each of them name its own product's tokens, which a
+ * shared card could not have reached under decision 007.
  *
  * Consumers import the token stylesheet once, and then the components:
  *
@@ -25,4 +32,8 @@
 export { Button } from './Button'
 export type { ButtonProps, ButtonSize, ButtonVariant } from './Button'
 export { Input } from './Input'
+export { ProductCard } from './ProductCard'
+export { RideCard, RideCardGroup } from './RideCard'
 export type { InputProps, InputSize, InputType, InputValueDirection } from './Input'
+export type { ProductCardProps, StockLevel } from './ProductCard'
+export type { RideCardProps, RideCardGroupProps, FareBasis } from './RideCard'

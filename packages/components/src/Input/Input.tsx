@@ -1,5 +1,6 @@
 import { useId } from 'react'
 import type { ChangeEvent, ReactNode } from 'react'
+import '../styles/focus.css'
 import './Input.css'
 
 /**
@@ -390,7 +391,7 @@ export function Input({
 
       <input
         id={id}
-        className="mz-input__field"
+        className="mz-input__field mz-focus-ring"
         type={type}
         name={name}
         inputMode={inputMode}

@@ -1,0 +1,251 @@
+/*
+  RideCard — Move's ride option, and the third component in the library.
+
+  Same rule as Button.css and Input.css: nothing here is a value. Every colour,
+  space, radius and type value is a custom property generated from
+  content/tokens/ by `npm run build:tokens`.
+
+  This is the first component allowed to name a PRODUCT-SPECIFIC token —
+  `mobility.surge` on the surge note. That permission is decision 024's doing
+  rather than an oversight: keeping this component Move's, instead of merging it
+  with Market's product card, is exactly what lets it reach mobility.*. A shared
+  component may not, and would have had to take the colour as a prop or expose
+  a slot, both of which are a product's identity written into shared code under
+  another name.
+
+  One written number, the same 1px control edge Button and Input both carry, and
+  still for the same reason: there is no border-width scale in content/tokens/.
+  Decision 023 recorded that as a pattern rather than an incident, and this is
+  the third occurrence.
+*/
+
+/* --------------------------------------------------------------- the group */
+
+.mz-ride-card-group {
+  /*
+    A fieldset with its default chrome removed. The element is here for the
+    accessibility tree — it is what gives four radios one accessible name — and
+    its border and padding are the browser's opinion about forms from 1997.
+  */
+  margin: 0;
+  padding: 0;
+  border: 0;
+
+  font-family: var(--font-family-sans);
+  letter-spacing: var(--letter-spacing-none);
+}
+
+.mz-ride-card-group__legend {
+  /*
+    A real legend, not a styled span. Removing it and using aria-label would put
+    the question in the accessibility tree and take it off the screen, which is
+    the wrong half to keep.
+  */
+  padding: 0;
+  margin-block-end: var(--space-150);
+
+  color: var(--text-primary);
+  font-size: var(--font-size-400);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-normal);
+}
+
+.mz-ride-card-group__options {
+  display: grid;
+  gap: var(--space-100);
+}
+
+/* ---------------------------------------------------------------- the card */
+
+.mz-ride-card {
+  /*
+    A label, drawn as the card. The whole surface is the target because a label
+    forwards its activation to the control it names — which is the platform
+    doing what v0's `<div onClick>` was trying to do, with the keyboard included.
+  */
+  position: relative;
+  display: grid;
+  gap: var(--space-50);
+
+  box-sizing: border-box;
+  padding: var(--space-200);
+
+  background-color: var(--surface-default);
+  color: var(--text-primary);
+
+  border-radius: var(--radius-200);
+  border-style: solid;
+  /* 1px — see the header. The third component to write it. */
+  border-width: 1px;
+  border-color: var(--border-control);
+
+  cursor: pointer;
+
+  /*
+    Named properties rather than `all`, and neither can cause a layout: both are
+    paints on the card's own box. The rule decision 021 set for Button holds.
+    easing.entrance for the same reason Input gives — at 100ms the curve is not
+    perceptible, only whether the change starts at once, and a second curve for
+    a second colour crossfade would imply a distinction nobody can see.
+  */
+  transition:
+    border-color var(--duration-100) var(--easing-entrance),
+    background-color var(--duration-100) var(--easing-entrance);
+}
+
+/*
+  The radio itself: visually hidden, and deliberately NOT display:none or
+  visibility:hidden. Either of those removes it from the accessibility tree and
+  from the tab order — which would reintroduce precisely the defect this
+  component exists to fix, while looking correct on screen.
+
+  The clip-rect technique keeps it focusable, checkable and announced. It is one
+  of the few places in this system where a construction is used because of what
+  it does to assistive technology rather than because of how it looks, so it is
+  written out rather than reached for from a utility class nobody reads.
+*/
+.mz-ride-card__input {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* --------------------------------------------------------------- the states */
+
+.mz-ride-card:hover:not(.mz-ride-card--disabled) {
+  border-color: var(--text-primary);
+}
+
+/*
+  Chosen. `:has()` is what lets the card style itself from the state of the
+  input inside it, which is the whole reason the input can be visually hidden
+  and still be the source of truth: the DOM knows which option is checked, and
+  nothing in React has to mirror that into a class name that could disagree
+  with it.
+*/
+.mz-ride-card:has(.mz-ride-card__input:checked) {
+  border-color: var(--action-primary);
+  background-color: var(--surface-sunken);
+}
+
+/*
+  The indicator lives in ../styles/focus.css, reached by `mz-focus-ring-within`
+  — the variant for an element that shows focus taken by a descendant.
+
+  That variant exists because of this component. RideCard's real focus lands on
+  a radio that is visually hidden inside the card, so the ring has to be drawn
+  on the card rather than on the thing that has focus. It is not a special case
+  to be smoothed away: it is the correct construction for any control whose
+  focusable element is not the thing a user sees, which is why it got a name
+  instead of an exception.
+*/
+.mz-ride-card--disabled {
+  background-color: var(--surface-sunken);
+  color: var(--text-secondary);
+  border-color: transparent;
+  cursor: not-allowed;
+}
+
+/* -------------------------------------------------------------- the content */
+
+.mz-ride-card__top,
+.mz-ride-card__row {
+  /*
+    Flex, so the two ends swap with the document direction and neither is named.
+    §6's test for a component is whether any directional value is written down;
+    `space-between` names an axis, not a side.
+  */
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-100);
+}
+
+.mz-ride-card__vehicle {
+  font-size: var(--font-size-400);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-normal);
+}
+
+.mz-ride-card__type {
+  color: var(--text-secondary);
+  font-size: var(--font-size-200);
+  line-height: var(--line-height-normal);
+}
+
+.mz-ride-card__eta,
+.mz-ride-card__capacity {
+  color: var(--text-secondary);
+  font-size: var(--font-size-300);
+  line-height: var(--line-height-normal);
+}
+
+.mz-ride-card__fare {
+  font-size: var(--font-size-400);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-normal);
+
+  /*
+    A fare is a formatted quantity and it sits in a row with Arabic labels
+    around it. It arrives already formatted through §4's one boundary — symbol
+    placed by Intl, Western digits, the currency's own minor-unit count — so
+    there is nothing for this file to do to the number except not break it.
+    unicode-bidi: isolate is the CSS equivalent of the <bdi> §3 asks for, and it
+    is applied here rather than left to the call site because a fare is the one
+    run in this card guaranteed to be opposite-direction in Arabic.
+  */
+  unicode-bidi: isolate;
+}
+
+/*
+  The surge note. Move's own token marks it; a text token sets it — and the
+  split is not fussiness, it is a defect this file had until axe found it.
+
+  The first version painted the whole sentence in mobility.surge. That token is
+  declared in pairs.json at the 1.4.11 INDICATOR bar of 3.0, and it sits at
+  4.75:1 in light and 3.87:1 in dark. As a mark those both pass. As a SENTENCE
+  the bar is 1.4.3's 4.5, and dark fails it — a paragraph of amber on the dark
+  page ground, below the text threshold, shipped behind a comment explaining
+  why it was acceptable.
+
+  Nothing in the pipeline was going to catch it. check-contrast.mjs verifies
+  every DECLARED pairing against the context it was declared in, and this
+  pairing is declared and passing; what it cannot see is a component using the
+  token in a different context from the one it was declared for. The gate
+  checks the token layer's claims, not a stylesheet's use of them.
+
+  So each token does the job it was declared for. mobility.surge is a mark — a
+  hairline down the leading edge, which is what a 3.0 indicator bar is for — and
+  the words are text.secondary, gated at 4.5 on both grounds and passing in all
+  four combinations. This is decision 008's sentence arriving a third time:
+  status colour and status text are two jobs. 023 needed a new token to say it;
+  here the existing token was already right and only its use was wrong.
+*/
+.mz-ride-card__surge {
+  color: var(--text-secondary);
+  font-size: var(--font-size-200);
+  line-height: var(--line-height-normal);
+
+  /*
+    The mark. border-inline-start, so it is on the reading-start edge in both
+    directions with no side named — in Arabic it moves to the right without a
+    rule in this file mentioning either.
+  */
+  border-inline-start: var(--space-25) solid var(--mobility-surge);
+  padding-inline-start: var(--space-100);
+}
+
+/* ---------------------------------------------------------- reduced motion */
+
+/*
+  Nothing is removed, and the reasoning is decision 021's: reduced motion asks
+  for fewer and gentler rather than zero, and a border colour crossfading over
+  100ms is neither vestibular nor attention-grabbing. This block exists so the
+  next reader knows the question was asked.
+*/

@@ -127,7 +127,7 @@
       "Supply a label, hint and error whose direction is declared where the application knows it. dir=\"auto\" reads the first strong character and nothing else, so a message opening with a Latin brand name resolves LTR whatever follows — these props are ReactNode precisely so a caller with a string catalogue can pass a node that declares its direction."
     ]
   },
-  "stylesheet": "packages/components/src/Input/Input.css",
+  "stylesheet": "packages/components/src/styles/focus.css, packages/components/src/Input/Input.css",
   "tokens": [
     "border.control",
     "border.default",

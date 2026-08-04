@@ -1,4 +1,5 @@
 import type { MouseEvent, ReactNode } from 'react'
+import '../styles/focus.css'
 import './Button.css'
 
 /**
@@ -232,6 +233,7 @@ export function Button({
 }: ButtonProps) {
   const className = [
     'mz-button',
+    'mz-focus-ring',
     `mz-button--${variant}`,
     `mz-button--${size}`,
     fullWidth ? 'mz-button--full-width' : null

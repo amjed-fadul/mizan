@@ -132,7 +132,7 @@
       "Supply an icon that carries its own mirroring flag."
     ]
   },
-  "stylesheet": "packages/components/src/Button/Button.css",
+  "stylesheet": "packages/components/src/styles/focus.css, packages/components/src/Button/Button.css",
   "tokens": [
     "action.primary",
     "action.primary-hover",
