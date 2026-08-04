@@ -45,3 +45,4 @@ Entries are numbered sequentially in the order decisions actually happen. Number
 | [017](./017-primitives-are-hidden-from-publishing.md) | Primitives are hidden from publishing; only the semantic layer is a library — decided, not yet in the file | 3 |
 | [018](./018-the-preview-reads-the-build-output.md) | The Stage 2 preview reads the build output, and the content seam it opens | 2 |
 | [019](./019-the-focus-indicator-is-two-tone.md) | The focus indicator is two-tone, and `pairs.json` gets its first exceptions | 2 |
+| [020](./020-the-button-consolidation.md) | Four buttons become one, and the vocabulary the shared API refuses to carry | 4 |
