@@ -14,7 +14,10 @@ The load-bearing rule is the seam between `machinery/` and `content/`. Machinery
 | Directory | Holds |
 |---|---|
 | `machinery/` | Brand-agnostic pipeline, deterministic checks, component metadata, agent instructions. No Mizan values. |
+| `machinery/figma-plugin/` | Mizan Sync — the Figma plugin that writes variables from the token JSON, the generated proof sheet, and the read-only bridge the drift detector reads through. One-way, outward, no delete. |
+| `machinery/scripts/` | The gates: schema, contrast, drift, the self-test that proves they reject things, and the health dashboard. |
 | `content/` | Mizan's own tokens, rules, and Arabic specifics. No pipeline logic. |
+| `packages/` | Generated and consuming code. `packages/tokens/` is build output — CSS, iOS and Android, never hand-edited. `packages/preview/` is the live preview app. |
 | `brief/` | The Mizan Labs product brief — what Market and Move are and which surfaces exist. |
 | `decisions/` | The Decision Log: the significant calls, with reasoning and consequences. |
 | `audit/` | Assessments written before an intervention. What is true and what it costs — not what we chose. |
@@ -31,4 +34,11 @@ Tokens are the only editing surface. CSS variables and Figma variables are gener
 
 ## Status
 
-Stage 0: repository skeleton. Directories carry READMEs stating what belongs in them and what does not; implementation arrives stage by stage per the roadmap.
+**Stage 3 — Figma joins, synced.** The tooling is built; the component library is not.
+
+- **Stage 1** audited Mizan v0 — 33 colours, four spacing rhythms, four button implementations, and an accessibility floor that is mostly a token problem. `audit/`.
+- **Stage 2** built the token architecture: spec-strict DTCG source in `content/tokens/`, two blocking gates with a self-test that proves they reject things, and generated CSS, iOS and Android output for four mode combinations.
+- **Stage 3** built Mizan Sync, the Figma plugin that writes the variables; the drift detector with eight drift classes; the health dashboard; a generated proof sheet that binds every projected variable to a real node rather than asserting it reached Figma; and a read-only localhost bridge, because Figma gates the variables REST API for reading as well as writing.
+- **Published:** the Figma **variable library** — 74 variables in three collections. **Not published, because it does not exist yet:** the component library. Components are Stage 4.
+
+Sixteen Decision Log entries so far, and the refusals are the useful ones. Implementation continues stage by stage per the roadmap.
