@@ -27,12 +27,20 @@
  *
  * Usage:
  *   node machinery/scripts/health-dashboard.mjs [--root <dir>] [--snapshot <file>]
- *                                               [--file-key <key>] [--out <file>]
+ *                                               [--file-key <key>] [--bridge]
+ *                                               [--bridge-port <n>] [--bridge-timeout <s>]
+ *                                               [--out <file>]
  *                                               [--title <str>] [--strict] [--quiet]
  *
  *   --root <dir>      token root. Defaults to $TOKENS_ROOT, then content/tokens.
  *   --snapshot <file> Figma variables snapshot, passed straight to check-drift.
  *   --file-key <key>  live Figma file key, passed straight to check-drift.
+ *   --bridge          read the live variables through the running Mizan Sync
+ *                     plugin, passed straight to check-drift. This is the only
+ *                     live read available below Enterprise, and it is what makes
+ *                     the page say ALIGNED rather than ALIGNED AS OBSERVED.
+ *   --bridge-port <n>      forwarded to check-drift. Default 8791.
+ *   --bridge-timeout <s>   forwarded to check-drift. Default 60.
  *   --out <file>      where to write the page. Default .tokens-build/health.html.
  *   --title <str>     page title. A name is a brand decision, so there is no
  *                     default beyond a generic one.
@@ -649,11 +657,21 @@ function renderPage({ title, root, source, generatedAt, schema, contrast, drift,
   // agreed when the snapshot was taken; a hand-edit since then is invisible here.
   const observed = source != null && source.kind === 'snapshot';
 
+  /* A bridge read has no file key — it has a port and, if the plugin said so, a
+   * document name. Naming the document is not decoration: every remedy on this
+   * page says "re-sync outward", and a reader has to be able to check which file
+   * that would write to before carrying one out. */
   const sourceLine = source === null || source === undefined
     ? 'no Figma source given'
     : source.kind === 'snapshot'
       ? `snapshot ${displayPath(source.path)}`
-      : `Figma file ${source.fileKey} (live)`;
+      : source.kind === 'bridge'
+        ? source.document
+          ? `"${source.document.name}" (${source.document.fileKey === null
+            ? 'no file key — the document may be unsaved'
+            : `file key ${source.document.fileKey}`}), read through the plugin bridge on 127.0.0.1:${source.port}`
+          : `the open file (the plugin did not name the document), read through the plugin bridge on 127.0.0.1:${source.port}`
+        : `Figma file ${source.fileKey} (live)`;
 
   return `<!doctype html>
 <html lang="en"${rootAttributes}>
@@ -683,8 +701,9 @@ ${renderCss(palettes)}
       ? observed
         ? 'All three gates pass against a snapshot. This says the display agreed with the source '
           + 'when the snapshot was taken — not that it agrees now. A hand-edit made since then is '
-          + 'invisible to this page. Reading Figma live needs the variables REST API, which is '
-          + 'Enterprise-only; see decisions/015.'
+          + 'invisible to this page. Reading Figma live below Enterprise means the plugin bridge: '
+          + 'run check-drift with --bridge, with the file open and Mizan Sync running. The '
+          + 'variables REST API is Enterprise-only in both directions; see decisions/015 and 016.'
         : 'All three gates pass, read live. The display agrees with the source.'
       : `${[!schemaOk && 'schema', !contrastOk && 'contrast', !driftOk && 'drift'].filter(Boolean).join(', ')} failing.`,
   )}</span>
@@ -791,12 +810,13 @@ ${drift.payload.notRepresentable.map((item) => `<tr><td><code>${escapeHtml(item.
 
 function main(argv) {
   const args = parseArgs(argv, {
-    flags: ['strict', 'quiet', 'help'],
-    values: ['root', 'snapshot', 'file-key', 'out', 'title'],
+    flags: ['strict', 'quiet', 'help', 'bridge'],
+    values: ['root', 'snapshot', 'file-key', 'bridge-port', 'bridge-timeout', 'out', 'title'],
   });
   if (args.help) {
     process.stdout.write(
       'Usage: health-dashboard.mjs [--root <dir>] [--snapshot <file>] [--file-key <key>]\n'
+      + '                            [--bridge] [--bridge-port <n>] [--bridge-timeout <s>]\n'
       + '                            [--out <file>] [--title <str>] [--strict] [--quiet]\n',
     );
     return 0;
@@ -809,7 +829,14 @@ function main(argv) {
   const root = args.root ? resolve(args.root) : defaultTokensRoot();
   const rootArgs = ['--root', root];
   const driftArgs = [...rootArgs];
+  /* Three sources, forwarded in check-drift's own precedence: snapshot beats
+   * bridge beats file key. The bridge was missing here for as long as it has
+   * existed, which meant the one live read available below Enterprise could not
+   * reach the page whose whole subject is whether the display is current. */
   if (args.snapshot) driftArgs.push('--snapshot', args.snapshot);
+  if (args.bridge) driftArgs.push('--bridge');
+  if (args['bridge-port']) driftArgs.push('--bridge-port', args['bridge-port']);
+  if (args['bridge-timeout']) driftArgs.push('--bridge-timeout', args['bridge-timeout']);
   if (args['file-key']) driftArgs.push('--file-key', args['file-key']);
 
   const schema = runGate('check-schema.mjs', rootArgs);

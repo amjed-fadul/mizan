@@ -1,5 +1,20 @@
 /**
- * figma-adapter.ts — the only file in this plugin that knows Figma exists.
+ * figma-adapter.ts — the only file that touches the Figma *document*.
+ *
+ * The claim used to read "the only file in this plugin that knows Figma exists",
+ * which is false and was the load-bearing architecture sentence, so it is worth
+ * saying precisely what does hold. `code.ts` uses the `figma` global 19 times —
+ * `showUI`, `ui.postMessage`, `ui.onmessage`, `notify`, `closePlugin`. Those are
+ * the plugin's shell: window, message pump and lifecycle. What `code.ts` never
+ * does is read or write a variable, a collection or a node.
+ *
+ * So the true statement is narrower and stronger than the old one: **this is the
+ * only file that reads or mutates document state.** Every call into
+ * `getLocalVariablesAsync`, `createVariable`, `setValueForMode`, node creation
+ * and node binding lives here. `src/core/**` is pure — plain data in, plain data
+ * out, no Figma and no Node — and that part was never overstated: the
+ * command-line dry run drives the identical functions with no Figma present,
+ * which is what proves it rather than asserts it.
  *
  * It implements `VariablesAdapter` against the Plugin API and nothing else:
  * no planning, no mapping, no token knowledge. Everything above it is the pure
