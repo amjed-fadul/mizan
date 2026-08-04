@@ -21,6 +21,8 @@
   <color name="border_default">#ff3d3d3d</color>
   <color name="commerce_discount">#ffef5350</color>
   <color name="commerce_stock_low">#ffc25e00</color>
+  <color name="focus_ring">#ffffffff</color>
+  <color name="focus_ring_contrast">#ff141414</color>
   <dimen name="font_size_100">12dp</dimen>
   <dimen name="font_size_200">13dp</dimen>
   <dimen name="font_size_300">14dp</dimen>

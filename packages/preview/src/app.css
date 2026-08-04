@@ -68,51 +68,59 @@ ol {
 }
 
 :focus-visible {
-  /* A two-tone indicator, and the two tones are text.primary and surface.default
-     because they are opposite polarities of the same axis: text.primary is
-     neutral.900 in light and neutral.0 in dark, surface.default is the reverse.
-     A pair chosen that way stays a pair in both themes instead of collapsing
-     into one colour in one of them, which is what text.on-action — white in both
-     — would have done in dark, next to a text.primary that is also white there.
+  /* A two-tone indicator, and the two tones are focus.ring and
+     focus.ring-contrast. They alias text.primary and surface.default and always
+     have — the change is that this rule no longer has to say so. It used to
+     reach for the text colour and the page ground directly and then spend a
+     paragraph explaining that it meant an indicator, which is the shape of a
+     comment standing in for a name. The values are chosen because they are
+     opposite polarities of the same axis: focus.ring is neutral.900 in light and
+     neutral.0 in dark, focus.ring-contrast is the reverse. A pair chosen that way
+     stays a pair in both themes instead of collapsing into one colour in one of
+     them, which is what text.on-action — white in both — would have done in
+     dark, next to a ring that is also white there.
 
      Measured outward from the border box, the indicator is three bands and two
      colours:
 
-       0–2px   surface.default   box-shadow spread
-       2–4px   text.primary      outline, painted over the shadow
-       4–8px   surface.default   the rest of the same box-shadow
+       0–2px   focus.ring-contrast   box-shadow spread
+       2–4px   focus.ring            outline, painted over the shadow
+       4–8px   focus.ring-contrast   the rest of the same box-shadow
 
      Two bands would have been enough for the ground the indicator sits on and
      are not enough for a segmented control, and finding that out is what the
      screenshots were for. With the light tone inside only, the outermost pixel
-     against a pressed neighbour is text.primary at 2.37:1 — the failure this
+     against a pressed neighbour is focus.ring at 2.37:1 — the failure this
      replaces, moved two pixels. With it outside only, the outer edge is fine and
-     a focused button that is *itself* pressed puts text.primary flush against
-     its own action.primary fill at the same 2.37:1. Whichever single side the
-     light tone is on, some real case has the dark band meeting a brand fill with
+     a focused button that is *itself* pressed puts focus.ring flush against its
+     own action.primary fill at the same 2.37:1. Whichever single side the light
+     tone is on, some real case has the dark band meeting a brand fill with
      nothing between them. Flanking it on both sides is the arrangement with no
      such case left, and it is the plain reading of WCAG's own advice: the light
      tone is what touches the world.
 
-     What each ground meets, then, is surface.default, and what the eye reads is
-     text.primary between two lines of it at 13.39:1 / 18.42:1:
+     What each ground meets, then, is focus.ring-contrast, and what the eye reads
+     is focus.ring between two lines of it at 13.39:1 / 18.42:1:
 
        surface.default   the outer band is the ground — invisible by
                          construction, so this reads exactly as the single ring
-                         did, and text.primary carries it at 13.39:1 / 18.42:1.
+                         did, and focus.ring carries it at 13.39:1 / 18.42:1.
        surface.sunken    the outer band is 1.12:1 against it, one step off and
-                         effectively the ground too; text.primary carries it at
+                         effectively the ground too; focus.ring carries it at
                          11.96:1 / 16.48:1.
        action.primary    the case that failed. The band that meets the fill is
-                         surface.default: 5.64:1 in light Market, 5.27:1 in light
-                         Move, 3.27:1 and 3.50:1 in dark. Dark Market is now the
-                         binding number in this rule, at 0.27 over the bar.
+                         focus.ring-contrast: 5.64:1 in light Market, 5.27:1 in
+                         light Move, 3.27:1 and 3.50:1 in dark. Dark Market is
+                         now the binding number in this rule, at 0.27 over the
+                         bar.
 
      So every ground meets a tone above 3.0 in all four combinations, which is
      what 1.4.11 asks of the indicator. It does not ask it of each tone
-     separately — text.primary over that fill is still 2.37:1 and still drawn —
-     and pairs.json says so in two exceptions rather than by leaving the losing
-     tone undeclared.
+     separately — focus.ring over that fill is still 2.37:1 and still drawn — and
+     pairs.json says so in two exceptions rather than by leaving the losing tone
+     undeclared. Those exceptions now name the indicator's own tokens, so the
+     gate's output reads as a statement about a focus ring rather than about the
+     body text colour.
 
      8px rather than 6px because the spacing scale steps 2, 4, 8 and the outer
      band takes a step from the scale instead of inventing one. A 6px ring here
@@ -137,9 +145,9 @@ ol {
      own corners with both the outline and the shadow. */
   position: relative;
   z-index: 1;
-  outline: var(--space-25) solid var(--text-primary);
+  outline: var(--space-25) solid var(--focus-ring);
   outline-offset: var(--space-25);
-  box-shadow: 0 0 0 var(--space-100) var(--surface-default);
+  box-shadow: 0 0 0 var(--space-100) var(--focus-ring-contrast);
 }
 
 /* ------------------------------------------------------- the script subtree */
