@@ -1,10 +1,16 @@
 {
-  "$description": "Declared pairings for the valid fixture. Every pair passes in all four mode combinations. The single exception is on a passing pair, so the selftest can assert that exceptions are reported even when nothing is wrong.",
+  "$description": "Declared pairings for the valid fixture. Every gated pair passes in all four mode combinations. The single exception is on a passing pair, so the selftest can assert that exceptions are reported even when nothing is wrong. The single decorative pair is deliberately far below every threshold, so the selftest can assert that an ungated context is reported rather than failed.",
   "pairs": [
     { "foreground": "text.primary", "background": "surface.default", "context": "text" },
     { "foreground": "text.secondary", "background": "surface.default", "context": "text" },
     { "foreground": "text.on-action", "background": "action.primary", "context": "text" },
-    { "foreground": "border.default", "background": "surface.default", "context": "ui" }
+    { "foreground": "border.default", "background": "surface.default", "context": "ui" },
+    {
+      "foreground": "border.subtle",
+      "background": "surface.default",
+      "context": "decorative",
+      "$description": "Fixture only. In theme.light this is #f0f0f0 on #ffffff — about 1.13:1, below every WCAG threshold including the 3.0 that a ui declaration would impose. The valid fixture still exits 0, which is what proves decorative carries no threshold rather than a lenient one."
+    }
   ],
   "exceptions": [
     {

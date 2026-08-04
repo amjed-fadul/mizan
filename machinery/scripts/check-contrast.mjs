@@ -10,6 +10,11 @@
  * that passes in one mode and fails in another is a failure — that is the
  * entire reason this runs across combinations rather than against base values.
  *
+ * One context, `decorative`, has no threshold. Those pairs are resolved and
+ * their ratios reported like any other, and can never fail the build. The
+ * category exists so that a pairing WCAG does not govern can still be declared
+ * and tracked, instead of being either wrongly gated or left undeclared.
+ *
  * Usage:
  *   node machinery/scripts/check-contrast.mjs [--root <dir>] [--pairs <file>]
  *                                             [--mode <id>]... [--json] [--quiet]
@@ -75,6 +80,8 @@ function loadPairs(pairsPath, diagnostics) {
         diagnostics.error('invalid-pair', `${where} needs string "foreground" and "background" token paths.`, { file: pairsPath });
         return;
       }
+      // Object.hasOwn, not truthiness: "decorative" maps to null on purpose and
+      // must still be a recognised context.
       if (typeof context !== 'string' || !Object.hasOwn(CONTRAST_THRESHOLDS, context)) {
         diagnostics.error(
           'invalid-pair-context',
@@ -197,7 +204,9 @@ function evaluatePair(pair, combo, resolved, pairsPath, diagnostics) {
   const effective = foreground.alpha < 1 ? compositeOver(foreground, background) : foreground;
   const ratio = contrastRatio(effective, background);
 
-  result.status = ratio >= threshold ? 'pass' : 'fail';
+  // A null threshold is a context with no bar to clear. The ratio is still
+  // computed and still printed — the pair is tracked, it is simply not gated.
+  result.status = threshold === null ? 'report' : (ratio >= threshold ? 'pass' : 'fail');
   result.ratio = Number(ratio.toFixed(4));
   result.foregroundHex = effective.hex;
   result.backgroundHex = background.hex;
@@ -271,6 +280,7 @@ function report({ args, set, pairsPath, results, exceptions, diagnostics, empty 
   const failures = results.filter((r) => r.status === 'fail' && !r.excepted);
   const excepted = results.filter((r) => r.excepted);
   const passing = results.filter((r) => r.status === 'pass' && !r.excepted);
+  const reported = results.filter((r) => r.status === 'report' && !r.excepted);
   const ok = diagnostics.ok && failures.length === 0;
 
   const payload = {
@@ -314,12 +324,19 @@ function report({ args, set, pairsPath, results, exceptions, diagnostics, empty 
     for (const result of failures) out.push(...formatResult(result, 'FAIL'));
   }
 
+  if (reported.length > 0) {
+    out.push('');
+    out.push(`REPORTED, NOT GATED (${reported.length})`);
+    out.push('  Declared in a context with no threshold. The ratio is measured and printed so the pairing can be read and counted, but nothing here can fail the build.');
+    for (const result of reported) out.push(...formatResult(result, 'REPORT'));
+  }
+
   if (excepted.length > 0) {
     out.push('');
     out.push(`EXCEPTIONS IN EFFECT (${excepted.length})`);
     out.push('  Every exception is reported whether it passes or fails. A silent exception is not an exception, it is a hole.');
     for (const result of excepted) {
-      out.push(...formatResult(result, result.status === 'pass' ? 'EXCEPTION (currently passing)' : 'EXCEPTION (currently failing)'));
+      out.push(...formatResult(result, exceptionLabel(result.status)));
       out.push(`      reason: ${result.reason}`);
     }
   }
@@ -346,12 +363,18 @@ function report({ args, set, pairsPath, results, exceptions, diagnostics, empty 
   out.push('');
   out.push(
     ok
-      ? `Result: pass. ${passing.length} check(s) passed, ${excepted.length} exception(s) in effect.`
-      : `Result: fail. ${failures.length} failing pair(s), ${diagnostics.errors.length} error(s), ${excepted.length} exception(s) in effect.`,
+      ? `Result: pass. ${passing.length} check(s) passed, ${reported.length} reported without a threshold, ${excepted.length} exception(s) in effect.`
+      : `Result: fail. ${failures.length} failing pair(s), ${diagnostics.errors.length} error(s), ${reported.length} reported without a threshold, ${excepted.length} exception(s) in effect.`,
   );
 
   if (!args.quiet || !ok) process.stdout.write(`${out.join('\n')}\n`);
   return ok ? 0 : 1;
+}
+
+function exceptionLabel(status) {
+  if (status === 'fail') return 'EXCEPTION (currently failing)';
+  if (status === 'report') return 'EXCEPTION (context is not gated)';
+  return 'EXCEPTION (currently passing)';
 }
 
 function formatResult(result, prefix) {
@@ -360,7 +383,9 @@ function formatResult(result, prefix) {
   lines.push(`      mode: ${result.modeLabel}`);
   if (result.ratio !== undefined) {
     lines.push(
-      `      ratio ${formatRatio(result.ratio)}  required ${result.threshold.toFixed(2)}:1  (context: ${result.context})`,
+      result.threshold === null
+        ? `      ratio ${formatRatio(result.ratio)}  no threshold applies  (context: ${result.context})`
+        : `      ratio ${formatRatio(result.ratio)}  required ${result.threshold.toFixed(2)}:1  (context: ${result.context})`,
     );
     lines.push(
       `      foreground ${result.foregroundHex}${result.composited ? ' (composited over the background)' : ''}  background ${result.backgroundHex}`,

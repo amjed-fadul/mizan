@@ -80,11 +80,11 @@ assert(
 const validContrast = run('check-contrast.mjs', ['--root', VALID]);
 assert(validContrast.status === 0, 'valid fixture: contrast gate exits 0',
   `exit ${validContrast.status}; ${JSON.stringify(validContrast.payload?.errors ?? validContrast.stderr)}`);
-assert((validContrast.payload?.results ?? []).every((r) => r.status === 'pass'),
-  'valid fixture: every declared pair passes in every mode combination',
-  JSON.stringify((validContrast.payload?.results ?? []).filter((r) => r.status !== 'pass')));
-assert(validContrast.payload?.checks === 16,
-  'valid fixture: four pairs times four combinations is sixteen checks',
+assert((validContrast.payload?.results ?? []).every((r) => r.status === 'pass' || r.status === 'report'),
+  'valid fixture: every gated pair passes in every mode combination',
+  JSON.stringify((validContrast.payload?.results ?? []).filter((r) => r.status !== 'pass' && r.status !== 'report')));
+assert(validContrast.payload?.checks === 20,
+  'valid fixture: five pairs times four combinations is twenty checks',
   `checks: ${validContrast.payload?.checks}`);
 
 const exceptedResults = (validContrast.payload?.results ?? []).filter((r) => r.excepted);
@@ -97,6 +97,34 @@ assert(exceptedResults.every((r) => typeof r.reason === 'string' && r.reason.len
 const validHuman = spawnSync(process.execPath, [join(SCRIPTS_DIR, 'check-contrast.mjs'), '--root', VALID], { encoding: 'utf8' });
 assert(validHuman.stdout.includes('EXCEPTIONS IN EFFECT'),
   'valid fixture: human-readable output announces exceptions prominently even though the build passes');
+
+/* The decorative context: reported, never gated, never a reason to fail. --- */
+
+assert(validContrast.payload?.thresholds?.decorative === null,
+  'decorative: the threshold table maps it to null, not to a low number — no bar rather than a soft one',
+  JSON.stringify(validContrast.payload?.thresholds));
+
+const decorative = (validContrast.payload?.results ?? []).filter((r) => r.context === 'decorative');
+assert(decorative.length === 4,
+  'decorative: the pair is still resolved in every mode combination, like any other',
+  `decorative results: ${decorative.length}`);
+assert(decorative.every((r) => r.status === 'report' && r.threshold === null && typeof r.ratio === 'number'),
+  'decorative: every result carries a measured ratio and no threshold',
+  JSON.stringify(decorative));
+
+const decorativeLight = decorative.find((r) => r.modeLabel.includes('theme.light'));
+assert(decorativeLight !== undefined && decorativeLight.ratio < 3.0,
+  'decorative: the fixture pair sits below even the 3.0 non-text threshold in light',
+  JSON.stringify(decorativeLight));
+assert(validContrast.status === 0,
+  'decorative: and the gate still exits 0 — a decorative pair cannot fail the build',
+  `exit ${validContrast.status}`);
+
+assert(validHuman.stdout.includes('REPORTED, NOT GATED')
+  && validHuman.stdout.includes('border.subtle on surface.default')
+  && validHuman.stdout.includes('no threshold applies'),
+  'decorative: the passing run still prints the pair and its ratio — tracked, not hidden',
+  validHuman.stdout);
 
 /* ------------------------------------------------------------------ *
  * The broken fixture must fail, with the defects we planted.

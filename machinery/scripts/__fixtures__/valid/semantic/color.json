@@ -15,6 +15,10 @@
   },
   "border": {
     "$type": "color",
-    "default": { "$value": "{color.neutral.500}" }
+    "default": { "$value": "{color.neutral.500}" },
+    "subtle": {
+      "$value": "{color.neutral.100}",
+      "$description": "Fixture only. Paired with surface.default in the decorative context, where it sits far below every WCAG threshold and the gate still passes. That is the assertion: decorative is not a low bar, it is no bar."
+    }
   }
 }

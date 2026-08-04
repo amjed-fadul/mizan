@@ -59,6 +59,21 @@ The audit supplies the evidence for why this matters. It found Market's `#5a5a5a
 - Four modes now exist: light/dark × Market/Move. Every shared semantic must resolve in all four, which is a real authoring cost and the reason the shared vocabulary stays small.
 - The boundary will sometimes be drawn wrong, and the cost of being wrong is asymmetric: wrongly namespacing something is a cheap promotion later, wrongly sharing something forces an awkward value into a product that does not want it. **When genuinely unsure, namespace.**
 
+### Amendment — the cost this decision did not anticipate
+
+*Added while building the mode matrix, because it is a real hole in the guarantee above.*
+
+A token that depends on **two** dimensions cannot be expressed by mode overrides alone. Modes compose in sequence, so the dimension applied second has no way to know what the first resolved to. `text.secondary` depends on both theme and product — it is `#5a5a5a`/`#6b6b6b` in light and `#b8b8b8`/`#949494` in dark — and that is exactly the shape the mechanism does not handle.
+
+The implementation uses two slot tokens, `text.secondary-market` and `text.secondary-move`, set by the theme dimension and selected by the product dimension. It works, and it costs two things worth stating plainly:
+
+1. **Two tokens exist that are plumbing rather than vocabulary.** They are labelled as such in their descriptions, but they are indistinguishable from real semantics to anyone reading the token list.
+2. **They leak into the published CSS.** `--text-secondary` references one of them, so both must exist in the output. A product-named custom property is now in the public API of a system whose central claim is that components are product-agnostic — which is precisely what this decision exists to prevent.
+
+Neither is fatal and both are contained, but the guarantee in this entry is weaker than it reads. The honest version: *components need not be product-aware, and the token layer pays for that with two tokens that are.*
+
+The fix is a lint rule rather than an architecture change — banning `-market`/`-move` suffixes and `commerce.`/`mobility.` prefixes inside shared components catches the slots alongside the namespaced tokens they resemble. That belongs to Stage 6.
+
 ## What would make us revisit this?
 
 If by Stage 4 the shared vocabulary has grown large enough that most tokens resolve to the same value in both modes, the mode mechanism is carrying no information and the products are not as different as [005](./005-two-products-not-one.md) claimed. Conversely, if components repeatedly need namespaced tokens to do their job, the boundary is drawn too far toward namespacing and shared concepts are being misclassified as product-unique.
