@@ -237,5 +237,5 @@ export const Arabic: Story = {
       </List>
     </div>
   ),
-  globals: { direction: 'rtl', language: 'ar' }
+  globals: { direction: 'rtl', lang: 'ar' }
 }

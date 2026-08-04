@@ -231,5 +231,5 @@ export const Arabic: Story = {
       <NavigationItem href="/move">Mizan Move</NavigationItem>
     </Navigation>
   ),
-  globals: { direction: 'rtl', language: 'ar' }
+  globals: { direction: 'rtl', lang: 'ar' }
 }

@@ -296,5 +296,5 @@ export const Arabic: Story = {
       </RideCardGroup>
     </div>
   ),
-  globals: { direction: 'rtl', language: 'ar' }
+  globals: { direction: 'rtl', lang: 'ar' }
 }

@@ -46,7 +46,14 @@ const meta = {
   title: 'Components/Dialog',
   component: Dialog,
   parameters: {
-    layout: 'centered'
+    layout: 'centered',
+    /*
+      Taller frames than the library default. Each docs story renders in its own
+      iframe (see .storybook/preview.tsx), and a modal fills the viewport it is
+      given — at the default height the dialog would be cropped by the frame
+      rather than by anything in the component.
+    */
+    docs: { story: { height: '440px' } }
   },
   argTypes: {
     title: { control: 'text' },
@@ -232,5 +239,5 @@ export const Arabic: Story = {
     confirmLabel: 'إلغاء الرحلة',
     dismissLabel: 'الاحتفاظ بالرحلة'
   },
-  globals: { direction: 'rtl', language: 'ar' }
+  globals: { direction: 'rtl', lang: 'ar' }
 }

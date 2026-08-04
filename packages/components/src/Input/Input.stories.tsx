@@ -146,6 +146,7 @@ export const LatinValueInAnArabicPage: Story = {
       }
     }
   },
+  globals: { direction: 'rtl', lang: 'ar' },
   play: async ({ canvasElement, step }) => {
     const canvas = within(canvasElement)
     const field = canvas.getByLabelText(/البريد/)
@@ -179,6 +180,7 @@ export const ArabicValueInAnArabicPage: Story = {
     label: 'الاسم الكامل',
     placeholder: 'محمد عبد الله'
   },
+  globals: { direction: 'rtl', lang: 'ar' },
   play: async ({ canvasElement, step }) => {
     const canvas = within(canvasElement)
     const field = canvas.getByLabelText(/الاسم/)

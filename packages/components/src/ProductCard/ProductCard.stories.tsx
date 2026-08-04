@@ -238,7 +238,7 @@ export const Arabic: Story = {
     delivery: 'احصل عليه غدًا',
     addToCartLabel: 'أضف إلى السلة'
   },
-  globals: { direction: 'rtl', language: 'ar' }
+  globals: { direction: 'rtl', lang: 'ar' }
 }
 
 /**
