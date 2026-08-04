@@ -14,7 +14,9 @@
     "check:contrast": "node machinery/scripts/check-contrast.mjs",
     "selftest": "node machinery/scripts/selftest.mjs",
     "adapt:tokens": "node machinery/scripts/dtcg-adapt.mjs",
-    "build:tokens": "node machinery/scripts/build-tokens.mjs"
+    "build:tokens": "node machinery/scripts/build-tokens.mjs",
+    "preview": "npm run dev --workspace @mizan/preview",
+    "build:preview": "npm run build --workspace @mizan/preview"
   },
   "engines": {
     "node": ">=22"

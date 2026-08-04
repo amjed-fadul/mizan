@@ -1,0 +1,252 @@
+/*
+  THE REPRODUCTION PANE — the only file in this package that contains a literal
+  colour, and it contains eleven of them.
+
+  Every value below is transcribed from legacy/src/shared/styles.css,
+  legacy/src/market/market.css and the inline styles in
+  legacy/src/market/screens/CategoryScreen.tsx. Nothing is imported from legacy/
+  and nothing in legacy/ is touched: it is quarantined evidence for the Stage 1
+  audit and the Stage 6 migration, and repairing it destroys both exercises.
+
+  What is faithfully reproduced: the four near-identical greys, the two brand
+  greens, the 7/13/26 inline spacing rhythm, the global 0.01em tracking that
+  severs Arabic joins, the discount badge whose inline style paints dark red text
+  onto a dark red fill, and .v0-btn-cta — a class v0 applies in three screens and
+  defines nowhere.
+
+  One defect is described in the caption rather than reproduced: the 72 physical
+  direction properties. This repository forbids the physical inline-axis
+  properties everywhere outside legacy/, and reproducing the defect would mean
+  importing it into the system that exists to remove it. The bidi failures below
+  are the more interesting half of that finding anyway — they are created at the
+  call site, not in the stylesheet, so they reproduce exactly.
+*/
+
+.v0 {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+    sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  /* The global tracking. On Latin it is invisible; on Arabic it severs the
+     joins between letters and a word stops being a word. */
+  letter-spacing: 0.01em;
+  color: #333333;
+  background-color: #ffffff;
+  padding: 16px;
+  border-radius: 4px;
+}
+
+.v0 a {
+  color: #2e7d5a;
+  text-decoration: none;
+}
+
+.v0-nav {
+  font-size: 14px;
+  margin-block-end: 16px;
+}
+
+.v0-header {
+  margin-block-end: 16px;
+}
+
+.v0-h1 {
+  font-size: 28px;
+  font-weight: 600;
+  margin-block-end: 16px;
+}
+
+.v0-muted {
+  color: #767676;
+  font-size: 13px;
+}
+
+.v0-card {
+  background-color: #ffffff;
+  border: 1px solid #dddddd;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  padding: 13px;
+  margin-block-end: 16px;
+}
+
+.v0-badge {
+  display: inline-block;
+  border-radius: 4px;
+  font-size: 12px;
+  padding: 7px 13px;
+  margin-inline-end: 8px;
+  margin-block-end: 8px;
+  border: 1px solid #eaeaea;
+  cursor: pointer;
+}
+
+.v0-badge--on {
+  background-color: #eaeaea;
+  color: #2e2e2e;
+}
+
+.v0-badge--off {
+  background-color: #ffffff;
+  color: #767676;
+}
+
+.v0-btn {
+  display: inline-block;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+  letter-spacing: 0.01em;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 8px 16px;
+  margin-inline-end: 8px;
+  margin-block-end: 8px;
+  cursor: pointer;
+  text-align: center;
+}
+
+.v0-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.v0-btn--primary {
+  background-color: #2e7d5a;
+  color: #ffffff;
+}
+
+.v0-btn--secondary {
+  background-color: #ffffff;
+  color: #333333;
+  border-color: #dddddd;
+}
+
+/* The second brand green. Same CTA fill, different lineage, 2.90 dE00 apart. */
+.v0-btn--mk {
+  background-color: #2f8560;
+  color: #ffffff;
+  font-size: 13px;
+  padding: 6px 12px;
+  border-radius: 4px;
+}
+
+/* .btn-cta is applied in three v0 screens and defined in no stylesheet. What it
+   renders is what an undefined class renders: the base button and nothing else. */
+.v0-btn--cta {
+  background-color: transparent;
+}
+
+.v0-actions {
+  margin-block-start: 12px;
+}
+
+.v0-grid {
+  display: flex;
+  flex-wrap: wrap;
+  margin-inline: -8px;
+}
+
+.v0-grid > * {
+  inline-size: 33.33%;
+  padding-inline: 8px;
+  margin-block-end: 16px;
+}
+
+.v0-product {
+  background-color: #ffffff;
+  border: 1px solid #dcdcdc;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  padding: 12px;
+  text-align: start;
+  block-size: 100%;
+}
+
+.v0-image {
+  position: relative;
+  inline-size: 100%;
+  block-size: 96px;
+  background-color: #f2f2f2;
+  border-radius: 4px;
+  margin-block-end: 12px;
+  color: #8e8e8e;
+  font-size: 13px;
+  text-align: center;
+  line-height: 96px;
+}
+
+/* An absolutely positioned div with an onClick, over the whole image. Not in the
+   tab order, no role, no key handler: a screen reader announces it as text. */
+.v0-quickview {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  inline-size: 100%;
+  block-size: 96px;
+  line-height: 96px;
+  font-size: 13px;
+  color: #767676;
+  cursor: pointer;
+}
+
+.v0-body {
+  padding-block-start: 4px;
+}
+
+/* The badge sets its own foreground in an inline style and overrides the
+   component's white. Dark red text on a dark red fill: 1.06:1. */
+.v0-discount {
+  display: inline-block;
+  background-color: #c62828;
+  color: #c0392b;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 4px 8px;
+  margin-inline-end: 8px;
+  margin-block-end: 4px;
+}
+
+.v0-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #2f2f2f;
+  margin-block-end: 4px;
+}
+
+.v0-row {
+  margin-block-start: 8px;
+}
+
+.v0-price {
+  font-size: 16px;
+  font-weight: 600;
+  color: #2f2f2f;
+  margin-inline-end: 8px;
+}
+
+.v0-price-was {
+  font-size: 13px;
+  color: #999999;
+  text-decoration: line-through;
+  margin-inline-end: 4px;
+}
+
+.v0-unit {
+  font-size: 12px;
+  color: #8e8e8e;
+  margin-block-start: 4px;
+}
+
+.v0-meta {
+  font-size: 13px;
+  color: #2e2e2e;
+  margin-block-start: 8px;
+}
+
+.v0-delivery {
+  font-size: 13px;
+  color: #5a5a5a;
+  margin-block-start: 7px;
+}

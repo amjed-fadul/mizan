@@ -1,0 +1,174 @@
+import pairsSource from '../../../../content/tokens/pairs.json'
+import { useMode } from '../lib/mode'
+import { s, ui } from '../lib/strings'
+import type { Lang } from '../lib/strings'
+import { Run } from './Run'
+import { COMBINATIONS, combinationKey, cssNameForPath, resolvePath } from '../lib/tokens'
+import type { Combination } from '../lib/tokens'
+import { contrastRatio, formatRatio, thresholdFor, verdict } from '../lib/contrast'
+import type { PairContext, Verdict } from '../lib/contrast'
+
+type DeclaredPair = {
+  foreground: string
+  background: string
+  context: string
+  $description: string
+}
+
+// content/tokens/pairs.json is read directly rather than copied. It is the
+// editing surface for this declaration (CLAUDE.md rule 1), and a preview that
+// kept its own list of pairings would be able to disagree with the build gate.
+const PAIRS = (pairsSource as { pairs: DeclaredPair[] }).pairs
+
+function contextLabel(context: PairContext, lang: Lang): string {
+  switch (context) {
+    case 'text':
+      return s(ui.pairs.contextText, lang)
+    case 'large-text':
+      return s(ui.pairs.contextLargeText, lang)
+    case 'ui':
+      return s(ui.pairs.contextUi, lang)
+    case 'decorative':
+      return s(ui.pairs.contextDecorative, lang)
+  }
+}
+
+function verdictLabel(value: Verdict, lang: Lang): string {
+  if (value === 'pass') return s(ui.pairs.pass, lang)
+  if (value === 'fail') return s(ui.pairs.fail, lang)
+  return s(ui.pairs.reported, lang)
+}
+
+function modeLabel(c: Combination, lang: Lang): string {
+  const theme = c.theme === 'light' ? s(ui.controls.light, lang) : s(ui.controls.dark, lang)
+  const product = c.product === 'market' ? s(ui.controls.market, lang) : s(ui.controls.move, lang)
+  return `${theme} · ${product}`
+}
+
+function ratioFor(pair: DeclaredPair, c: Combination): number | null {
+  const fg = resolvePath(pair.foreground, c).value
+  const bg = resolvePath(pair.background, c).value
+  return contrastRatio(fg, bg)
+}
+
+function VerdictBadge({ value, lang }: { value: Verdict; lang: Lang }) {
+  return (
+    <span className={`mz-verdict mz-verdict--${value}`}>
+      <span className="mz-verdict__mark" aria-hidden="true" />
+      <Run text={verdictLabel(value, lang)} ambient={lang} />
+    </span>
+  )
+}
+
+function PairCard({ pair, lang }: { pair: DeclaredPair; lang: Lang }) {
+  const mode = useMode()
+  const context = pair.context as PairContext
+  const threshold = thresholdFor(context)
+  const currentKey = combinationKey(mode.combination)
+
+  return (
+    <li className="mz-pair">
+      <div className="mz-pair__id">
+        <div className="mz-pair__names">
+          <span className="mz-token-name">
+            <bdi>{pair.foreground}</bdi>
+          </span>
+          <span className="mz-value">
+            <Run text={s(ui.pairs.on, lang)} ambient={lang} />
+          </span>
+          <span className="mz-token-name">
+            <bdi>{pair.background}</bdi>
+          </span>
+        </div>
+
+        <div
+          className="mz-pair__sample"
+          style={{
+            color: `var(${cssNameForPath(pair.foreground)})`,
+            backgroundColor: `var(${cssNameForPath(pair.background)})`
+          }}
+        >
+          {/* The specimen is the pairing rendered, not described: Latin, Arabic
+              and digits together, because that is the string this system has to
+              hold up under. */}
+          <Run text="Mizan" ambient="en" />
+          {' · '}
+          <Run text="ميزان" ambient="en" />
+          {' · '}
+          <Run text="12.50" ambient="en" />
+        </div>
+
+        <div className="mz-pair__names">
+          <span className="mz-tag mz-tag--strong">
+            <Run text={contextLabel(context, lang)} ambient={lang} />
+          </span>
+          <span className="mz-tag">
+            {threshold === null ? (
+              <Run text={s(ui.pairs.notGated, lang)} ambient={lang} />
+            ) : (
+              <>
+                <Run text={s(ui.pairs.needs, lang)} ambient={lang} />
+                {' '}
+                <bdi>{threshold.toFixed(1)}</bdi>
+              </>
+            )}
+          </span>
+        </div>
+      </div>
+
+      <ul className="mz-pair__matrix">
+        {COMBINATIONS.map((c) => {
+          const ratio = ratioFor(pair, c)
+          const key = combinationKey(c)
+          const isCurrent = key === currentKey
+          return (
+            <li key={key} className={isCurrent ? 'mz-cell mz-cell--current' : 'mz-cell'}>
+              <span className="mz-cell__mode">
+                <Run text={modeLabel(c, lang)} ambient={lang} />
+                {isCurrent && (
+                  <>
+                    {' · '}
+                    <Run text={s(ui.pairs.current, lang)} ambient={lang} />
+                  </>
+                )}
+              </span>
+              <span className="mz-cell__ratio">
+                <bdi>{ratio === null ? '—' : `${formatRatio(ratio)}:1`}</bdi>
+              </span>
+              {ratio !== null && <VerdictBadge value={verdict(ratio, context)} lang={lang} />}
+            </li>
+          )
+        })}
+      </ul>
+    </li>
+  )
+}
+
+export function ContrastMatrix() {
+  const { lang } = useMode()
+
+  return (
+    <section className="mz-section" aria-labelledby="mz-pairs-title">
+      <div className="mz-section__head">
+        <p className="mz-eyebrow">
+          <Run text="03" ambient="en" />
+        </p>
+        <h2 className="mz-h2" id="mz-pairs-title">
+          <Run text={s(ui.pairs.title, lang)} ambient={lang} />
+        </h2>
+        <p className="mz-prose">
+          <Run text={s(ui.pairs.lede, lang)} ambient={lang} />
+        </p>
+        <p className="mz-prose">
+          <Run text={s(ui.pairs.verdictNote, lang)} ambient={lang} />
+        </p>
+      </div>
+
+      <ul className="mz-pairs">
+        {PAIRS.map((pair) => (
+          <PairCard key={`${pair.foreground}-${pair.background}-${pair.context}`} pair={pair} lang={lang} />
+        ))}
+      </ul>
+    </section>
+  )
+}
