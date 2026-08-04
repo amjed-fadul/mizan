@@ -34,3 +34,6 @@ npm-debug.log*
 
 # unrelated local assets — not part of Mizan
 BlaBlaCar ios May 2026/
+
+# Agent worktrees — transient, and each is its own git repo.
+.claude/worktrees/
