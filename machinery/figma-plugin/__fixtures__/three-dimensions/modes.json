@@ -1,0 +1,8 @@
+{
+  "$description": "Three dimensions, which is the point of this fixture: the plugin projects one Figma collection per dimension and needed no change to grow from two to three. text.secondary depends on both theme and product and is expressed with slot tokens, exactly as the token layer expresses it.",
+  "dimensions": [
+    { "name": "theme",   "modes": ["theme.light", "theme.dark"] },
+    { "name": "product", "modes": ["product.one", "product.two"] },
+    { "name": "script",  "modes": ["script.latin", "script.arabic"] }
+  ]
+}

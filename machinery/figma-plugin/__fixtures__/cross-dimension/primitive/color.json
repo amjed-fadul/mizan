@@ -1,0 +1,8 @@
+{
+  "grey": {
+    "$type": "color",
+    "0": { "$value": { "colorSpace": "srgb", "components": [1, 1, 1], "alpha": 1, "hex": "#ffffff" } },
+    "500": { "$value": { "colorSpace": "srgb", "components": [0.5, 0.5, 0.5], "alpha": 1, "hex": "#808080" } },
+    "900": { "$value": { "colorSpace": "srgb", "components": [0.1, 0.1, 0.1], "alpha": 1, "hex": "#1a1a1a" } }
+  }
+}

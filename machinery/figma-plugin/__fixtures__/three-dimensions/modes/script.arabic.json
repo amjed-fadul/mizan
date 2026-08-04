@@ -1,0 +1,6 @@
+{
+  "text": {
+    "leading": { "$value": "{line-height.loose}" },
+    "face": { "$value": "{font-family.other-script}" }
+  }
+}

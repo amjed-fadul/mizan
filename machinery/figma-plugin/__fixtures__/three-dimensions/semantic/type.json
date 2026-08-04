@@ -1,0 +1,14 @@
+{
+  "text": {
+    "leading": {
+      "$type": "number",
+      "$value": "{line-height.normal}",
+      "$description": "Varies by script alone — the third dimension, which needs no plugin change."
+    },
+    "face": {
+      "$type": "fontFamily",
+      "$value": "{font-family.sans}",
+      "$description": "Varies by script alone."
+    }
+  }
+}

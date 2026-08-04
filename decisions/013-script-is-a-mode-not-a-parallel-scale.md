@@ -51,7 +51,18 @@ This is also why the optical correction is a single multiplier (`font-size.arabi
 
 ## Consequences
 
-- **Eight mode combinations.** 007 cited Figma's ten-mode ceiling as a background constraint; at eight it is a live one. Any fourth dimension now has to displace something rather than be added, and that constraint should be stated wherever a new dimension is proposed.
+- **Eight mode combinations.**
+
+> **Correction, made while building the Figma sync plugin.** This consequence originally read: *"007 cited Figma's ten-mode ceiling as a background constraint; at eight it is a live one. Any fourth dimension now has to displace something rather than be added."* That is wrong, and it was wrong because it assumed one architecture without saying so.
+>
+> Figma's ten-mode limit is **per variable collection**, and there is no documented limit on the number of collections. The constraint therefore depends entirely on how dimensions are mapped:
+>
+> - **One flat collection, one mode per combination** — 4 modes now, 8 with script, 16 with direction. Here the ceiling is real and my original arithmetic was right.
+> - **One collection per dimension** — each holds exactly 2 modes, forever. Adding a dimension adds a *collection*, not modes. The cartesian product is never materialised and the ceiling never binds.
+>
+> The sync plugin uses collection-per-dimension, so the ceiling is not a live constraint. What that choice costs instead is the slot indirection: a variable lives in one collection, so a token varying by two dimensions cannot be expressed directly and needs the selector-plus-slots pattern from [007](./007-modes-for-shared-namespaces-for-unique.md)'s amendment. The plugin refuses such a token rather than flattening it.
+>
+> The real lesson is not the number. It is that **a constraint attributed to a tool was actually a property of an unstated design choice** — and stating the choice dissolved it.
 - **Script mode is not applied where the other two are.** Light/dark and Market/Move are properties of a whole rendered page. Script is not — an Arabic page contains Latin runs and an English page contains Arabic ones, which is exactly what the bidi rules exist for. So the script mode is scoped to a subtree, selected by `:lang()` and set on the same element that sets the language. **A script mode applied at the document root is wrong for precisely the content the bidi rules are about.** This is a genuine asymmetry between dimensions and the mode machinery has to tolerate it.
 - The optical correction reaches leading on its own, because line-height is a unitless ratio. Applying it twice is a real and easy mistake.
 - `font-size.arabic-scale` at 1.08 has only 0.3% of margin under its ceiling: the tightest Latin rung is 12→13px at 1.083, and any correction at or above that makes the Arabic rendering of one step indistinguishable from the Latin rendering of the next, collapsing an eight-step scale to seven. If Arabic ever needs a larger correction, **the 12/13 rung is what has to change first** — not the multiplier.

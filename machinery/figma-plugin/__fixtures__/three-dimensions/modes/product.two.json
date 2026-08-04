@@ -1,0 +1,4 @@
+{
+  "text": { "secondary": { "$value": "{text.secondary-two}" } },
+  "action": { "primary": { "$value": "{accent.b}" } }
+}

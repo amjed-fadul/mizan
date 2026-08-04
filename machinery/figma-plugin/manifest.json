@@ -1,0 +1,16 @@
+{
+  "name": "Mizan Sync",
+  "id": "mizan-sync",
+  "api": "1.0.0",
+  "main": "code.js",
+  "ui": "ui.html",
+  "editorType": ["figma"],
+  "documentAccess": "dynamic-page",
+  "networkAccess": {
+    "allowedDomains": ["none"],
+    "reasoning": "The plugin reads token JSON handed to it through its own UI and writes variables in the open file. It never contacts a server, and it never sends the document anywhere."
+  },
+  "capabilities": [],
+  "enableProposedApi": false,
+  "permissions": []
+}

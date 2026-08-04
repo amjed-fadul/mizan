@@ -12,9 +12,14 @@
     "check": "npm run check:schema && npm run check:contrast",
     "check:schema": "node machinery/scripts/check-schema.mjs",
     "check:contrast": "node machinery/scripts/check-contrast.mjs",
+    "check:drift": "node machinery/scripts/check-drift.mjs",
+    "health": "node machinery/scripts/health-dashboard.mjs --title \"Mizan Health\"",
     "selftest": "node machinery/scripts/selftest.mjs",
     "adapt:tokens": "node machinery/scripts/dtcg-adapt.mjs",
-    "build:tokens": "node machinery/scripts/build-tokens.mjs"
+    "build:tokens": "node machinery/scripts/build-tokens.mjs",
+    "figma:bundle": "node machinery/figma-plugin/bundle.mjs",
+    "figma:build": "npm --prefix machinery/figma-plugin run build",
+    "figma:dry-run": "npm --prefix machinery/figma-plugin run dry-run"
   },
   "engines": {
     "node": ">=22"

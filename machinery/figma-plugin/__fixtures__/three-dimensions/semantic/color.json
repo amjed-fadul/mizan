@@ -1,0 +1,33 @@
+{
+  "text": {
+    "$type": "color",
+    "primary": { "$value": "{grey.900}", "$description": "Varies by theme alone." },
+    "secondary": {
+      "$value": "{text.secondary-one}",
+      "$description": "The selector. Varies by product; the product dimension picks which slot applies."
+    },
+    "secondary-one": {
+      "$value": "{grey.500}",
+      "$description": "Plumbing. A slot set by the theme dimension and selected by the product dimension. Nothing outside the mode files may reference it."
+    },
+    "secondary-two": {
+      "$value": "{grey.500}",
+      "$description": "Plumbing. The other slot."
+    }
+  },
+  "surface": {
+    "$type": "color",
+    "default": { "$value": "{grey.0}", "$description": "Varies by theme alone." }
+  },
+  "action": {
+    "$type": "color",
+    "primary": { "$value": "{accent.a}", "$description": "Varies by product alone." }
+  },
+  "border": {
+    "$type": "color",
+    "hairline": {
+      "$value": "{grey.500}",
+      "$description": "Varies by nothing, so it belongs to its layer's collection rather than a dimension's."
+    }
+  }
+}
