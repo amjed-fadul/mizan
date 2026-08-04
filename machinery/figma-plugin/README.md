@@ -285,6 +285,7 @@ The general rule: **a projection that discards information is shared code; a pro
 - **It will not touch collections it does not manage.** A collection whose name matches no dimension and no layer is listed under "left alone" and is not even scanned for orphans. It is not this plugin's business.
 - **It will not rename a mode that has values in it.** The one rename it performs is Figma's placeholder mode on a collection somebody created by hand and left empty. Renaming a mode with values would silently re-point everything bound to it.
 - **It will not change a variable's type.** Figma fixes a resolved type at creation. If the token's type no longer matches, that is an error telling you to delete the variable or rename the token — never a silent recreate.
+- **It will not let two tokens share one variable.** Token paths become Figma names with `/` for `.`, and Figma groups on `/` — so `a/b` written *inside* a path segment is indistinguishable from the `.` between two, and `color.a/b` and `color.a.b` both arrive as `color/a/b`. That is refused twice over: a segment carrying `/` is a `naming-pattern` error at load, where the path is still readable as a path, and two projected variables claiming one name in one collection is a `duplicate-variable-name` error naming both tokens and the name. It is an error rather than a warning because of how it fails — the diff matches variables by name, so one variable written by two tokens flips its value on every run and no run of this plugin, or of the drift detector downstream of it, could ever come back clean. **A gate nobody can clear is worse than a refusal.**
 - **It will not write a partial projection.** Any error blocks the whole run. Half a projection is drift, and drift that the tool itself introduced is the worst kind.
 - **It does not set scopes, code syntax, or publishing visibility.** Those are decisions about a Figma library, and the plugin has no opinion it could honestly base on the token JSON. They survive a re-sync untouched.
 - **The sync does not touch styles, components, or any node on the canvas.** Variables only. The proof sheet is the one thing in this plugin that draws, it is a separate action, and it draws on one page of its own — see below.
@@ -315,27 +316,28 @@ It runs against the **real** `content/tokens/` plus two fixtures, with an in-mem
 7. A token deleted from the source is reported as an orphan and nothing is written to remove it.
 8. Three dimensions project and apply with no code change.
 9. A token varying by two dimensions is refused, and the message names the fix.
-10. Collections the plugin did not plan are untouched.
+10. Two token paths projecting to one Figma name are refused — at load, and again on the projection — and the error names both paths and the single name they collide on. The same token root with that one character changed still plans, applies and settles, so the check is on the name rather than on the pair.
+11. Collections the plugin did not plan are untouched.
 
 And for the proof sheet, against the same in-memory model plus an in-memory scene graph that enforces what Figma enforces — unique sibling names, a node type fixed at creation, a binding whose field must suit the node's kind and whose variable must exist and be of a type that field can hold:
 
-11. The sheet documents exactly the variables the sync projects — no more, no fewer — and skips exactly what the sync skips, with the sync's reason.
-12. **Every one of them is bound**, to a real Figma bindable field, once in every combination frame. Nothing on the sheet writes a value: no node has a property both bound and set as a plain value, and every swatch is one bound specimen plus one unbound label carrying the variable's name.
-13. Each frame that got *drawn* — not each frame the plan described — carries exactly the explicit modes its combination names, for every collection.
-14. Drawing it twice changes nothing the second time, and applying an empty plan draws nothing.
-15. There is no delete operation in the sheet's vocabulary either, and the scene-graph adapter exposes no method that could remove a node. A node on the page that the plan did not produce is reported as an orphan and left alone.
-16. The sheet refuses a file whose variables have not been synced, and refuses a node whose name matches but whose type does not.
-17. Every word in every frame title comes from the token root; no generated layer name contains a character outside plain ASCII.
-18. A `fontFamily` variable naming a family the running Figma does not have is a **planned skip** whose reason names the value, not an error and not a substitution: it is bound nowhere on the page that gets drawn, the plan's summary counts it, and the sheet stays idempotent with a skip on it. Given a list that *does* hold the family, the same variable is bound and the plan is byte-for-byte the one made with no list at all — so the filter is doing the work, and the assertion is not vacuous. Told no list, nothing is filtered.
-19. Eight combinations on the three-dimension fixture, with no code change.
+12. The sheet documents exactly the variables the sync projects — no more, no fewer — and skips exactly what the sync skips, with the sync's reason.
+13. **Every one of them is bound**, to a real Figma bindable field, once in every combination frame. Nothing on the sheet writes a value: no node has a property both bound and set as a plain value, and every swatch is one bound specimen plus one unbound label carrying the variable's name.
+14. Each frame that got *drawn* — not each frame the plan described — carries exactly the explicit modes its combination names, for every collection.
+15. Drawing it twice changes nothing the second time, and applying an empty plan draws nothing.
+16. There is no delete operation in the sheet's vocabulary either, and the scene-graph adapter exposes no method that could remove a node. A node on the page that the plan did not produce is reported as an orphan and left alone.
+17. The sheet refuses a file whose variables have not been synced, and refuses a node whose name matches but whose type does not.
+18. Every word in every frame title comes from the token root; no generated layer name contains a character outside plain ASCII.
+19. A `fontFamily` variable naming a family the running Figma does not have is a **planned skip** whose reason names the value, not an error and not a substitution: it is bound nowhere on the page that gets drawn, the plan's summary counts it, and the sheet stays idempotent with a skip on it. Given a list that *does* hold the family, the same variable is bound and the plan is byte-for-byte the one made with no list at all — so the filter is doing the work, and the assertion is not vacuous. Told no list, nothing is filtered.
+20. Eight combinations on the three-dimension fixture, with no code change.
 
 And for the two files that carry this plugin's state back out — the REST projection in `src/core/rest.ts` and the read bridge's vocabulary in `src/core/bridge.ts`:
 
-20. Every collection and every variable arrives in the payload under its own id, `variableIds` on a collection is *derived* from the variables that name it rather than trusted, and every alias lands on a variable in the same payload — including one that crosses a collection boundary.
-21. A colour's four channels come through exactly as the plan set them — compared with `===`, not within a tolerance, because a projection that rounds produces drift below the gate's own resolution. `resolvedType` and `description` survive verbatim, and the payload carries `generatedBy` beside `meta`, so a saved snapshot says on its face that it did not come from the REST API.
-22. The plan for the real token root, applied and exported, is reported as aligned by the **real** drift detector, run as a separate process. See below.
-23. The bridge knows four message types — `hello`, `snapshot-request`, `snapshot`, `error` — and neither those nor any name it exports contains a word for writing. A well-formed message asking to delete a variable parses to `null`: an unrecognised instruction is not an instruction.
-24. A snapshot survives the round trip through the wire unchanged, payload and all.
+21. Every collection and every variable arrives in the payload under its own id, `variableIds` on a collection is *derived* from the variables that name it rather than trusted, and every alias lands on a variable in the same payload — including one that crosses a collection boundary.
+22. A colour's four channels come through exactly as the plan set them — compared with `===`, not within a tolerance, because a projection that rounds produces drift below the gate's own resolution. `resolvedType` and `description` survive verbatim, and the payload carries `generatedBy` beside `meta`, so a saved snapshot says on its face that it did not come from the REST API.
+23. The plan for the real token root, applied and exported, is reported as aligned by the **real** drift detector, run as a separate process. See below.
+24. The bridge knows four message types — `hello`, `snapshot-request`, `snapshot`, `error` — and neither those nor any name it exports contains a word for writing. A well-formed message asking to delete a variable parses to `null`: an unrecognised instruction is not an instruction.
+25. A snapshot survives the round trip through the wire unchanged, payload and all.
 
 Those are checked by mutation as well as by construction. Breaking the sheet on purpose — describing a variable in text instead of binding it, dropping one collection's explicit mode from a frame, writing a plain value for a property that is also bound, collapsing two swatches onto one name — makes the harness fail. So does breaking the projection: the harness builds corrupted payloads in memory and asserts they are **caught** — one missing a variable, one whose alias points at an id nothing holds, one whose collection claims a variable it does not hold, and one whose colour moved by 1e-9, which a 1e-6 tolerance would have waved through. An assertion nothing can break is not an assertion.
 

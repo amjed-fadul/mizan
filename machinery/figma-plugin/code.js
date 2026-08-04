@@ -136,6 +136,7 @@
   // src/core/token-model.ts
   var MODES_DIR = "modes";
   var MODES_MANIFEST = "modes.json";
+  var SEGMENT_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
   var ALIAS_PATTERN = /^\{([^{}]+)\}$/;
   var Diagnostics = class {
     constructor() {
@@ -194,6 +195,14 @@
             { file, token: path }
           );
           return;
+        }
+        const misnamed = segments.filter((segment) => !SEGMENT_PATTERN.test(segment));
+        if (misnamed.length > 0) {
+          diagnostics.error(
+            "naming-pattern",
+            `Token path "${path}" is not lowercase kebab-case: ${misnamed.map((s) => `"${s}"`).join(", ")}. Segments must match ${SEGMENT_PATTERN.source} and be separated by dots. A segment carrying "/" is the case this plugin cannot survive: Figma reads it as a group separator, so the path projects to a variable name another path can also claim.`,
+            { file, token: path }
+          );
         }
         into.set(path, {
           path,
@@ -768,6 +777,7 @@
         values
       });
     }
+    checkDistinctNames(desired, errors);
     const actions = [];
     const orphans = [];
     const existingCollections = /* @__PURE__ */ new Map();
@@ -935,6 +945,23 @@
         updates: actions.length - creates
       }
     };
+  }
+  function checkDistinctNames(desired, errors) {
+    const claimedBy = /* @__PURE__ */ new Map();
+    for (const variable of desired) {
+      const key2 = `${variable.collection}/${variable.name}`;
+      const first = claimedBy.get(key2);
+      if (first === void 0) {
+        claimedBy.set(key2, variable.token);
+        continue;
+      }
+      errors.push({
+        code: "duplicate-variable-name",
+        token: variable.token,
+        collection: variable.collection,
+        message: `"${first}" and "${variable.token}" both become the Figma variable name "${variable.name}" in collection "${variable.collection}". Figma has no way to tell the two apart and this plugin matches variables by name, so they would share one variable and every run would flip its value back to whichever token it read last. Figma groups names on "/" exactly as the token path separates on ".", so rename one of the two so that the paths differ by more than a separator.`
+      });
+    }
   }
   function orderCollections(collections, set) {
     const layers = Array.from(collections.values()).filter((c) => c.origin === "layer").sort((a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0);

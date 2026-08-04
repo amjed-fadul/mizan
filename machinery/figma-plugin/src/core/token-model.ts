@@ -158,6 +158,26 @@ function flattenDocument(
         );
         return;
       }
+      // The same rule `machinery/scripts/check-schema.mjs` states, under the same
+      // code, because this loader is a second entry point into the same token
+      // root and nothing guarantees the bundle handed to it has been through that
+      // gate — a designer picking a folder in Figma has run no script at all. The
+      // constant was ported here with the loader and enforced nowhere, which made
+      // it a claim rather than a rule. The segment separator is the reason it
+      // matters more here than there: Figma groups variables on "/", so a "/"
+      // inside a segment is indistinguishable from the "." between two, and two
+      // token paths then land on one variable.
+      const misnamed = segments.filter((segment) => !SEGMENT_PATTERN.test(segment));
+      if (misnamed.length > 0) {
+        diagnostics.error(
+          'naming-pattern',
+          `Token path "${path}" is not lowercase kebab-case: ${misnamed.map((s) => `"${s}"`).join(', ')}. ` +
+            `Segments must match ${SEGMENT_PATTERN.source} and be separated by dots. ` +
+            'A segment carrying "/" is the case this plugin cannot survive: Figma reads it as a group ' +
+            'separator, so the path projects to a variable name another path can also claim.',
+          { file, token: path },
+        );
+      }
       into.set(path, {
         path,
         segments: segments.slice(),

@@ -390,6 +390,8 @@ export function planSync(bundle: TokenBundle, snapshot: Snapshot): Plan {
     });
   }
 
+  checkDistinctNames(desired, errors);
+
   /* -- Diff against what the file already holds ---------------------- */
 
   const actions: Action[] = [];
@@ -588,6 +590,53 @@ export function planSync(bundle: TokenBundle, snapshot: Snapshot): Plan {
 /* ------------------------------------------------------------------ *
  * Helpers
  * ------------------------------------------------------------------ */
+
+/**
+ * One token per Figma name, checked on the projection rather than on the input.
+ *
+ * `figmaName` is not injective. It maps "." to "/" and Figma groups on "/", so
+ * two token paths that differ only in a separator — `color.a/b` and `color.a.b`
+ * — project to the one name `color/a/b`. `token-model.ts` refuses a "/" inside
+ * a segment at load, which closes today's only route to that collision; this
+ * check stands on the other side of the projection and asks the question the
+ * name has to answer whatever the route was, because `figmaName` is documented
+ * as the one place that would learn about escaping, case folding or truncation,
+ * and any of those would reopen it silently.
+ *
+ * It is an error rather than a warning, and the reason is the failure mode. The
+ * diff matches variables by name, so two claimants on one name are one variable
+ * written twice: the first run creates it twice and the second, third and fourth
+ * flip its value between the two tokens for ever. That is not a projection with
+ * a blemish on it — it is a projection that can never settle, so no run of this
+ * plugin and no run of the drift detector downstream of it could ever come back
+ * clean. A gate nobody can clear is worse than a refusal, which at least names
+ * the two tokens and stops.
+ *
+ * The shape is `checkSiblingNames` in `sheet.ts` and the reason is the same one:
+ * find-or-create keyed on a name cannot survive two things claiming the name.
+ */
+function checkDistinctNames(desired: DesiredVariable[], errors: Problem[]): void {
+  const claimedBy = new Map<string, string>();
+  for (const variable of desired) {
+    const key = `${variable.collection}/${variable.name}`;
+    const first = claimedBy.get(key);
+    if (first === undefined) {
+      claimedBy.set(key, variable.token);
+      continue;
+    }
+    errors.push({
+      code: 'duplicate-variable-name',
+      token: variable.token,
+      collection: variable.collection,
+      message:
+        `"${first}" and "${variable.token}" both become the Figma variable name "${variable.name}" in ` +
+        `collection "${variable.collection}". Figma has no way to tell the two apart and this plugin matches ` +
+        'variables by name, so they would share one variable and every run would flip its value back to ' +
+        'whichever token it read last. Figma groups names on "/" exactly as the token path separates on ".", ' +
+        'so rename one of the two so that the paths differ by more than a separator.',
+    });
+  }
+}
 
 /**
  * Collections in a deterministic order: invariant layers first, then the mode

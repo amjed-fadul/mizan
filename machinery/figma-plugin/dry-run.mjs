@@ -447,10 +447,16 @@ assert(planSync(threeBundle, threeFigma.readSnapshot()).actions.length === 0,
   'and is idempotent too');
 
 /* ================================================================== *
- * 9. The refusal
+ * 9. The two refusals
+ *
+ * Both are the same failure wearing different clothes: a projection that
+ * cannot settle. One token varying by two dimensions has no Figma shape at
+ * all; two tokens claiming one Figma name have a shape they must share, which
+ * means each run writes over the last one and no run ever comes back clean.
+ * A gate nobody can clear is worse than a refusal, so both are errors.
  * ================================================================== */
 
-process.stdout.write('\n7. Fixture: a token varying by two dimensions is refused\n');
+process.stdout.write('\n7. The two projections this plugin refuses to write\n');
 
 const crossBundle = bundleTokenRoot(join(FIXTURES, 'cross-dimension'));
 const crossPlan = planSync(crossBundle, emptySnapshot());
@@ -463,6 +469,63 @@ assert(Boolean(crossError) && /slot/i.test(crossError.message),
 assert(!isApplicable(crossPlan), 'a plan with that error cannot be applied');
 assert(!crossPlan.actions.some((a) => a.op === 'create-variable' && a.token === 'text.secondary'),
   'and no variable is planned for the offending token');
+
+/*
+ * The second refusal is built here rather than kept as a fixture directory,
+ * for the same reason the corrupted REST payloads below are: the whole point
+ * is one character, and a one-character difference between two files a reader
+ * has to open in turn is a difference a reader will miss. The same builder
+ * makes the refused root and the accepted one, and the argument to it is the
+ * character.
+ */
+const sharedNameBundle = (segment) => ({
+  files: {
+    'primitive/color.json': {
+      swatch: {
+        $type: 'color',
+        [segment]: { $value: { colorSpace: 'srgb', components: [0, 0, 1], alpha: 1, hex: '#0000ff' } },
+        a: { b: { $value: { colorSpace: 'srgb', components: [1, 0, 0], alpha: 1, hex: '#ff0000' } } },
+      },
+    },
+  },
+});
+
+/* One segment carrying "/". `swatch.a/b` and `swatch.a.b` both become `swatch/a/b`. */
+const collidingPlan = planSync(sharedNameBundle('a/b'), emptySnapshot());
+const collision = collidingPlan.errors.filter((e) => e.code === 'duplicate-variable-name')[0];
+const misnamed = collidingPlan.errors.filter((e) => e.code === 'naming-pattern')[0];
+
+assert(Boolean(collision), 'two token paths projecting to one Figma name are an error',
+  JSON.stringify(collidingPlan.errors.slice(0, 3)));
+assert(Boolean(collision) && collision.message.includes('swatch.a/b') && collision.message.includes('swatch.a.b'),
+  'and the message names both token paths, because "duplicate name" alone tells a reader nothing to act on',
+  collision && collision.message);
+assert(Boolean(collision) && collision.message.includes('"swatch/a/b"'),
+  'and the single Figma name they collide on', collision && collision.message);
+assert(!isApplicable(collidingPlan),
+  'the plan cannot be applied — a variable two tokens write to flips value on every run, for ever');
+assert(Boolean(misnamed) && misnamed.token === 'swatch.a/b',
+  'the "/" inside a segment is refused at load as well, where the path is still readable as a path',
+  JSON.stringify(misnamed));
+
+/* And the same bundle with that one character changed: two names, not one. */
+const distinctPlan = planSync(sharedNameBundle('a-b'), emptySnapshot());
+const distinctNames = distinctPlan.actions
+  .filter((a) => a.op === 'create-variable')
+  .map((a) => `${a.collection}/${a.name}`)
+  .sort();
+const distinctFigma = new MemoryVariables();
+const distinctApply = applyPlan(distinctPlan, distinctFigma);
+
+assert(same(distinctNames, ['primitive/swatch/a-b', 'primitive/swatch/a/b']),
+  'two token paths projecting to two Figma names both still plan — the check is on the name, not on the pair',
+  JSON.stringify(distinctNames));
+assert(distinctPlan.errors.length === 0, 'with no error of either kind',
+  JSON.stringify(distinctPlan.errors));
+assert(distinctApply.failures.length === 0, 'they apply cleanly',
+  JSON.stringify(distinctApply.failures.slice(0, 3).map((f) => f.message)));
+assert(planSync(sharedNameBundle('a-b'), distinctFigma.readSnapshot()).actions.length === 0,
+  'and the second run has nothing left to do, which is what the colliding pair could never reach');
 
 /* ================================================================== *
  * 10. Everything else in the file is left alone
