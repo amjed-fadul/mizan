@@ -56,6 +56,8 @@ const VALID = join(FIXTURES, 'valid');
 const BROKEN = join(FIXTURES, 'broken');
 const FIGMA_ALIGNED = join(FIXTURES, 'figma', 'aligned.json');
 const FIGMA_DRIFTED = join(FIXTURES, 'figma', 'drifted.json');
+const FIGMA_MODE_DELETED = join(FIXTURES, 'figma', 'mode-deleted.json');
+const FIGMA_DIMENSION_FLATTENED = join(FIXTURES, 'figma', 'dimension-flattened.json');
 
 const args = parseArgs(process.argv.slice(2), { flags: ['verbose'] });
 
@@ -355,6 +357,81 @@ assert(driftHuman.stdout.includes('Figma is a display, never a source')
   && driftHuman.stdout.includes('runs outward'),
   'drifted snapshot: the human-readable output states the direction of the fix, not just the disagreement',
   driftHuman.stdout);
+
+/* ------------------------------------------------------------------ *
+ * The drift a deletion causes, which is drift nobody sees.
+ *
+ * Every class above announces itself: something in the file disagrees with
+ * something in the source, and the detector has both halves in front of it. A
+ * *deleted mode* is the opposite shape. There is no wrong value to find, because
+ * there is no value at all — the comparison for that mode simply stops being
+ * run, and a gate that counts what it compared rather than what it should have
+ * compared reports a pass with a smaller number in it.
+ *
+ * So both directions are fixtures now. `drifted.json` carries a mode Figma has
+ * and the source does not, which was always warned about. `mode-deleted.json`
+ * carries the reverse, which was silent.
+ *
+ * And `dimension-flattened.json` holds the line between them, because an
+ * unclaimed mode is not always a gap: a collection with one mode is invariant
+ * *by design*, and a dimension no collection models is a dimension every value
+ * is compared against in full. That fixture must produce a value finding and no
+ * mode finding — the difference between a comparison that ran and disagreed and
+ * one that never ran.
+ * ------------------------------------------------------------------ */
+
+process.stdout.write('\nFixture: figma/mode-deleted — a mode the source has and the file no longer does\n');
+
+const modeDeleted = run('check-drift.mjs', ['--root', VALID, '--snapshot', FIGMA_MODE_DELETED]);
+assert(modeDeleted.status === 1, 'mode deleted: the drift gate exits 1',
+  `exit ${modeDeleted.status}; ${JSON.stringify(modeDeleted.payload?.findings ?? modeDeleted.stderr)}`);
+
+const modeFindings = (modeDeleted.payload?.findings ?? []).filter((f) => f.code === 'mode-missing-in-figma');
+assert(modeFindings.length === 1,
+  'mode deleted: exactly one mode-missing-in-figma finding — one deleted mode, one finding, not one per token that lived in it',
+  JSON.stringify((modeDeleted.payload?.findings ?? []).map((f) => f.code)));
+assert(modeFindings[0]?.tokenMode === 'theme.dark',
+  'mode deleted: and it names the source mode that has nowhere left to be compared',
+  JSON.stringify(modeFindings[0]));
+
+/* The whole point of the fixture: nothing else in it is wrong. Every value that
+ * survived still agrees with the source, so an assertion on the exit code alone
+ * would have passed for a reason that has nothing to do with the deletion. */
+assert((modeDeleted.payload?.findings ?? []).length === 1,
+  'mode deleted: and it is the *only* finding — every value still in the file agrees, so the deletion is the entire defect',
+  JSON.stringify((modeDeleted.payload?.findings ?? []).map((f) => `${f.code} ${f.token ?? ''}`)));
+
+/* The symptom the old gate left behind, asserted so it stays evidence: the run
+ * did fewer comparisons than the aligned snapshot of the same source, and that
+ * difference used to be the only trace in a passing report. */
+assert(modeDeleted.payload?.counts?.checks < (aligned.payload?.counts?.checks ?? 0),
+  'mode deleted: the run compares less than the aligned snapshot of the same source — the number that used to be the only trace',
+  `${modeDeleted.payload?.counts?.checks} comparison(s) against ${aligned.payload?.counts?.checks}`);
+assert(modeDeleted.payload?.counts?.modesMissing === 1 && modeDeleted.payload?.counts?.drifted === 0,
+  'mode deleted: counted as a missing mode and not as a drifted token — the two are different units and the summary says so',
+  JSON.stringify(modeDeleted.payload?.counts));
+
+const modeRemedy = modeFindings[0]?.remedy ?? '';
+assert(/outward/.test(modeRemedy) && !/copy|import|pull/i.test(modeRemedy),
+  'mode deleted: the new class carries the same outward remedy as the other eight — nothing here recovers a mode from the file',
+  modeRemedy);
+
+process.stdout.write('\nFixture: figma/dimension-flattened — an invariant collection is not a missing mode\n');
+
+const dimensionFlattened = run('check-drift.mjs', ['--root', VALID, '--snapshot', FIGMA_DIMENSION_FLATTENED]);
+assert(!codes(dimensionFlattened.payload?.findings).has('mode-missing-in-figma'),
+  'dimension flattened: a dimension no collection models reports no missing mode — a single-mode collection is invariant by design, not incomplete',
+  JSON.stringify((dimensionFlattened.payload?.findings ?? []).map((f) => f.code)));
+
+const flattenedFinding = (dimensionFlattened.payload?.findings ?? [])
+  .find((f) => f.code === 'alias-target-mismatch' && f.token === 'spacing.inset');
+assert(dimensionFlattened.status === 1 && flattenedFinding !== undefined,
+  'dimension flattened: the one value now speaking for every combination is compared against every combination, and the disagreement is reported',
+  JSON.stringify((dimensionFlattened.payload?.findings ?? []).map((f) => `${f.code} ${f.token ?? ''}`)));
+assert((flattenedFinding?.tokenModes ?? []).length === 2
+  && (flattenedFinding?.tokenModes ?? []).every((label) => label.includes('density.compact')),
+  'dimension flattened: reported against exactly the combinations where the source disagrees, and not the ones where it does not',
+  JSON.stringify(flattenedFinding?.tokenModes));
 
 /* ------------------------------------------------------------------ *
  * The lossy rule: one narrowing, imported by both ends of the sync.

@@ -107,6 +107,10 @@
  *           one of which resolves to nothing, is a mode Figma has and the source
  *           does not: warned about, and its values skipped, because there is no
  *           source value to compare them to.
+ *
+ *           The reverse — a mode the source has and Figma does not — is drift,
+ *           and the loudest kind, because its symptom is silence: the comparison
+ *           for that mode simply never runs. See `checkModeCoverage`.
  */
 
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
@@ -194,6 +198,11 @@ const DRIFT_CLASSES = Object.freeze({
     label: 'Orphan in Figma',
     summary: 'The Figma file has a variable the source never defined. Somebody created it by hand.',
     remedy: 'Delete the variable in Figma. If the concept is wanted, it is authored in the token source first and arrives here by sync.',
+  },
+  'mode-missing-in-figma': {
+    label: 'Mode missing in Figma',
+    summary: 'The source declares a mode along a dimension the Figma file does model, and the collection modelling it has no mode for it. Every value in that mode is unreachable: there is nowhere in the file for the comparison to look.',
+    remedy: 'Re-sync outward. A mode is created from the source like any other display, and a mode deleted in Figma has deleted a display, never a decision.',
   },
   'value-mismatch': {
     label: 'Value mismatch',
@@ -360,6 +369,78 @@ function combinationsFor(set, collection, tokenModeId) {
   if (tokenModeId !== null) return set.combinations.filter((combo) => combo.includes(tokenModeId));
   if (collection && collection.modes.length > 1) return [];
   return set.combinations;
+}
+
+/**
+ * Every mode the source declares must be modelled somewhere in the file.
+ *
+ * `mapModes` runs one way. It notices a mode Figma has that the source lacks,
+ * because that mode is standing in front of it holding values. The opposite —
+ * a mode the source has that Figma no longer does — arrives as nothing at all:
+ * `combinationsFor` returns fewer combinations, `compareInMode` is called fewer
+ * times, and the run passes with a smaller comparison count than it had
+ * yesterday. Delete a theme in Figma and half the displayed decisions stop
+ * being checked, with the gate still green. A gate whose failure mode is
+ * silence is the one that has to be made to speak.
+ *
+ * The honest edge is that an unclaimed mode is not always drift. A collection
+ * with one mode is invariant *by design* — it holds one value that speaks for
+ * every combination, and the whole point of that convention is that a primitive
+ * layer does not sprout a copy of every theme. So the question is not "is this
+ * mode claimed" but "is this mode's *dimension* modelled here". If some
+ * collection maps onto a dimension, that collection has taken responsibility
+ * for it, and a mode of that dimension it does not carry is a gap. If no
+ * collection maps onto the dimension at all, the file simply does not model it:
+ * every collection is invariant with respect to it, every value is compared
+ * against every combination along it, and a source that varies along it already
+ * reports value-mismatch through the grouping in `compareInMode`. Nothing is
+ * skipped, so nothing is reported.
+ *
+ * That line is drawn per dimension rather than per collection on purpose: it is
+ * the difference between "this display was never asked to model themes" and
+ * "this display models themes and has lost one".
+ */
+function checkModeCoverage(set, snapshot, modeMap) {
+  /* Which collection speaks for a token mode. First claim wins, and a second
+   * claimant is not a finding here — two collections modelling one dimension is
+   * odd but not a value nobody compared, which is what this class is about. */
+  const claimedBy = new Map();
+  for (const collection of snapshot.collections.values()) {
+    for (const tokenModeId of (modeMap.get(collection.id) ?? new Map()).values()) {
+      if (tokenModeId !== null && !claimedBy.has(tokenModeId)) claimedBy.set(tokenModeId, collection);
+    }
+  }
+
+  const findings = [];
+  for (const dimension of set.dimensions) {
+    const modelled = dimension.modes.filter((id) => claimedBy.has(id));
+    if (modelled.length === 0) continue; // not modelled here — invariant by design, see above
+    const collection = claimedBy.get(modelled[0]);
+
+    for (const id of dimension.modes) {
+      if (claimedBy.has(id)) continue;
+
+      /* The name the mode would have to carry to be found again, which is the
+       * mapping rule read backwards: "<collection>.<mode>" is tried first, so a
+       * root using the dimension-prefixed convention wants the bare half. */
+      const prefix = `${collection.name}.`;
+      const expectedName = id.startsWith(prefix) ? id.slice(prefix.length) : id;
+      const uncompared = set.combinations.filter((combo) => combo.includes(id)).length;
+
+      findings.push(finding('mode-missing-in-figma', {
+        token: null,
+        variable: null,
+        mode: null,
+        tokenMode: id,
+        expected: { kind: 'value', display: `a mode named "${expectedName}" in collection "${collection.name}"` },
+        actual: { kind: 'absent', display: '(the collection that models this dimension has no such mode)' },
+        message: `The source declares mode "${id}" of dimension "${dimension.name}", which collection "${collection.name}" models; `
+          + `that collection has no mode for it. Nothing in the file holds those values, so the ${uncompared} mode combination(s) `
+          + 'naming it were not compared at all — this run checked less than the last one did, and said so only in its comparison count.',
+      }));
+    }
+  }
+  return findings;
 }
 
 /* ------------------------------------------------------------------ *
@@ -677,7 +758,11 @@ function compare(set, snapshot, diagnostics, sourceLabel) {
     resolvedByLabel.set(label, resolveTokens(composed, diagnostics, label));
   }
 
-  const findings = [];
+  /* Before a single value is compared: is there anywhere in the file for every
+   * mode of the source to be compared *in*? A missing mode costs comparisons
+   * rather than causing them, so it is reported first — it is the reason the
+   * numbers below are smaller than they should be. */
+  const findings = checkModeCoverage(set, snapshot, modeMap);
   const notRepresentable = [];
   const compared = new Set();
   let checks = 0;
@@ -1046,9 +1131,16 @@ function report({ args, set, source, result, diagnostics, empty }) {
     variables: result.snapshot ? result.snapshot.byPath.size : 0,
     comparable: aligned.length + new Set(findings.map((f) => f.token).filter(Boolean)).size,
     aligned: aligned.length,
-    drifted: new Set(findings.filter((f) => f.code !== 'missing-in-figma' && f.code !== 'orphan-in-figma').map((f) => f.token)).size,
+    /* A count of drifted *tokens*, so a finding that names no token — a whole
+     * mode absent from the file — is not counted as one. It has its own number
+     * below, because it is a different unit: not a decision displayed wrongly,
+     * but a place where decisions were not displayed at all. */
+    drifted: new Set(findings
+      .filter((f) => f.token !== null && f.code !== 'missing-in-figma' && f.code !== 'orphan-in-figma')
+      .map((f) => f.token)).size,
     missing: byCode.get('missing-in-figma')?.length ?? 0,
     orphan: byCode.get('orphan-in-figma')?.length ?? 0,
+    modesMissing: byCode.get('mode-missing-in-figma')?.length ?? 0,
     notRepresentable: notRepresentable.length,
     checks,
   };
@@ -1148,7 +1240,8 @@ function report({ args, set, source, result, diagnostics, empty }) {
     ok
       ? `Result: pass. ${counts.aligned} token(s) aligned across ${checks} comparison(s), 0 drifted, 0 missing, 0 orphaned.`
       : `Result: fail. ${counts.aligned} aligned, ${counts.drifted} drifted, ${counts.missing} missing in Figma, `
-        + `${counts.orphan} orphaned in Figma, ${diagnostics.errors.length} error(s).`,
+        + `${counts.orphan} orphaned in Figma, ${counts.modesMissing} mode(s) missing in Figma, `
+        + `${diagnostics.errors.length} error(s).`,
   );
 
   if (!args.quiet || !ok) process.stdout.write(`${out.join('\n')}\n`);

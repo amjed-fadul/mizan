@@ -30,19 +30,32 @@ Do not fix `broken/`. Its defects are the test.
 
 ## `figma/` — the display side
 
-Two Figma variable snapshots of the **same** `valid/` token set, for
+Four Figma variable snapshots of the **same** `valid/` token set, for
 `check-drift.mjs`. Rung 1 checks the source against itself, so its fixtures are
 two token sets; rung 2 checks the display against the source, so its fixtures
-are two displays of one correct source.
+are several displays of one correct source.
 
 - `aligned.json` — what the sync plugin would have written. Zero drift, no
   warnings, and every token in the table reads `aligned`. This is the fixture
   that proves the detector does not cry wolf, which matters exactly as much as
   the other one.
 - `drifted.json` — the same file after somebody has been in it by hand, carrying
-  one instance of every drift class the detector claims to catch. Each planted
-  edit carries a `_defect` key saying what it is and why it matters; the key is
-  not part of Figma's payload and the loader ignores it.
+  one instance of every drift class a hand-edit can produce. Each planted edit
+  carries a `_defect` key saying what it is and why it matters; the key is not
+  part of Figma's payload and the loader ignores it.
+- `mode-deleted.json` — the aligned file with one mode of a multi-mode collection
+  deleted, values and all. Every surviving value still agrees with the source, so
+  the only thing wrong with this file is a comparison that no longer happens.
+  That is the defect: it costs comparisons rather than causing them, and before
+  `mode-missing-in-figma` existed this file passed the gate, with `80 → 74`
+  comparisons the only trace and `--quiet` hiding even that.
+- `dimension-flattened.json` — the aligned file with a whole mode dimension left
+  unmodelled: the collection that used to carry it now has one mode, which is the
+  invariant convention rather than a defect. It must report **no** missing mode,
+  and must still report the value finding that one-value-for-every-combination
+  causes. It is here to hold the line between a comparison that ran and
+  disagreed and one that never ran — the two look identical in an exit code and
+  are not the same thing at all.
 
 Each planted edit is attributable to its own code: repair one of them and exactly
 that code stops being reported. `value-mismatch` is planted twice on purpose —

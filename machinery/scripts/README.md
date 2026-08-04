@@ -259,12 +259,31 @@ with a mode that resolves to nothing is a mode Figma has and the source does not
 warned about, and its values skipped, because there is no source value to compare
 them to.
 
+**And the reverse, which is the one that used to be silent.** A mode the *source*
+has and the file does not costs comparisons rather than causing them: fewer
+combinations are selected, `compareInMode` is called fewer times, and the run
+passes with a smaller number in it than it had yesterday. Delete a theme in Figma
+and half the displayed decisions stop being checked, with the gate still green.
+So every mode the source declares is now checked for somewhere to be compared,
+and `mode-missing-in-figma` is the finding when there is nowhere.
+
+The line that check draws is per *dimension*, not per collection, because an
+unclaimed mode is not always a gap. A collection with one mode is invariant **by
+design** — that convention is why the primitive layer does not sprout a copy of
+every theme. So the question is whether some collection has taken a dimension on:
+if one has, a mode of that dimension it does not carry is a gap; if none has, the
+file simply does not model that dimension, every value in it is compared against
+every combination, and a source that varies along it already reports a value
+finding. The difference being held apart is *a comparison that ran and disagreed*
+against *a comparison that never ran*.
+
 ### What it reports
 
 | Code | Meaning | Fix |
 |---|---|---|
 | `missing-in-figma` | the source defines it, the file has no variable | re-sync outward |
 | `orphan-in-figma` | the file has a variable no token declares | delete it in Figma |
+| `mode-missing-in-figma` | the source declares a mode, the collection modelling its dimension has none | re-sync outward |
 | `value-mismatch` | the variable holds a different value, in some mode | re-sync outward |
 | `alias-flattened` | the token references, the variable holds a raw value | re-sync outward |
 | `alias-unexpected` | the token states a literal, the variable references | re-sync outward |
@@ -379,7 +398,9 @@ Runs both gates against both fixture sets and asserts the valid set passes with 
 
 `decorative` is asserted the only way that means anything: the valid fixture declares a decorative pair sitting at about **1.14:1** in light — below every WCAG threshold, including the 3.0 a `ui` declaration would impose — and the assertions are that its threshold is `null`, that it is resolved in all four combinations, that each result carries a measured ratio, that it appears by name in the passing run's output, and that the gate still exits 0. A threshold that was merely lenient would pass an exit-code check; only the ratio and the printed line prove there is no bar at all.
 
-**Rung 2 is held to the same standard.** Both drift fixtures are snapshots of the *same* correct token set: `figma/aligned.json`, which must report zero drift, zero errors and zero warnings with all twenty tokens compared in all four combinations; and `figma/drifted.json`, which must report **each of the eight drift codes by name**. `alias-flattened` is asserted three ways, because its exit code alone would prove nothing: that the flattened Figma value *equals* what the alias resolves to — so a value-only comparison would have called it aligned — that it is caught in the one Figma mode it was planted in, and that the untouched mode of the same variable reports nothing. The remedies are asserted too: no finding may tell anybody to take a Figma value back into the source.
+**Rung 2 is held to the same standard.** Every drift fixture is a snapshot of the *same* correct token set: `figma/aligned.json`, which must report zero drift, zero errors and zero warnings with all twenty tokens compared in all four combinations; and `figma/drifted.json`, which must report **each of the eight hand-edit drift codes by name**. `alias-flattened` is asserted three ways, because its exit code alone would prove nothing: that the flattened Figma value *equals* what the alias resolves to — so a value-only comparison would have called it aligned — that it is caught in the one Figma mode it was planted in, and that the untouched mode of the same variable reports nothing. The remedies are asserted too: no finding may tell anybody to take a Figma value back into the source.
+
+Two further snapshots hold the ninth code and the line beside it. `figma/mode-deleted.json` is the aligned file with one mode of a multi-mode collection removed — *every surviving value still agrees*, so the exit code cannot pass for any other reason, and the assertion is that the one finding is `mode-missing-in-figma` and names the source mode. `figma/dimension-flattened.json` is the aligned file with a whole dimension left unmodelled: it must report **no** missing mode, because a single-mode collection is invariant by design, and must still report the value finding the flattened dimension causes — in exactly the combinations where the source disagrees. Between them they assert both halves: that the silence is now caught, and that the convention is not mistaken for the defect.
 
 Every planted edit is attributable: repair one of them and exactly its own code stops being reported, which is what makes "the gate caught `description-drift`" a statement about the defect rather than about the pile.
 
