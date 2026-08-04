@@ -1,0 +1,171 @@
+{
+  "status": "stable",
+  "purpose": "A stack of rows that is still a list to assistive technology after the markers have been styled off it. The smallest component in the library and the one with the narrowest reason to exist: one platform trap, fixed once.",
+  "responsibilities": [
+    "Render a real <ul> or <ol> with a real <li> per row.",
+    "Keep the list role after list-style: none removes the markers.",
+    "Space the rows, and optionally rule between them.",
+    "Nothing about the rows themselves. A row holds whatever it was given and is styled by that thing, not by this one.",
+    "Nothing about layout beyond a single-column stack. A grid is a different concern and is not reachable through a prop here."
+  ],
+  "do": [
+    "Use it for any collection a user reads as a set of things — cart lines, saved addresses, search results, order history.",
+    "Give it a visible heading beside it where you can, and reach for label only when there is genuinely nothing on screen to name it.",
+    "Use ordered only where the position is part of what a row means — checkout steps, a ranked result, the legs of a trip.",
+    "Put a component in a row and let that component decide its own padding and ground."
+  ],
+  "dont": [
+    "Do not remove the list-style: none from the stylesheet without removing role=\"list\" from the source. The two exist as a pair and a future edit that breaks the pair is the defect this component was built to prevent.",
+    "Do not use ordered because the rows happen to arrive in an order. Everything on a screen is in an order; the question is whether the number is information.",
+    "Do not use it for a set of controls where exactly one is chosen. That is a radio group, and RideCardGroup is the one this system has.",
+    "Do not use it for a grid. A product grid is a layout decision and this component deliberately cannot express one.",
+    "Do not style the rows from here. A row that needed a second opinion about its padding would need a way to switch this one off."
+  ],
+  "do_not_use_when": [
+    {
+      "when": "Exactly one of the rows is chosen, and choosing is what the collection is for.",
+      "use_instead": "RideCard, whose RideCardGroup is a real radio group. A list of options is not a list — it is a control, and decision 024 is the argument."
+    },
+    {
+      "when": "The collection is laid out in columns — a product grid, a gallery.",
+      "use_instead": "Nothing yet. A grid is a layout concern and this system has no layout components; a screen writes its own grid and can still put a List inside a cell."
+    },
+    {
+      "when": "The rows are label and value pairs — an order summary, a receipt, a specification table.",
+      "use_instead": "A <dl>, which has a description-list structure this component cannot express. It is a different element and would be a different component."
+    },
+    {
+      "when": "There is one row, or none.",
+      "use_instead": "For one, the thing itself — a list of one is a list a screen reader announces the size of for no reason. For none, an empty state, which this component does not provide and which is the screen's to write."
+    },
+    {
+      "when": "The rows are navigation destinations forming the primary way around the product.",
+      "use_instead": "Nothing yet. Navigation is its own component with its own landmark and current-page semantics, and it is not built."
+    }
+  ],
+  "alternatives": [
+    {
+      "use": "RideCard",
+      "for": "a collection where exactly one row is chosen — its RideCardGroup is the radio group, documented in that component's spec",
+      "in_system": true
+    },
+    {
+      "use": "a <dl>",
+      "for": "label and value pairs",
+      "in_system": false
+    },
+    {
+      "use": "a grid written by the screen",
+      "for": "a collection laid out in columns",
+      "in_system": false
+    }
+  ],
+  "content": [
+    "The rows, which are whatever the screen puts in them.",
+    "The accessible name, when there is no visible heading to carry it."
+  ],
+  "constraints": [
+    "No className and no style.",
+    "No layout beyond a single-column stack. No columns, no density, no alignment.",
+    "No styling of the rows. A row is styled by what it contains.",
+    "No empty state. A list with nothing in it is a screen's decision about what to say, and it is usually a sentence rather than a component.",
+    "No virtualisation, no pagination, no sorting. Those are behaviours of a screen's data rather than of its markup.",
+    "One written number, the 1px divider, for the sixth time in the library. Still no border-width scale."
+  ],
+  "rtl": {
+    "behaviour": [
+      "There is nothing in this component with a direction to get wrong, and that is a property rather than an accident: the stack is a BLOCK-axis grid and the divider is a border-block-start, and the block axis is the one dir does not touch.",
+      "What flips inside a row is the row's own business — the browser reorders its text, and this component neither knows nor cares.",
+      "letter-spacing 0 is declared rather than inherited, because a list is a container that would otherwise pass a page's global tracking straight through to every Arabic row. §2: tracking breaks the joins in Arabic script, and the Stage 1 audit found exactly that reaching every product title.",
+      "There is no [dir='rtl'] selector anywhere."
+    ],
+    "mirrors": [
+      "Nothing. There is no inline-axis value in this component to mirror."
+    ],
+    "does_not_mirror": [
+      "The divider, which is on the block axis and is unaffected by direction."
+    ]
+  },
+  "accessibility": {
+    "guarantees": [
+      "A real <ul> or <ol> with a real <li> per row, so the collection is counted and a screen-reader user is told its size and their position in it.",
+      "role=\"list\" written unconditionally, so the semantics survive the list-style: none that the stylesheet applies. WebKit is documented as dropping the implicit role when markers are removed; the attribute is inert where it is unnecessary.",
+      "An accessible name when label is given, through aria-label.",
+      "0 axe violations across all six stories, checked in dark + RTL."
+    ],
+    "consumer_must": [
+      "Prefer a visible heading beside the list to the label prop. A name only assistive technology can reach cannot be used by a sighted user to say which list they mean.",
+      "Wrap every row in ListItem. A <div> inside a <ul> is invalid and fails quietly — it usually looks right, and the row stops being counted.",
+      "Decide ordered honestly. It changes what a screen reader says about every row, and using it for rows that merely arrived in an order announces a position that means nothing.",
+      "Write the empty state. This component renders nothing helpful when it has no rows."
+    ]
+  },
+  "tokens_absent": [],
+  "aiHints": {
+    "keywords": [
+      "list",
+      "ul",
+      "ol",
+      "ordered list",
+      "unordered list",
+      "rows",
+      "collection",
+      "cart lines",
+      "saved addresses",
+      "order history",
+      "search results",
+      "dividers",
+      "stack"
+    ],
+    "use_when": [
+      "A collection is read as a set of things rather than chosen between.",
+      "Rows need consistent spacing and optionally a rule between them.",
+      "A screen reader should announce how many items there are and which one is current."
+    ],
+    "not_a": [
+      "A radio group. A collection where exactly one row is chosen is a control, not a list.",
+      "A grid. This component cannot express columns and deliberately does not try.",
+      "A description list. Label and value pairs need a <dl> this component cannot render.",
+      "A table. Rows with meaningful columns are tabular data.",
+      "A navigation menu. That needs a landmark and current-page semantics this does not have."
+    ]
+  },
+  "deprecation": {
+    "policy": "The narrowest component in the library, which makes it the easiest to withdraw and the one most likely to be absorbed: if a layout primitive ever lands that owns stacking and spacing, the question is whether List becomes a thin semantic wrapper over it or disappears into it. Either way it is a decision entry naming what replaces it, and the migration is mechanical because the API is four props. A prop is withdrawn ahead of the component: @deprecated in the source with the replacement named in the tag, one minor version of overlap, then removal in a major one."
+  },
+  "figma": {
+    "component": "List",
+    "unmapped": [
+      {
+        "prop": "children",
+        "why": "Arbitrary rows have no property to mirror. In Figma the rows are instances a designer places directly."
+      },
+      {
+        "prop": "label",
+        "why": "It becomes aria-label — a name for assistive technology with no visual form at all. A Figma variant for it would be two identical frames."
+      },
+      {
+        "prop": "ordered",
+        "why": "It changes the element from ul to ol and, because the markers are styled off, changes no pixel. What a designer would draw for an ordered list is a number in each row, which is row content rather than a list property."
+      }
+    ]
+  },
+  "props": {
+    "children": {
+      "figmaProperty": null,
+      "guidance": "The rows, each wrapped in ListItem. ListItem exists so a call site cannot forget the <li>: a <div> inside a <ul> is invalid and fails quietly, usually looking right while the row stops being counted."
+    },
+    "ordered": {
+      "figmaProperty": null,
+      "guidance": "Renders <ol> rather than <ul>. The test is whether the POSITION is part of what a row means — checkout steps, a ranked result — not whether the rows arrived in an order. A cart is not ordered, and an <ol> there announces \"item 3 of 7\" about a number the user has never thought about."
+    },
+    "dividers": {
+      "figmaProperty": "Dividers",
+      "guidance": "A border-block-start on every row after the first, so the line belongs to the row below it and there is no trailing rule under the last. border.default is the token whose own description names this use, and it is declared decorative in pairs.json — correct for a divider and wrong for anything identifying a control."
+    },
+    "label": {
+      "figmaProperty": null,
+      "guidance": "An accessible name for a list with no visible heading. A string rather than a ReactNode because it becomes an attribute. Prefer a visible heading: a name only assistive technology can reach is one a sighted user cannot use to say which list they mean."
+    }
+  }
+}

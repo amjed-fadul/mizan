@@ -1,0 +1,71 @@
+/*
+  List — the sixth component, and the smallest one in the library.
+
+  Same rule as every other stylesheet here: nothing in this file is a value.
+
+  It is worth saying what this file does NOT do, because a list is where layout
+  most wants to leak into a component. There is no column count, no grid, no
+  density and no alignment. A list is a stack of rows in reading order; a
+  product grid is a layout, and the boundary is recorded in the contract rather
+  than blurred with a prop.
+*/
+
+.mz-list {
+  /*
+    The line that makes this component necessary.
+
+    Removing the markers is what every design system does to a list, and WebKit
+    is documented as dropping the implicit `list` role when it happens — so the
+    List component writes role="list" unconditionally in the TSX, and these two
+    declarations belong together. Deleting one without the other is the defect.
+  */
+  list-style: none;
+
+  margin: 0;
+  padding: 0;
+
+  display: grid;
+  gap: var(--space-150);
+
+  font-family: var(--font-family-sans);
+
+  /*
+    letter-spacing 0, always, declared rather than inherited. §2: a global
+    tracking applied to a page is exactly the defect the Stage 1 audit found
+    reaching every Arabic product title, and a list is a container that would
+    otherwise pass one straight through to every row.
+  */
+  letter-spacing: var(--letter-spacing-none);
+}
+
+/*
+  Dividers, drawn on the rows rather than on the list.
+
+  border-block-start on every row after the first, which means the line belongs
+  to the row below it and there is never a trailing rule under the last one —
+  the failure a `border-block-end` on every row produces, and the one that makes
+  a list look unfinished.
+
+  It is the BLOCK axis, so `dir` does not touch it and there is nothing here to
+  mirror. border.default is the token whose own description names this use — "a
+  card outline, a divider between list rows" — and it is declared decorative in
+  pairs.json, so its 1.48:1 is measured and reported and nothing gates it. That
+  is right for a divider and would be wrong for a line that identified a
+  control, which is what border.control is for.
+*/
+.mz-list--dividers > .mz-list__item + .mz-list__item {
+  border-block-start: 1px solid var(--border-default);
+  padding-block-start: var(--space-150);
+}
+
+/*
+  The row carries no styling of its own.
+
+  That is deliberate rather than unfinished: a row holds a ProductCard, a cart
+  line or a sentence, and each of those already decides its own padding and
+  ground. A List that styled its rows would be a second opinion about every one
+  of them, and the first thing a consumer would need is a way to switch it off.
+*/
+.mz-list__item {
+  margin: 0;
+}
