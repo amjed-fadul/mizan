@@ -567,6 +567,13 @@ export function planSync(bundle: TokenBundle, snapshot: Snapshot): Plan {
             type: variable.type,
             dtcgType: effectiveType(variable.token, set.base),
             description: variable.description,
+            // The base node's, not the node in some mode. A specimen is one node
+            // per combination frame but one *string* across all of them, because
+            // what varies by mode here is the family bound to it rather than the
+            // text set in it. A mode that stated its own sample would have
+            // nowhere on the sheet to put it, so the base statement is the only
+            // one read and a mode override of it is ignored rather than merged.
+            sample: sampleOf(variable.token, set),
           })),
         ),
       [],
@@ -636,6 +643,12 @@ function checkDistinctNames(desired: DesiredVariable[], errors: Problem[]): void
         'so rename one of the two so that the paths differ by more than a separator.',
     });
   }
+}
+
+/** The sample a token states for rendering itself, read off the base node. */
+function sampleOf(path: string, set: TokenSet): string | undefined {
+  const node = set.base.get(path);
+  return node ? node.sample : undefined;
 }
 
 /**

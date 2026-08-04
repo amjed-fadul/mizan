@@ -54,7 +54,9 @@
  *   fontWeight (numeric)     TEXT       fontWeight     the specimen renders at
  *                                                      the weight it names
  *   fontFamily               TEXT       fontFamily     the specimen renders in
- *                                                      the family it names
+ *                                                      the family it names, set
+ *                                                      in the sample the token
+ *                                                      states — see below
  *   string / untyped         TEXT       characters     the content is the value
  *   boolean                  RECTANGLE  visible        Figma's one bindable
  *                                                      boolean property
@@ -76,6 +78,51 @@
  *
  * Nothing here names a dimension, a mode, a collection or a token. The page
  * name is the one constant, and it is generic on purpose — see below.
+ *
+ * ===========================================================================
+ * WHAT A fontFamily SPECIMEN SAYS, AND WHY THIS FILE DOES NOT DECIDE IT
+ * ===========================================================================
+ *
+ * A fontFamily specimen binds a TEXT node's family, which proves the binding.
+ * It does not follow that the node proves anything else. The characters set in
+ * it used to be the variable's own name — Latin, always, because token paths are
+ * lowercase kebab-case ASCII by the schema gate — so a family drawn for a script
+ * that is not Latin was shown setting text it cannot set. Figma falls back to
+ * some other face for those glyphs and the swatch looks fine, which is the worst
+ * available outcome for job 3: the sheet exists so that a wrong face is visible
+ * at a glance, and a face rendering a script it was never chosen for is exactly
+ * the case that stays invisible.
+ *
+ * The fix has to come from outside this file. Deciding what a family should be
+ * shown setting means knowing what script it is for, and this directory is
+ * brand-agnostic — it holds no Arabic, no Cyrillic, no Han and no table mapping
+ * a family name to any of them. Three ways were weighed:
+ *
+ *   1. INFER THE SCRIPT FROM THE TOKEN. `font-family.arabic` is named after one.
+ *      Rejected: the inference needs a script-name-to-sample table living here,
+ *      which is the leak stated as a rule, and it is wrong the moment a token
+ *      root names its families after products, weights or vendors instead.
+ *
+ *   2. A SCRIPT-NEUTRAL SAMPLE. Digits, or the family's own name. Rejected on
+ *      the merits rather than on the rule: neither is script-neutral, it only
+ *      looks that way from Latin. Digits are set from a face's Latin-ish glyph
+ *      set and a family may not carry them at all; the family's *name* is Latin
+ *      text, which is the defect being fixed, wearing a different label.
+ *
+ *   3. LET THE TOKEN ROOT STATE IT. Taken. A `$extensions` entry under
+ *      `SPECIMEN_EXTENSION` carries an optional sample per token, so the string
+ *      lives beside the stack it demonstrates, in the half of the repository
+ *      that is allowed to know what script it is in. This file holds the
+ *      mechanism and none of the content, which is the same shape every other
+ *      name on this sheet already has.
+ *
+ * TOLD NOTHING, IT GUESSES NOTHING. A fontFamily token that states no sample
+ * gets what it got before: its own name, in its own family. That is not an
+ * oversight to be tidied later — it is the only honest answer available, and it
+ * is correct for the Latin family that states nothing. Anything cleverer would
+ * be this file deciding a script from a name, which is option 1 arriving by the
+ * back door. The specimen's `reason` says which of the two happened, so the diff
+ * distinguishes "the token stated a sample" from "the token stated none".
  *
  * ===========================================================================
  * THE ONE DOCUMENTED EXCEPTION: A FONT FIGMA DOES NOT HAVE
@@ -214,12 +261,18 @@ export function renderingFor(variable: ProjectedVariable): Rendering {
 
   if (variable.type === 'STRING') {
     if (variable.dtcgType === 'fontFamily') {
+      // The sample if the token states one, the variable's own name if it does
+      // not. The fallback is the status quo rather than a guess — see the header.
+      const sample = variable.sample;
       return {
         kind: 'TEXT',
         field: 'fontFamily',
-        reason: 'the specimen renders in the family the token names',
+        reason:
+          sample === undefined
+            ? 'the specimen renders in the family the token names, setting the variable name because the token states no sample'
+            : 'the specimen renders the sample the token states, in the family the token names',
         props: { fontSize: TITLE_SIZE },
-        text: variable.name,
+        text: sample === undefined ? variable.name : sample,
       };
     }
     return {
@@ -414,6 +467,7 @@ export function planSheet(
       kind: rendering.kind,
       field: rendering.field,
       reason: rendering.reason,
+      sample: variable.sample,
     });
     if (rendering.field === 'fontFamily') {
       for (const family of live.values) if (fonts.indexOf(family) === -1) fonts.push(family);

@@ -83,13 +83,44 @@ The choice comes from the token's DTCG `$type` — a fact the token states — a
 | `dimension` otherwise, `duration` | bar | `width` | a length drawn as a length; a duration is a magnitude too |
 | `number` | bar | `height` | a unitless multiplier has no natural geometry, and as a thickness a value near 1 still renders — a 1.5px-**wide** bar would read as nothing |
 | `fontWeight` (numeric) | text | `fontWeight` | the specimen renders at the weight it names |
-| `fontFamily` | text | `fontFamily` | the specimen renders in the family it names |
+| `fontFamily` | text | `fontFamily` | the specimen renders in the family it names, set in the **sample the token states** — see below |
 | `string`, untyped | text | `characters` | the content is the value |
 | `boolean` | rectangle | `visible` | Figma's one bindable boolean property |
 
 The radius vocabulary in `src/core/sheet.ts` names geometric roles and nothing else — no token, no product, no colour. A group it does not recognise gets the length bar, which is correct for any magnitude.
 
 **Composite types stay out**, with the sync's own reason rather than a new one: `shadow`, `typography`, `border` and the rest are styles in Figma, not variables, so there is nothing to bind.
+
+### What a `fontFamily` specimen is set in, and who decides
+
+Binding a family to a text node proves the binding. It does not prove the family is doing its job, and for one script the difference was visible in the desktop app: `font-family/arabic` bound correctly and rendered **Latin glyphs** — because the characters in the node were the variable's own name, and a token path is lowercase kebab-case ASCII by the schema gate. An Arabic face was shown setting text it has no glyphs for, Figma substituted another face for them, and the swatch looked fine.
+
+That is the worst available outcome for the third job. The sheet exists so a wrong face shows at a glance; a face rendering a script it was never chosen for is precisely the case that stays invisible.
+
+The fix cannot live here. Knowing what a family should be shown setting means knowing its script, and this directory holds no script: no Arabic, no Cyrillic, no Han, and no table mapping a family name to any of them. Three routes were weighed and two were refused:
+
+- **Infer the script from the token name.** `font-family.arabic` names one. Refused: the inference needs a script-to-sample table in `machinery/`, which is the leak rule 2 forbids, and it is wrong the moment a token root names its families after products, weights or vendors instead.
+- **A script-neutral sample** — digits, or the family's own name. Refused on the merits rather than on the rule. Neither is script-neutral; it only looks that way from Latin. Digits come from a face's Latin-ish glyph set and a family may carry none. The family's *name* is Latin text, which is the defect being fixed wearing a different label.
+- **Let the token root state it.** Taken. A token may carry an optional sample under one `$extensions` namespace:
+
+```json
+"arabic": {
+  "$value": ["IBM Plex Sans Arabic", "…"],
+  "$extensions": {
+    "figma-token-sync.specimen": { "sample": "…" }
+  }
+}
+```
+
+The namespace is this package's own name — not a brand, because the brand is on the other side of the wall, and not a script, because this plugin has no opinion about one. The string lives beside the stack it demonstrates, in the half of the repository allowed to know what script it is in. On the token root in `content/`, `font-family.arabic` states one and [`font-family.sans` states none](#told-nothing-it-guesses-nothing).
+
+#### Told nothing, it guesses nothing
+
+A `fontFamily` token that states no sample gets what it always got: its own name, in its own family. That is not an oversight waiting to be tidied — it is the only honest answer, and it is right for a Latin family, which is what a token stating nothing usually is. Anything cleverer is the refused first option arriving by the back door, and a script guessed wrong is worse than the plain fallback: it renders confidently and reads as deliberate.
+
+The specimen's stated reason in the diff says which of the two happened, so "the token supplied this text" and "the token supplied none" are distinguishable without opening the JSON. A malformed sample — anything that is not a non-empty string — is a **warning** naming the token, and falls back the same way. It is not an error, because a caption cannot be allowed to block a projection, least of all at a gate `check-schema.mjs` does not itself have.
+
+Both halves of the wall are asserted, not asserted-to. `dry-run.mjs` reads the samples out of the raw bundle JSON rather than out of the loader, and checks that every one of them reaches the drawn page verbatim, that every character on that page outside plain ASCII is one of them, and that **none of them appears in this plugin's own sources or in the harness** — read off the authored files rather than off `code.js`, since an unused string is tree-shaken out of a bundle and a bundle that lacks one proves only that nothing reached for it today.
 
 ### The one other thing that stays out: a font Figma does not have
 
@@ -269,6 +300,8 @@ with its two mode files produces a third collection with two modes and moves the
 
 `$description` is carried into the Figma variable description verbatim, so the reasoning travels with the value — a designer hovering a variable reads the same sentence a developer reads in the JSON. `$deprecated` is prefixed to it.
 
+`$extensions` is read for exactly one namespace, `figma-token-sync.specimen`, and nothing else in it is looked at. It carries no value and reaches no variable — only [what a `fontFamily` specimen is set in](#what-a-fontfamily-specimen-is-set-in-and-who-decides) on the proof sheet.
+
 ### The one rule this plugin does not own alone
 
 `machinery/scripts/check-drift.mjs` reads these variables back and asks whether they are still what was written, so it has to agree with `src/core/map.ts` about every row of the table above. Most of those rows are safe to state twice: if the two disagree, the detector reports a finding and somebody fixes it.
@@ -329,17 +362,18 @@ And for the proof sheet, against the same in-memory model plus an in-memory scen
 15. Drawing it twice changes nothing the second time, and applying an empty plan draws nothing.
 16. There is no delete operation in the sheet's vocabulary either, and the scene-graph adapter exposes no method that could remove a node. A node on the page that the plan did not produce is reported as an orphan and left alone.
 17. The sheet refuses a file whose variables have not been synced, and refuses a node whose name matches but whose type does not.
-18. Every word in every frame title comes from the token root; no generated layer name contains a character outside plain ASCII.
-19. A `fontFamily` variable naming a family the running Figma does not have is a **planned skip** whose reason names the value, not an error and not a substitution: it is bound nowhere on the page that gets drawn, the plan's summary counts it, and the sheet stays idempotent with a skip on it. Given a list that *does* hold the family, the same variable is bound and the plan is byte-for-byte the one made with no list at all — so the filter is doing the work, and the assertion is not vacuous. Told no list, nothing is filtered.
-20. Eight combinations on the three-dimension fixture, with no code change.
+18. Every word in every frame title comes from the token root; no generated layer **name** contains a character outside plain ASCII. That claim used to cover the whole page and no longer does, because a specimen now renders a sample the token root states and a sample is text rather than a name. What replaces the missing half is stronger than the old blanket: every character on the drawn page outside plain ASCII is one the token root stated, and no sample appears anywhere in this plugin's own sources.
+19. A `fontFamily` specimen is set in the sample its token states, so a face is shown setting a script it can actually set. A token stating none keeps writing its own name — the fallback is abstention, not a guess, and the two are distinguishable in the diff. A malformed sample is a warning and falls back identically. A token root that has never heard of the extension still gets all of its specimens.
+20. A `fontFamily` variable naming a family the running Figma does not have is a **planned skip** whose reason names the value, not an error and not a substitution: it is bound nowhere on the page that gets drawn, the plan's summary counts it, and the sheet stays idempotent with a skip on it. Given a list that *does* hold the family, the same variable is bound and the plan is byte-for-byte the one made with no list at all — so the filter is doing the work, and the assertion is not vacuous. Told no list, nothing is filtered.
+21. Eight combinations on the three-dimension fixture, with no code change.
 
 And for the two files that carry this plugin's state back out — the REST projection in `src/core/rest.ts` and the read bridge's vocabulary in `src/core/bridge.ts`:
 
-21. Every collection and every variable arrives in the payload under its own id, `variableIds` on a collection is *derived* from the variables that name it rather than trusted, and every alias lands on a variable in the same payload — including one that crosses a collection boundary.
-22. A colour's four channels come through exactly as the plan set them — compared with `===`, not within a tolerance, because a projection that rounds produces drift below the gate's own resolution. `resolvedType` and `description` survive verbatim, and the payload carries `generatedBy` beside `meta`, so a saved snapshot says on its face that it did not come from the REST API.
-23. The plan for the real token root, applied and exported, is reported as aligned by the **real** drift detector, run as a separate process. See below.
-24. The bridge knows four message types — `hello`, `snapshot-request`, `snapshot`, `error` — and neither those nor any name it exports contains a word for writing. A well-formed message asking to delete a variable parses to `null`: an unrecognised instruction is not an instruction.
-25. A snapshot survives the round trip through the wire unchanged, payload and all.
+22. Every collection and every variable arrives in the payload under its own id, `variableIds` on a collection is *derived* from the variables that name it rather than trusted, and every alias lands on a variable in the same payload — including one that crosses a collection boundary.
+23. A colour's four channels come through exactly as the plan set them — compared with `===`, not within a tolerance, because a projection that rounds produces drift below the gate's own resolution. `resolvedType` and `description` survive verbatim, and the payload carries `generatedBy` beside `meta`, so a saved snapshot says on its face that it did not come from the REST API.
+24. The plan for the real token root, applied and exported, is reported as aligned by the **real** drift detector, run as a separate process. See below.
+25. The bridge knows four message types — `hello`, `snapshot-request`, `snapshot`, `error` — and neither those nor any name it exports contains a word for writing. A well-formed message asking to delete a variable parses to `null`: an unrecognised instruction is not an instruction.
+26. A snapshot survives the round trip through the wire unchanged, payload and all.
 
 Those are checked by mutation as well as by construction. Breaking the sheet on purpose — describing a variable in text instead of binding it, dropping one collection's explicit mode from a frame, writing a plain value for a property that is also bound, collapsing two swatches onto one name — makes the harness fail. So does breaking the projection: the harness builds corrupted payloads in memory and asserts they are **caught** — one missing a variable, one whose alias points at an id nothing holds, one whose collection claims a variable it does not hold, and one whose colour moved by 1e-9, which a 1e-6 tolerance would have waved through. An assertion nothing can break is not an assertion.
 
