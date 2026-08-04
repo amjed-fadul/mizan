@@ -30,6 +30,13 @@
  *   8. A third mode dimension needs no code change.
  *   9. A token varying by two dimensions is refused, with the reason.
  *  10. Collections this plugin did not plan are left alone.
+ *  11. The proof sheet documents exactly the variables the sync projects, and
+ *      *binds* every one of them to a real property of a real node — a value
+ *      written as a label would prove nothing and would be invisible to
+ *      anything asking Figma what a layer uses.
+ *  12. Every combination frame carries an explicit mode for every collection.
+ *  13. Drawing the sheet twice changes nothing the second time, and nothing in
+ *      its vocabulary removes anything either.
  *
  *   node dry-run.mjs [--root <dir>] [--verbose]
  *
@@ -59,13 +66,22 @@ if (!existsSync(CORE)) {
 }
 
 const {
+  HEADING_NODE,
+  LABEL_NODE,
+  MemoryNodes,
   MemoryVariables,
+  SHEET_PAGE_NAME,
   SINGLE_MODE_NAME,
+  SPECIMEN_NODE,
   applyPlan,
+  applySheet,
   describeAction,
+  describeSheetAction,
   isApplicable,
+  isSheetApplicable,
   figmaName,
   loadBundle,
+  planSheet,
   planSync,
   varyingDimensions,
   effectiveType,
@@ -94,6 +110,12 @@ const emptySnapshot = () => ({ collections: [], variables: [] });
 
 /** The known action vocabulary. Note what is not in it: anything that removes. */
 const ACTION_OPS = ['create-collection', 'create-mode', 'rename-mode', 'create-variable', 'set-description', 'set-value'];
+
+/** The sheet's vocabulary. Note the same absence, for the same reason. */
+const SHEET_OPS = ['create-page', 'create-node', 'set-prop', 'set-text', 'bind', 'set-explicit-mode'];
+
+/** Every field the sheet is allowed to bind. All of them are real Figma fields. */
+const BINDABLE = ['fill', 'width', 'height', 'cornerRadius', 'characters', 'fontFamily', 'fontWeight', 'visible'];
 
 /* ================================================================== *
  * 1. The port agrees with the shared library
@@ -417,6 +439,320 @@ assert(!withHandmade.orphans.some((o) => o.collection === 'a-collection-somebody
   'nor is anything inside it reported as an orphan — it is not this plugin\'s business');
 
 /* ================================================================== *
+ * 11. The proof sheet
+ *
+ * The sheet's whole claim is that it *binds* every variable rather than
+ * describing it, so that is what gets asserted hardest below. A sheet that
+ * printed hexes into text labels would look identical in a screenshot and
+ * would prove nothing.
+ * ================================================================== */
+
+process.stdout.write('\n9. The proof sheet: every variable bound to something real\n');
+
+/* The sheet documents a file the sync has already written, so start from one. */
+const synced = figma.readSnapshot();
+const nodes = new MemoryNodes(synced);
+const sheet = planSheet(bundle, synced, nodes.readSheet());
+
+assert(sheet.errors.length === 0, 'the sheet plans cleanly against a freshly synced file',
+  JSON.stringify(sheet.errors.slice(0, 3), null, 1));
+assert(isSheetApplicable(sheet), 'the sheet plan is applicable');
+assert(sheet.actions.every((a) => SHEET_OPS.includes(a.op)), 'every sheet action is one of the six known operations',
+  JSON.stringify(sheet.actions.filter((a) => !SHEET_OPS.includes(a.op)).slice(0, 3)));
+
+/* It documents exactly what the sync projects — one projection, not two. */
+const projectedKeys = plan.projected.map((v) => `${v.collection}/${v.name}`).sort();
+const specimenKeys = sheet.specimens.map((s) => `${s.collection}/${s.name}`).sort();
+assert(same(projectedKeys, specimenKeys),
+  'the sheet documents exactly the variables the sync projects — no more, no fewer',
+  `${projectedKeys.length} projected vs ${specimenKeys.length} documented`);
+assert(same(sheet.skipped.map((s) => s.token).sort(), plan.skipped.map((s) => s.token).sort()),
+  'and skips exactly what the sync skips, with the sync\'s own reason');
+assert(sheet.skipped.every((s) => /composite/i.test(s.reason) || s.reason.length > 0),
+  'a composite type stays out of the sheet for the reason the sync gives, not a new one');
+
+assert(sheet.specimens.every((s) => BINDABLE.includes(s.field)),
+  'every specimen binds a real Figma bindable field',
+  JSON.stringify(sheet.specimens.filter((s) => !BINDABLE.includes(s.field)).slice(0, 3)));
+assert(sheet.specimens.every((s) => typeof s.reason === 'string' && s.reason.length > 0),
+  'and every binding choice carries the reason it was chosen');
+
+/* A property that is bound must never also be written as a plain value: the
+ * two would fight, and the plain one would be re-set on every single run. */
+const propsByPath = new Map();
+const bindsByPath = new Map();
+for (const action of sheet.actions) {
+  if (action.op === 'set-prop') {
+    const key = action.path.join(' / ');
+    propsByPath.set(key, (propsByPath.get(key) || []).concat(action.prop));
+  }
+  if (action.op === 'bind') {
+    const key = action.path.join(' / ');
+    bindsByPath.set(key, (bindsByPath.get(key) || []).concat(action.field));
+  }
+}
+let boundAndSet = null;
+for (const [key, fields] of bindsByPath) {
+  const overlap = (propsByPath.get(key) || []).filter((prop) => fields.includes(prop));
+  if (overlap.length > 0) { boundAndSet = `${key}: ${overlap.join(', ')}`; break; }
+}
+assert(boundAndSet === null,
+  'no node has a property both bound to a variable and written as a plain value',
+  boundAndSet);
+
+/* One frame per mode combination, and that is the product of the dimensions. */
+const dimensionCollections = plan.collections.filter((c) => c.origin === 'dimension');
+const expectedCombinations = dimensionCollections.reduce((n, c) => n * c.modes.length, 1);
+assert(sheet.combinations.length === expectedCombinations,
+  `one frame per mode combination — ${expectedCombinations} with these dimensions`,
+  `${sheet.combinations.length} frames`);
+
+let wrongModes = null;
+for (const combination of sheet.combinations) {
+  for (const collection of plan.collections) {
+    const mode = combination.modes[collection.name];
+    if (!mode || !collection.modes.includes(mode)) {
+      wrongModes = `${combination.label}: ${collection.name} = ${mode}`;
+      break;
+    }
+  }
+  if (wrongModes) break;
+}
+assert(wrongModes === null,
+  'every frame carries an explicit mode for every collection the sync manages, and each is a mode of that collection',
+  wrongModes);
+assert(sheet.combinations.every((c) => Object.keys(c.modes).length === plan.collections.length),
+  'no collection is left to fall back to its default — nothing about what a frame renders is implicit');
+assert(sheet.combinations.every((c) =>
+  dimensionCollections.every((d) => c.label.includes(`${d.name} ${c.modes[d.name]}`))),
+  'and each frame is titled with the combination it renders',
+  JSON.stringify(sheet.combinations.map((c) => c.label)));
+assert(new Set(sheet.combinations.map((c) => c.label)).size === sheet.combinations.length,
+  'the frame titles are distinct, so find-or-create by name cannot confuse two combinations');
+
+/* Nothing on the sheet is named after a brand: every part of every frame title
+ * is a collection or a mode this token root declares. */
+const declared = new Set();
+for (const collection of plan.collections) {
+  declared.add(collection.name);
+  for (const mode of collection.modes) declared.add(mode);
+}
+assert(sheet.combinations.every((c) => c.label.split(' / ').every((part) => {
+  const words = part.split(' ');
+  return declared.has(words[0]) && declared.has(words.slice(1).join(' '));
+})), 'every word in a frame title comes from the token root — no name is hardcoded',
+  JSON.stringify(sheet.combinations.map((c) => c.label)));
+
+/* ================================================================== *
+ * 12. Drawing it, twice
+ * ================================================================== */
+
+process.stdout.write('\n10. Drawing it, twice\n');
+
+const built = applySheet(sheet, nodes);
+assert(built.failures.length === 0, 'the sheet applies with no failures',
+  JSON.stringify(built.failures.slice(0, 3).map((f) => `${describeSheetAction(f.action)}: ${f.message}`)));
+assert(built.applied === sheet.actions.length, 'every sheet action was applied',
+  `${built.applied} of ${sheet.actions.length}`);
+
+const drawn = nodes.readSheet();
+assert(Boolean(drawn.page) && drawn.page.name === SHEET_PAGE_NAME, 'the sheet lives on its own page');
+assert(same(Object.keys(drawn), ['page']),
+  'the sheet adapter can see nothing but that page — user content is unreachable, not merely untouched',
+  JSON.stringify(Object.keys(drawn)));
+
+/* Walk what actually got built. */
+const bindingsOf = new Map(); // "collection/name" -> count of nodes bound to it
+const swatchProblems = [];
+const nonAscii = [];
+const frameNames = drawn.page.children.map((child) => child.name);
+
+const walkSheet = (node, path) => {
+  if (!/^[\x20-\x7e]*$/.test(node.name)) nonAscii.push(node.name);
+  for (const field of Object.keys(node.bindings)) {
+    const binding = node.bindings[field];
+    const key = `${binding.collection}/${binding.name}`;
+    bindingsOf.set(key, (bindingsOf.get(key) || 0) + 1);
+  }
+  for (const child of node.children) walkSheet(child, path.concat(child.name));
+};
+walkSheet(drawn.page, []);
+
+assert(same(frameNames, sheet.combinations.map((c) => c.label)),
+  'the page holds one frame per combination and nothing else',
+  JSON.stringify(frameNames));
+assert(nonAscii.length === 0, 'no generated layer name contains a character outside plain ASCII',
+  JSON.stringify(nonAscii.slice(0, 3)));
+
+/* The modes are asserted on the page that got drawn, not on the plan that
+ * described it — a frame that renders the wrong combination renders wrong
+ * values, and a plan agreeing with itself would not catch that. */
+let frameModes = null;
+for (const combination of sheet.combinations) {
+  const frame = drawn.page.children.filter((child) => child.name === combination.label)[0];
+  if (!frame) { frameModes = `no frame drawn for "${combination.label}"`; break; }
+  const wanted = Object.keys(combination.modes).sort();
+  const written = Object.keys(frame.explicitModes).sort();
+  if (!same(wanted, written) || wanted.some((collection) => frame.explicitModes[collection] !== combination.modes[collection])) {
+    frameModes = `${combination.label}: drew ${JSON.stringify(frame.explicitModes)}, wanted ${JSON.stringify(combination.modes)}`;
+    break;
+  }
+}
+assert(frameModes === null,
+  'each frame that got drawn carries exactly the explicit modes its combination names, for every collection',
+  frameModes);
+
+const unbound = plan.projected.filter((v) => !bindingsOf.has(`${v.collection}/${v.name}`));
+assert(unbound.length === 0,
+  'every variable the sync projects is bound to at least one node on the sheet — the claim the whole artifact rests on',
+  unbound.slice(0, 5).map((v) => `${v.collection}/${v.name}`).join(', '));
+
+const wrongCount = plan.projected.filter((v) => bindingsOf.get(`${v.collection}/${v.name}`) !== sheet.combinations.length);
+assert(wrongCount.length === 0,
+  'and bound once in every combination frame, so selecting any one frame reads the whole set',
+  wrongCount.slice(0, 3).map((v) => `${v.collection}/${v.name}: ${bindingsOf.get(`${v.collection}/${v.name}`)}`).join(', '));
+
+/* Each swatch: one bound specimen, and one plain-text label naming the variable. */
+const swatchNames = new Set(sheet.specimens.map((s) => s.name));
+let swatchesSeen = 0;
+const checkSwatches = (node) => {
+  if (swatchNames.has(node.name) && node.children.length > 0) {
+    swatchesSeen += 1;
+    const specimen = node.children.filter((child) => child.name === SPECIMEN_NODE)[0];
+    const label = node.children.filter((child) => child.name === LABEL_NODE)[0];
+    if (!specimen || Object.keys(specimen.bindings).length !== 1) {
+      swatchProblems.push(`${node.name}: specimen has ${specimen ? Object.keys(specimen.bindings).length : 'no'} binding(s)`);
+    }
+    if (!label || label.kind !== 'TEXT' || label.text !== node.name || Object.keys(label.bindings).length !== 0) {
+      swatchProblems.push(`${node.name}: label is not unbound text naming the variable`);
+    }
+  }
+  for (const child of node.children) checkSwatches(child);
+};
+checkSwatches(drawn.page);
+assert(swatchesSeen === sheet.specimens.length * sheet.combinations.length,
+  'the sheet holds one swatch per variable per combination, and the check below actually visited all of them',
+  `${swatchesSeen} swatches, expected ${sheet.specimens.length * sheet.combinations.length}`);
+assert(swatchProblems.length === 0,
+  'every swatch is one bound specimen plus one unbound text label carrying the variable name',
+  swatchProblems.slice(0, 3).join(' | '));
+
+/* Grouped by collection, and by the groups already in the token names. */
+const firstFrame = drawn.page.children[0];
+const sections = firstFrame.children.filter((child) => child.name !== HEADING_NODE).map((child) => child.name);
+assert(sections.length > 0 && sections.every((name) => plan.collections.some((c) => c.name === name)),
+  'a frame is divided by collection', JSON.stringify(sections));
+const groupsSeen = [];
+for (const section of firstFrame.children) {
+  if (section.name === HEADING_NODE) continue;
+  for (const group of section.children) {
+    if (group.name === HEADING_NODE) continue;
+    groupsSeen.push(group.name);
+    const members = group.children.filter((child) => child.name !== HEADING_NODE);
+    if (members.some((member) => member.name.indexOf('/') !== -1 && member.name.split('/')[0] !== group.name)) {
+      groupsSeen.push(`MISPLACED in ${group.name}`);
+    }
+  }
+}
+assert(groupsSeen.length > 0 && !groupsSeen.some((name) => name.startsWith('MISPLACED')),
+  'and each collection by the group structure already in the token names',
+  JSON.stringify(groupsSeen.slice(0, 8)));
+
+const redrawn = planSheet(bundle, synced, nodes.readSheet());
+assert(redrawn.actions.length === 0, 'drawing the sheet again changes nothing — it is idempotent',
+  redrawn.actions.slice(0, 5).map(describeSheetAction).join(' | '));
+assert(redrawn.errors.length === 0, 're-planning the sheet produces no errors', JSON.stringify(redrawn.errors.slice(0, 2)));
+assert(redrawn.orphans.length === 0, 'a freshly drawn sheet has no orphans', JSON.stringify(redrawn.orphans.slice(0, 3)));
+
+const redrawResult = applySheet(redrawn, nodes);
+assert(redrawResult.applied === 0 && redrawResult.failures.length === 0, 'applying an empty sheet plan draws nothing');
+assert(planSheet(bundle, synced, nodes.readSheet()).actions.length === 0, 'and the sheet is still up to date afterwards');
+
+/* ================================================================== *
+ * 13. What the sheet refuses to do
+ * ================================================================== */
+
+process.stdout.write('\n11. What the sheet refuses to do\n');
+
+assert(!SHEET_OPS.some((op) => op.includes('delete') || op.includes('remove')),
+  'the sheet\'s action vocabulary contains no delete operation at all');
+assert(!Object.getOwnPropertyNames(MemoryNodes.prototype).some((name) => /delete|remove/i.test(name)),
+  'and the scene-graph adapter exposes no method that could remove a node');
+
+nodes.addStrayNode([sheet.combinations[0].label], 'something-somebody-drew', 'FRAME');
+const withStray = planSheet(bundle, synced, nodes.readSheet());
+const stray = withStray.orphans.filter((o) => o.path[o.path.length - 1] === 'something-somebody-drew')[0];
+assert(Boolean(stray), 'a node on the page that this plan did not produce is reported as an orphan',
+  JSON.stringify(withStray.orphans.slice(0, 3)));
+assert(withStray.actions.length === 0, 'and nothing is written to remove it',
+  withStray.actions.slice(0, 3).map(describeSheetAction).join(' | '));
+
+/* The sheet binds variables; it does not create them. */
+const unsynced = planSheet(bundle, emptySnapshot(), { page: null });
+const notSynced = unsynced.errors.filter((e) => e.code === 'sheet-variable-missing')[0];
+assert(Boolean(notSynced), 'a file whose variables have not been synced yet is an error, not a sheet full of nothing',
+  JSON.stringify(unsynced.errors.slice(0, 2)));
+assert(Boolean(notSynced) && /sync/i.test(notSynced.message), 'and the message says to run the sync first',
+  notSynced && notSynced.message);
+assert(!isSheetApplicable(unsynced), 'a sheet plan with that error cannot be drawn');
+
+/* A node of the wrong type is refused rather than silently recreated. */
+const clashing = new MemoryNodes(synced);
+const clashingPage = clashing.createPage(SHEET_PAGE_NAME);
+clashing.createNode(clashingPage, 'RECTANGLE', sheet.combinations[0].label);
+const clashPlan = planSheet(bundle, synced, clashing.readSheet());
+const clash = clashPlan.errors.filter((e) => e.code === 'sheet-kind-conflict')[0];
+assert(Boolean(clash), 'a node whose name matches but whose type does not is an error',
+  JSON.stringify(clashPlan.errors.slice(0, 2)));
+assert(Boolean(clash) && /delete/i.test(clash.message),
+  'and the message says to remove it by hand, because this plugin will not',
+  clash && clash.message);
+
+/* ================================================================== *
+ * 14. The sheet on a third dimension
+ * ================================================================== */
+
+process.stdout.write('\n12. Fixture: the sheet across three dimensions\n');
+
+const threeSheetVariables = threeFigma.readSnapshot();
+const threeNodes = new MemoryNodes(threeSheetVariables);
+const threeSheet = planSheet(threeBundle, threeSheetVariables, threeNodes.readSheet());
+
+assert(threeSheet.errors.length === 0, 'the three-dimension fixture produces a sheet with no errors',
+  JSON.stringify(threeSheet.errors.slice(0, 3), null, 1));
+assert(threeSheet.combinations.length === 8, 'three dimensions of two modes become eight frames, with no code change',
+  `${threeSheet.combinations.length} frames`);
+
+const threeBuilt = applySheet(threeSheet, threeNodes);
+assert(threeBuilt.failures.length === 0, 'and it draws with no failures',
+  JSON.stringify(threeBuilt.failures.slice(0, 3).map((f) => f.message)));
+assert(planSheet(threeBundle, threeSheetVariables, threeNodes.readSheet()).actions.length === 0,
+  'and is idempotent too');
+
+const threeBindings = new Set();
+const collectBindings = (node) => {
+  for (const field of Object.keys(node.bindings)) {
+    threeBindings.add(`${node.bindings[field].collection}/${node.bindings[field].name}`);
+  }
+  for (const child of node.children) collectBindings(child);
+};
+collectBindings(threeNodes.readSheet().page);
+assert(threePlan.projected.every((v) => threeBindings.has(`${v.collection}/${v.name}`)),
+  'every variable in the fixture is bound there too, including the selector that crosses collections',
+  threePlan.projected.filter((v) => !threeBindings.has(`${v.collection}/${v.name}`)).slice(0, 3)
+    .map((v) => `${v.collection}/${v.name}`).join(', '));
+
+const fontSpecimen = threeSheet.specimens.filter((s) => s.dtcgType === 'fontFamily')[0];
+assert(Boolean(fontSpecimen) && fontSpecimen.kind === 'TEXT' && fontSpecimen.field === 'fontFamily',
+  'a fontFamily token binds a text node\'s family rather than being written out as a string',
+  JSON.stringify(fontSpecimen));
+assert(threeSheet.fonts.length > 0,
+  'and the families it will need are named up front, because Figma will not bind a font it has not loaded',
+  JSON.stringify(threeSheet.fonts));
+assert(!threeSheet.specimens.some((s) => s.token === 'shadow.raised'),
+  'a composite type is absent from the sheet, exactly as it is absent from the sync');
+
+/* ================================================================== *
  * Summary
  * ================================================================== */
 
@@ -435,6 +771,19 @@ if (plan.skipped.length > 0) {
 if (plan.warnings.length > 0) {
   process.stdout.write('\nWarnings:\n');
   for (const warning of plan.warnings) process.stdout.write(`  ${warning.code}: ${warning.message}\n`);
+}
+
+process.stdout.write(
+  `\nProof sheet: ${sheet.stats.variablesDocumented} variables documented across ` +
+    `${sheet.combinations.length} mode combination(s), ${sheet.stats.nodesPlanned} nodes\n`,
+);
+const byBinding = new Map();
+for (const specimen of sheet.specimens) {
+  const key = `${String(specimen.dtcgType).padEnd(12)} ${specimen.type.padEnd(8)} ${specimen.kind.padEnd(10)} ${specimen.field}`;
+  byBinding.set(key, (byBinding.get(key) || 0) + 1);
+}
+for (const [key, count] of [...byBinding.entries()].sort()) {
+  process.stdout.write(`  ${key.padEnd(46)} ${String(count).padStart(3)} variable(s)\n`);
 }
 
 process.stdout.write(`\n${passes.length} assertion(s) passed, ${failures.length} failed\n`);

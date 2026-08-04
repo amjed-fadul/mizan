@@ -1,6 +1,6 @@
 # machinery/figma-plugin/ — Mizan Sync
 
-A Figma plugin that generates variables from a DTCG token root.
+A Figma plugin that generates variables from a DTCG token root, and a proof sheet that binds every one of them.
 
 Figma's REST API can *read* variables on any plan but can only *write* them on Enterprise. A plugin can write them on any plan. That asymmetry is the entire reason this exists: it is how the token JSON reaches Figma without an Enterprise seat and without anybody retyping a hex.
 
@@ -53,6 +53,51 @@ Then:
 Before writing, it re-plans against the live document and refuses if the diff has moved since your preview — if somebody edited a variable in the meantime, the diff you approved is not the diff that would be written, and you get shown the new one instead.
 
 After writing, it re-plans once more and reports what is left. On a healthy sync that number is zero, which is what idempotent means: running it twice changes nothing the second time.
+
+---
+
+## The proof sheet
+
+**Preview proof sheet** is a second, separate action with its own diff and its own confirmation. Syncing variables and documenting them are separate decisions — you may want to change a value without redrawing a page, or redraw the page without touching a value — so they are separate buttons rather than one that does both.
+
+It generates one page, **Token proof sheet**, holding one frame per **mode combination** — the cartesian product of the mode dimensions, which on the token root in `content/` is four: theme light/dark × product market/move. Each frame calls `setExplicitVariableModeForCollection` for *every* collection the sync manages, so it renders exactly that combination and resolves every alias chain without a designer setting anything, and each frame is titled with the combination it renders. Inside a frame: one section per collection, one group per group already present in the variable names — `neutral/*`, `space/*` — and one swatch per variable.
+
+### Three jobs, one artifact
+
+1. **Documentation at the moment of use.** Stage 3 asks for docs where the work happens. A page of real swatches in the file a designer already has open is that.
+2. **Proof the sync landed.** A swatch *is* the variable rather than a picture of one. If a swatch renders wrong, the variable is wrong; there is no third possibility, because nothing on the sheet restates a value.
+3. **A readable surface below Enterprise.** Figma's Variables REST API reads values on Enterprise only, so an educational or Professional plan has no programmatic route back to the values it just wrote. What *is* available on every plan is the set of variables **bound to a selected layer**. A page that binds every variable therefore makes the whole set readable by selecting one frame — which is the only route a drift detector has below Enterprise.
+
+The third job is the constraint that decides the design: **every variable is bound to a real property of a real node.** A hex written into a text label proves nothing, cannot visibly go stale, and is invisible to anything asking Figma what a layer uses. The sheet never writes a value. The one unbound thing on it is a plain text label per swatch carrying the variable's **name** — which is not a value and so cannot drift.
+
+### What is bound to what
+
+The choice comes from the token's DTCG `$type` — a fact the token states — and only falls back to reading the variable's group name in the one case a `$type` cannot decide, because a corner radius and a gap are both `dimension`.
+
+| DTCG `$type` | node | bound property | why |
+|---|---|---|---|
+| `color` | rectangle | `fills[0].color` | a colour is a fill |
+| `dimension`, radius-like group | square | `cornerRadius` | the only shape in which a radius reads as itself |
+| `dimension` otherwise, `duration` | bar | `width` | a length drawn as a length; a duration is a magnitude too |
+| `number` | bar | `height` | a unitless multiplier has no natural geometry, and as a thickness a value near 1 still renders — a 1.5px-**wide** bar would read as nothing |
+| `fontWeight` (numeric) | text | `fontWeight` | the specimen renders at the weight it names |
+| `fontFamily` | text | `fontFamily` | the specimen renders in the family it names |
+| `string`, untyped | text | `characters` | the content is the value |
+| `boolean` | rectangle | `visible` | Figma's one bindable boolean property |
+
+The radius vocabulary in `src/core/sheet.ts` names geometric roles and nothing else — no token, no product, no colour. A group it does not recognise gets the length bar, which is correct for any magnitude.
+
+**Composite types stay out**, with the sync's own reason rather than a new one: `shadow`, `typography`, `border` and the rest are styles in Figma, not variables, so there is nothing to bind.
+
+### What it will not do
+
+- **It will not create variables.** It binds them. A file whose variables have not been synced is an error naming the fix, not a sheet full of empty swatches.
+- **It will not delete anything**, including on its own page. A node the plan does not describe is reported as an orphan and left where it is.
+- **It cannot touch user content.** The adapter finds one page by name and walks that; there is no path from it to any other page in the document, so this is a property of the code rather than a promise in a comment.
+- **It will not change a node's type.** A node whose name matches but whose type does not is an error telling you to remove it by hand — never a silent recreate.
+- **It does not manage layer order.** A node it creates is appended last. Reordering the sheet by hand survives a re-run.
+
+The page name is the one string on the sheet that is not discovered from the token root, and it is generic on purpose. Find-or-create by name is the whole idempotency argument, and the three ways tokens reach this plugin do not agree on what the token root is called — a folder picked in Figma carries no root path at all. A name that changed with the source route would orphan the previous page on every other run. So the *name* is a constant and the *content* is entirely discovered.
 
 ---
 
@@ -156,7 +201,7 @@ The general rule: **a projection that discards information is shared code; a pro
 - **It will not change a variable's type.** Figma fixes a resolved type at creation. If the token's type no longer matches, that is an error telling you to delete the variable or rename the token — never a silent recreate.
 - **It will not write a partial projection.** Any error blocks the whole run. Half a projection is drift, and drift that the tool itself introduced is the worst kind.
 - **It does not set scopes, code syntax, or publishing visibility.** Those are decisions about a Figma library, and the plugin has no opinion it could honestly base on the token JSON. They survive a re-sync untouched.
-- **It does not touch styles, components, or any node on the canvas.** Variables only.
+- **The sync does not touch styles, components, or any node on the canvas.** Variables only. The proof sheet is the one thing in this plugin that draws, it is a separate action, and it draws on one page of its own — see below.
 - **It does not use the network.** `manifest.json` declares `"allowedDomains": ["none"]`.
 
 ---
@@ -186,6 +231,19 @@ It runs against the **real** `content/tokens/` plus two fixtures, with an in-mem
 9. A token varying by two dimensions is refused, and the message names the fix.
 10. Collections the plugin did not plan are untouched.
 
+And for the proof sheet, against the same in-memory model plus an in-memory scene graph that enforces what Figma enforces — unique sibling names, a node type fixed at creation, a binding whose field must suit the node's kind and whose variable must exist and be of a type that field can hold:
+
+11. The sheet documents exactly the variables the sync projects — no more, no fewer — and skips exactly what the sync skips, with the sync's reason.
+12. **Every one of them is bound**, to a real Figma bindable field, once in every combination frame. Nothing on the sheet writes a value: no node has a property both bound and set as a plain value, and every swatch is one bound specimen plus one unbound label carrying the variable's name.
+13. Each frame that got *drawn* — not each frame the plan described — carries exactly the explicit modes its combination names, for every collection.
+14. Drawing it twice changes nothing the second time, and applying an empty plan draws nothing.
+15. There is no delete operation in the sheet's vocabulary either, and the scene-graph adapter exposes no method that could remove a node. A node on the page that the plan did not produce is reported as an orphan and left alone.
+16. The sheet refuses a file whose variables have not been synced, and refuses a node whose name matches but whose type does not.
+17. Every word in every frame title comes from the token root; no generated layer name contains a character outside plain ASCII.
+18. Eight combinations on the three-dimension fixture, with no code change.
+
+Those are checked by mutation as well as by construction: breaking the sheet on purpose — describing a variable in text instead of binding it, dropping one collection's explicit mode from a frame, writing a plain value for a property that is also bound, collapsing two swatches onto one name — makes the harness fail. An assertion nothing can break is not an assertion.
+
 `npm run typecheck` runs `tsc --noEmit` over the same sources.
 
 ### Against the drift detector
@@ -212,9 +270,12 @@ The two files were written independently and agree on all four conventions that 
 | `src/core/plan.ts` | The projection and the diff. The architecture argument lives in its header. |
 | `src/core/apply.ts` | Writing a plan, through an adapter. The only apply path there is. |
 | `src/core/memory-adapter.ts` | Figma's variable model in memory, for the dry run. |
-| `src/figma-adapter.ts` | The only file that knows Figma exists. |
-| `src/code.ts` | The plugin main thread: message plumbing and the confirmation gate. |
-| `ui.html` | The source picker and the diff. Plain HTML, CSS and JS. |
+| `src/core/sheet.ts` | The proof sheet: what is bound to what, and why. The argument lives in its header. |
+| `src/core/sheet-apply.ts` | Drawing a sheet plan, through an adapter. No delete path here either. |
+| `src/core/memory-nodes.ts` | Figma's scene graph in memory, for the dry run. |
+| `src/figma-adapter.ts` | The only file that knows Figma exists — both adapters. |
+| `src/code.ts` | The plugin main thread: message plumbing and the two confirmation gates. |
+| `ui.html` | The source picker and the two diffs. Plain HTML, CSS and JS. |
 | `build.mjs` | esbuild → `code.js` for Figma, `dist/core.mjs` for Node. |
 | `bundle.mjs` | A token root flattened into one JSON file. Also importable. |
 | `dry-run.mjs` | The harness. |

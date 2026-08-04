@@ -54,6 +54,7 @@ import type {
   Plan,
   PlanValue,
   Problem,
+  ProjectedVariable,
   Skip,
   Snapshot,
   SnapshotCollection,
@@ -551,6 +552,23 @@ export function planSync(bundle: TokenBundle, snapshot: Snapshot): Plan {
 
   return {
     collections: collectionSummaries,
+    // Everything the projection intends to exist, in collection order, so that
+    // a reader of this plan — the proof sheet — documents exactly what the sync
+    // writes without classifying anything a second time.
+    projected: orderedCollections.reduce<ProjectedVariable[]>(
+      (list, collection) =>
+        list.concat(
+          (desiredByCollection.get(collection.name) || []).map((variable) => ({
+            token: variable.token,
+            name: variable.name,
+            collection: variable.collection,
+            type: variable.type,
+            dtcgType: effectiveType(variable.token, set.base),
+            description: variable.description,
+          })),
+        ),
+      [],
+    ),
     actions,
     errors,
     warnings,
@@ -607,9 +625,11 @@ export function describeToken(node: TokenNode): string {
  *
  * Apply re-plans against the live document and refuses if the signature has
  * moved: the diff the user confirmed has to be the diff that gets written, or
- * the confirmation meant nothing.
+ * the confirmation meant nothing. The proof sheet uses the same digest over its
+ * own action list, which is why this takes any list rather than only this
+ * file's.
  */
-export function signatureOf(actions: Action[]): string {
+export function signatureOf(actions: unknown[]): string {
   const text = JSON.stringify(actions);
   let hash = 0x811c9dc5;
   for (let i = 0; i < text.length; i += 1) {

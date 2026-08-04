@@ -891,6 +891,22 @@
     ).length;
     return {
       collections: collectionSummaries,
+      // Everything the projection intends to exist, in collection order, so that
+      // a reader of this plan — the proof sheet — documents exactly what the sync
+      // writes without classifying anything a second time.
+      projected: orderedCollections.reduce(
+        (list, collection) => list.concat(
+          (desiredByCollection.get(collection.name) || []).map((variable) => ({
+            token: variable.token,
+            name: variable.name,
+            collection: variable.collection,
+            type: variable.type,
+            dtcgType: effectiveType(variable.token, set.base),
+            description: variable.description
+          }))
+        ),
+        []
+      ),
       actions,
       errors,
       warnings,
@@ -934,6 +950,450 @@
   }
   function isApplicable(plan) {
     return plan.errors.length === 0;
+  }
+
+  // src/core/sheet.ts
+  var SHEET_PAGE_NAME = "Token proof sheet";
+  var UNGROUPED = "ungrouped";
+  var HEADING_NODE = "Heading";
+  var LABEL_NODE = "Label";
+  var SPECIMEN_NODE = "Specimen";
+  var FRAME_WIDTH = 1200;
+  var FRAME_GAP = 120;
+  var SWATCH = 64;
+  var BAR_HEIGHT = 24;
+  var BAR_WIDTH = 240;
+  var TITLE_SIZE = 24;
+  var SECTION_SIZE = 16;
+  var GROUP_SIZE = 12;
+  var LABEL_SIZE = 11;
+  var RADIUS_GROUPS = ["radius", "radii", "corner", "corners", "rounding"];
+  function renderingFor(variable) {
+    const group = groupOf(variable.name);
+    if (variable.type === "COLOR") {
+      return {
+        kind: "RECTANGLE",
+        field: "fill",
+        reason: "a colour is a fill",
+        props: { width: SWATCH, height: SWATCH, cornerRadius: 4 }
+      };
+    }
+    if (variable.type === "BOOLEAN") {
+      return {
+        kind: "RECTANGLE",
+        field: "visible",
+        reason: "visibility is Figma's one bindable boolean property",
+        props: { width: SWATCH, height: BAR_HEIGHT }
+      };
+    }
+    if (variable.type === "STRING") {
+      if (variable.dtcgType === "fontFamily") {
+        return {
+          kind: "TEXT",
+          field: "fontFamily",
+          reason: "the specimen renders in the family the token names",
+          props: { fontSize: TITLE_SIZE },
+          text: variable.name
+        };
+      }
+      return {
+        kind: "TEXT",
+        field: "characters",
+        reason: "the text content is the value itself",
+        props: { fontSize: SECTION_SIZE }
+      };
+    }
+    if (variable.dtcgType === "fontWeight") {
+      return {
+        kind: "TEXT",
+        field: "fontWeight",
+        reason: "the specimen renders at the weight the token names",
+        props: { fontSize: TITLE_SIZE },
+        text: variable.name
+      };
+    }
+    if (variable.dtcgType === "number") {
+      return {
+        kind: "RECTANGLE",
+        field: "height",
+        reason: "a unitless multiplier has no natural geometry; drawn as a thickness, a value near 1 still renders as a line",
+        props: { width: BAR_WIDTH }
+      };
+    }
+    if (variable.dtcgType === "dimension" && RADIUS_GROUPS.indexOf(group) !== -1) {
+      return {
+        kind: "RECTANGLE",
+        field: "cornerRadius",
+        reason: "a radius only reads as itself on a corner",
+        props: { width: SWATCH, height: SWATCH }
+      };
+    }
+    return {
+      kind: "RECTANGLE",
+      field: "width",
+      reason: "a length drawn as a length",
+      props: { height: BAR_HEIGHT }
+    };
+  }
+  function groupOf(figmaVariableName) {
+    const slash = figmaVariableName.indexOf("/");
+    return slash === -1 ? UNGROUPED : figmaVariableName.slice(0, slash);
+  }
+  function combinationsOf(plan) {
+    const dimensions = plan.collections.filter((c) => c.origin === "dimension");
+    const layers = plan.collections.filter((c) => c.origin !== "dimension");
+    let rows = [{ label: [], modes: {} }];
+    for (const dimension of dimensions) {
+      const next = [];
+      for (const row of rows) {
+        for (const mode of dimension.modes) {
+          const modes = {};
+          for (const key2 of Object.keys(row.modes)) modes[key2] = row.modes[key2];
+          modes[dimension.name] = mode;
+          next.push({ label: row.label.concat(`${dimension.name} ${mode}`), modes });
+        }
+      }
+      rows = next;
+    }
+    return rows.map((row) => {
+      const modes = {};
+      for (const key2 of Object.keys(row.modes)) modes[key2] = row.modes[key2];
+      for (const layer of layers) modes[layer.name] = layer.modes[0];
+      return {
+        // A token root with no mode dimensions still gets one frame; naming it
+        // after the thing it is not would be worse than naming it after what it
+        // is, which is every mode there is.
+        label: row.label.length > 0 ? row.label.join(" / ") : "all modes",
+        modes
+      };
+    });
+  }
+  function planSheet(bundle, snapshot, sheet) {
+    const errors = [];
+    const warnings = [];
+    const sync = planSync(bundle, snapshot);
+    for (const problem of sync.errors) {
+      errors.push(__spreadProps(__spreadValues({}, problem), {
+        message: `${problem.message} (the sheet documents the sync's projection, so it cannot be built while that projection has errors)`
+      }));
+    }
+    const combinations = combinationsOf(sync);
+    const specimens = [];
+    const fonts = [];
+    const liveVariables = /* @__PURE__ */ new Map();
+    for (const variable of snapshot.variables) {
+      const collectionName = snapshot.collections.filter((c) => c.id === variable.collectionId)[0];
+      if (!collectionName) continue;
+      const values = [];
+      for (const modeId of Object.keys(variable.valuesByMode)) {
+        const value = variable.valuesByMode[modeId];
+        if (value.kind === "STRING") values.push(value.value);
+      }
+      liveVariables.set(`${collectionName.name}\0${variable.name}`, { type: variable.resolvedType, values });
+    }
+    const missing = [];
+    const documented = [];
+    for (const variable of sync.projected) {
+      const live = liveVariables.get(`${variable.collection}\0${variable.name}`);
+      if (!live) {
+        missing.push(`${variable.collection}/${variable.name}`);
+        continue;
+      }
+      if (live.type !== variable.type) {
+        errors.push({
+          code: "sheet-variable-type",
+          token: variable.token,
+          collection: variable.collection,
+          message: `"${variable.name}" is ${live.type} in this file but the token projects to ${variable.type}. Fix the sync before documenting it.`
+        });
+        continue;
+      }
+      documented.push(variable);
+      const rendering = renderingFor(variable);
+      specimens.push({
+        token: variable.token,
+        collection: variable.collection,
+        name: variable.name,
+        group: groupOf(variable.name),
+        type: variable.type,
+        dtcgType: variable.dtcgType,
+        kind: rendering.kind,
+        field: rendering.field,
+        reason: rendering.reason
+      });
+      if (rendering.field === "fontFamily") {
+        for (const family of live.values) if (fonts.indexOf(family) === -1) fonts.push(family);
+      }
+    }
+    if (missing.length > 0) {
+      errors.push({
+        code: "sheet-variable-missing",
+        message: `${missing.length} variable(s) the sheet documents are not in this file \u2014 for example ${missing.slice(0, 3).join(", ")}. The sheet binds variables; it does not create them. Run the sync first, then generate the sheet.`
+      });
+    }
+    const page = {
+      name: SHEET_PAGE_NAME,
+      kind: "FRAME",
+      props: {},
+      bindings: {},
+      explicitModes: {},
+      children: []
+    };
+    combinations.forEach((combination, index) => {
+      const frame = {
+        name: combination.label,
+        kind: "FRAME",
+        props: {
+          x: index * (FRAME_WIDTH + FRAME_GAP),
+          y: 0,
+          width: FRAME_WIDTH,
+          layoutMode: "VERTICAL",
+          itemSpacing: 32,
+          padding: 32,
+          counterAxisAlignItems: "MIN"
+        },
+        bindings: {},
+        explicitModes: combination.modes,
+        children: [heading(combination.label, TITLE_SIZE)]
+      };
+      for (const collection of sync.collections) {
+        const members = documented.filter((v) => v.collection === collection.name);
+        if (members.length === 0) continue;
+        const section = {
+          name: collection.name,
+          kind: "FRAME",
+          props: { layoutMode: "VERTICAL", itemSpacing: 20, padding: 0, counterAxisAlignItems: "MIN" },
+          bindings: {},
+          explicitModes: {},
+          children: [heading(`${collection.name} (${collection.modes.join(", ")})`, SECTION_SIZE)]
+        };
+        const groups = [];
+        for (const member of members) {
+          const group = groupOf(member.name);
+          if (groups.indexOf(group) === -1) groups.push(group);
+        }
+        for (const group of groups) {
+          const groupFrame = {
+            name: group,
+            kind: "FRAME",
+            props: { layoutMode: "VERTICAL", itemSpacing: 8, padding: 0, counterAxisAlignItems: "MIN" },
+            bindings: {},
+            explicitModes: {},
+            children: [heading(group, GROUP_SIZE)]
+          };
+          for (const member of members) {
+            if (groupOf(member.name) !== group) continue;
+            const rendering = renderingFor(member);
+            const binding = { collection: member.collection, name: member.name };
+            const specimen = {
+              name: SPECIMEN_NODE,
+              kind: rendering.kind,
+              props: rendering.props,
+              bindings: { [rendering.field]: binding },
+              explicitModes: {},
+              children: []
+            };
+            if (rendering.text !== void 0) specimen.text = rendering.text;
+            groupFrame.children.push({
+              name: member.name,
+              kind: "FRAME",
+              props: { layoutMode: "HORIZONTAL", itemSpacing: 16, padding: 0, counterAxisAlignItems: "CENTER" },
+              bindings: {},
+              explicitModes: {},
+              children: [
+                specimen,
+                // The one unbound thing on the sheet, and the only thing that can
+                // be: a name is not a value, so it cannot go stale.
+                { name: LABEL_NODE, kind: "TEXT", props: { fontSize: LABEL_SIZE }, text: member.name, bindings: {}, explicitModes: {}, children: [] }
+              ]
+            });
+          }
+          section.children.push(groupFrame);
+        }
+        frame.children.push(section);
+      }
+      page.children.push(frame);
+    });
+    checkSiblingNames(page, [], errors);
+    const actions = [];
+    const orphans = [];
+    if (!sheet.page) actions.push({ op: "create-page", page: SHEET_PAGE_NAME });
+    diffNode(page, sheet.page, [], actions, orphans, errors);
+    const creates = actions.filter((a) => a.op === "create-page" || a.op === "create-node").length;
+    return {
+      page: SHEET_PAGE_NAME,
+      combinations,
+      specimens,
+      actions,
+      errors,
+      warnings,
+      skipped: sync.skipped,
+      orphans,
+      fonts,
+      signature: signatureOf(actions),
+      stats: {
+        variablesDocumented: documented.length,
+        nodesPlanned: countNodes(page) - 1,
+        creates,
+        updates: actions.length - creates
+      }
+    };
+  }
+  function heading(text, fontSize) {
+    return {
+      name: HEADING_NODE,
+      kind: "TEXT",
+      props: { fontSize },
+      text,
+      bindings: {},
+      explicitModes: {},
+      children: []
+    };
+  }
+  function countNodes(node) {
+    return node.children.reduce((total, child) => total + countNodes(child), 1);
+  }
+  function checkSiblingNames(node, path, errors) {
+    const seen = [];
+    for (const child of node.children) {
+      if (seen.indexOf(child.name) !== -1) {
+        errors.push({
+          code: "sheet-duplicate-name",
+          message: `Two nodes named "${child.name}" would be siblings under ${path.length === 0 ? "the page" : path.join(" / ")}. Find-or-create matches on name, so this cannot be built.`
+        });
+      }
+      seen.push(child.name);
+      checkSiblingNames(child, path.concat(child.name), errors);
+    }
+  }
+  function diffNode(desired, current, path, actions, orphans, errors) {
+    if (current && path.length > 0 && current.kind !== desired.kind) {
+      errors.push({
+        code: "sheet-kind-conflict",
+        message: `"${path.join(" / ")}" already exists as a ${current.kind} but the sheet needs a ${desired.kind}. A node's type cannot be changed and this plugin does not delete \u2014 remove it in Figma and run again.`
+      });
+      return;
+    }
+    if (path.length > 0 && !current) {
+      actions.push({ op: "create-node", path, kind: desired.kind });
+    }
+    for (const prop of orderProps(Object.keys(desired.props))) {
+      const to = desired.props[prop];
+      const from = current && Object.prototype.hasOwnProperty.call(current.props, prop) ? current.props[prop] : null;
+      if (!samePropValue(from, to)) actions.push({ op: "set-prop", path, prop, from, to });
+    }
+    if (desired.text !== void 0) {
+      const from = current && current.text !== void 0 ? current.text : null;
+      if (from !== desired.text) actions.push({ op: "set-text", path, from, to: desired.text });
+    }
+    for (const field of Object.keys(desired.bindings).sort()) {
+      const to = desired.bindings[field];
+      const from = current && current.bindings[field] ? current.bindings[field] : null;
+      if (!from || from.collection !== to.collection || from.name !== to.name) {
+        actions.push({ op: "bind", path, field, from, to });
+      }
+    }
+    for (const collection of Object.keys(desired.explicitModes).sort()) {
+      const to = desired.explicitModes[collection];
+      const from = current && current.explicitModes[collection] ? current.explicitModes[collection] : null;
+      if (from !== to) actions.push({ op: "set-explicit-mode", path, collection, from, to });
+    }
+    const currentByName = /* @__PURE__ */ new Map();
+    if (current) for (const child of current.children) currentByName.set(child.name, child);
+    const desiredNames = [];
+    for (const child of desired.children) {
+      desiredNames.push(child.name);
+      diffNode(child, currentByName.get(child.name) || null, path.concat(child.name), actions, orphans, errors);
+    }
+    if (current) {
+      for (const child of current.children) {
+        if (desiredNames.indexOf(child.name) !== -1) continue;
+        orphans.push({
+          path: path.concat(child.name),
+          kind: child.kind,
+          note: "nothing in the token source produces this node; reported, not deleted"
+        });
+      }
+    }
+  }
+  var PROP_ORDER = [
+    "layoutMode",
+    "itemSpacing",
+    "padding",
+    "counterAxisAlignItems",
+    "width",
+    "height",
+    "cornerRadius",
+    "fontSize",
+    "x",
+    "y"
+  ];
+  function orderProps(props) {
+    const known = PROP_ORDER.filter((prop) => props.indexOf(prop) !== -1);
+    return known.concat(props.filter((prop) => PROP_ORDER.indexOf(prop) === -1));
+  }
+  function samePropValue(a, b) {
+    if (a === null || b === null) return a === b;
+    if (typeof a === "number" && typeof b === "number") return Math.abs(a - b) < 1e-6;
+    return a === b;
+  }
+  function isSheetApplicable(plan) {
+    return plan.errors.length === 0;
+  }
+
+  // src/core/sheet-apply.ts
+  function applySheet(plan, adapter) {
+    const failures = [];
+    let applied = 0;
+    const idByPath = /* @__PURE__ */ new Map();
+    const snapshot = adapter.readSheet();
+    const record = (node, path) => {
+      idByPath.set(keyOf(path), node.id);
+      for (const child of node.children) record(child, path.concat(child.name));
+    };
+    if (snapshot.page) record(snapshot.page, []);
+    const idFor = (path) => {
+      const id = idByPath.get(keyOf(path));
+      if (!id) throw new Error(`"${path.length === 0 ? "(page)" : path.join(" / ")}" was expected to exist by now`);
+      return id;
+    };
+    for (const action of plan.actions) {
+      try {
+        switch (action.op) {
+          case "create-page": {
+            idByPath.set(keyOf([]), adapter.createPage(action.page));
+            break;
+          }
+          case "create-node": {
+            const parent = idFor(action.path.slice(0, -1));
+            const id = adapter.createNode(parent, action.kind, action.path[action.path.length - 1]);
+            idByPath.set(keyOf(action.path), id);
+            break;
+          }
+          case "set-prop":
+            adapter.setProp(idFor(action.path), action.prop, action.to);
+            break;
+          case "set-text":
+            adapter.setText(idFor(action.path), action.to);
+            break;
+          case "bind":
+            adapter.bind(idFor(action.path), action.field, action.to.collection, action.to.name);
+            break;
+          case "set-explicit-mode":
+            adapter.setExplicitMode(idFor(action.path), action.collection, action.to);
+            break;
+          default:
+            break;
+        }
+        applied += 1;
+      } catch (error) {
+        failures.push({ action, message: error instanceof Error ? error.message : String(error) });
+      }
+    }
+    return { applied, failures };
+  }
+  function keyOf(path) {
+    return path.join("\0");
   }
 
   // src/figma-adapter.ts
@@ -1049,9 +1509,268 @@
       return found;
     }
   };
+  var DEFAULT_FONT = { family: "Inter", style: "Regular" };
+  async function captureSheetSnapshot(pageName, variables) {
+    await figma.loadAllPagesAsync();
+    const page = figma.root.children.filter((child) => child.name === pageName)[0];
+    if (!page) return { page: null };
+    const variableById = /* @__PURE__ */ new Map();
+    const collectionNameById = /* @__PURE__ */ new Map();
+    for (const collection of variables.collections) collectionNameById.set(collection.id, collection.name);
+    for (const variable of variables.variables) {
+      const collection = collectionNameById.get(variable.collectionId);
+      if (collection) variableById.set(variable.id, { collection, name: variable.name });
+    }
+    const modeNameById = /* @__PURE__ */ new Map();
+    for (const collection of variables.collections) {
+      for (const mode of collection.modes) modeNameById.set(`${collection.id}\0${mode.id}`, mode.name);
+    }
+    const root = {
+      id: page.id,
+      name: page.name,
+      kind: "FRAME",
+      props: {},
+      bindings: {},
+      explicitModes: {},
+      children: page.children.map((child) => readNode(child, variableById, collectionNameById, modeNameById))
+    };
+    return { page: root };
+  }
+  function readNode(node, variableById, collectionNameById, modeNameById) {
+    const kind = node.type === "TEXT" ? "TEXT" : node.type === "RECTANGLE" ? "RECTANGLE" : "FRAME";
+    const props = { x: node.x, y: node.y, width: node.width, height: node.height };
+    const asFrame = node;
+    if (node.type === "FRAME") {
+      props.layoutMode = asFrame.layoutMode;
+      props.itemSpacing = asFrame.itemSpacing;
+      props.padding = asFrame.paddingTop;
+      props.counterAxisAlignItems = asFrame.counterAxisAlignItems;
+    }
+    if (node.type === "RECTANGLE" || node.type === "FRAME") {
+      const radius = node.cornerRadius;
+      if (typeof radius === "number") props.cornerRadius = radius;
+    }
+    const out = {
+      id: node.id,
+      name: node.name,
+      kind,
+      props,
+      bindings: readBindings(node, variableById),
+      explicitModes: readExplicitModes(node, collectionNameById, modeNameById),
+      children: []
+    };
+    if (node.type === "TEXT") {
+      const size = node.fontSize;
+      if (typeof size === "number") out.props.fontSize = size;
+      out.text = node.characters;
+    }
+    if ("children" in node) {
+      out.children = node.children.map(
+        (child) => readNode(child, variableById, collectionNameById, modeNameById)
+      );
+    }
+    return out;
+  }
+  function readBindings(node, variableById) {
+    const bound = node.boundVariables;
+    const out = {};
+    if (!bound) return out;
+    const single = (field, alias) => {
+      if (!alias) return;
+      const target = variableById.get(alias.id);
+      if (target) out[field] = target;
+    };
+    const first = (field, aliases) => {
+      if (!aliases || aliases.length === 0) return;
+      const target = variableById.get(aliases[0].id);
+      if (target) out[field] = target;
+    };
+    first("fill", bound.fills);
+    single("width", bound.width);
+    single("height", bound.height);
+    single("visible", bound.visible);
+    single("characters", bound.characters);
+    single("cornerRadius", bound.cornerRadius || bound.topLeftRadius);
+    first("fontFamily", bound.fontFamily);
+    first("fontWeight", bound.fontWeight);
+    return out;
+  }
+  function readExplicitModes(node, collectionNameById, modeNameById) {
+    const out = {};
+    const explicit = node.explicitVariableModes;
+    if (!explicit) return out;
+    for (const collectionId of Object.keys(explicit)) {
+      const collection = collectionNameById.get(collectionId);
+      const mode = modeNameById.get(`${collectionId}\0${explicit[collectionId]}`);
+      if (collection && mode) out[collection] = mode;
+    }
+    return out;
+  }
+  var FigmaNodes = class _FigmaNodes {
+    constructor(snapshot, collections, variables) {
+      this.snapshot = snapshot;
+      this.collections = collections;
+      this.variables = variables;
+      this.nodes = /* @__PURE__ */ new Map();
+    }
+    /**
+     * Load the document, and every font the sheet is going to need.
+     *
+     * Figma refuses to bind a font family it has not loaded and refuses to set
+     * text on a node whose font is not loaded, and both of those are async while
+     * applying a plan is not. So the families the plan names are loaded here,
+     * up front, in every style the running Figma actually has for them — asking
+     * Figma which styles exist beats guessing at style names.
+     */
+    static async create(pageName, variables, families) {
+      await figma.loadFontAsync(DEFAULT_FONT);
+      const wanted = [DEFAULT_FONT.family].concat(families.filter((family) => family !== DEFAULT_FONT.family));
+      const available = await figma.listAvailableFontsAsync();
+      for (const font of available) {
+        if (wanted.indexOf(font.fontName.family) === -1) continue;
+        try {
+          await figma.loadFontAsync(font.fontName);
+        } catch (e) {
+        }
+      }
+      const sheet = await captureSheetSnapshot(pageName, variables);
+      const collections = await figma.variables.getLocalVariableCollectionsAsync();
+      const locals = await figma.variables.getLocalVariablesAsync();
+      const adapter = new _FigmaNodes(sheet, collections, locals);
+      adapter.index(pageName);
+      return adapter;
+    }
+    /**
+     * Hold on to the real nodes behind the snapshot's ids.
+     *
+     * `documentAccess: dynamic-page` has no synchronous lookup by id, and
+     * applying a plan is synchronous — so the nodes are collected here, right
+     * after `loadAllPagesAsync` has made them reachable, rather than looked up
+     * one at a time later.
+     */
+    index(pageName) {
+      const page = figma.root.children.filter((child) => child.name === pageName)[0];
+      if (!page) return;
+      this.nodes.set(page.id, page);
+      const walk = (node) => {
+        this.nodes.set(node.id, node);
+        if ("children" in node) for (const child of node.children) walk(child);
+      };
+      for (const child of page.children) walk(child);
+    }
+    readSheet() {
+      return this.snapshot;
+    }
+    createPage(name) {
+      const page = figma.createPage();
+      page.name = name;
+      this.nodes.set(page.id, page);
+      return page.id;
+    }
+    createNode(parentId, kind, name) {
+      const parent = this.node(parentId);
+      const node = kind === "TEXT" ? figma.createText() : kind === "RECTANGLE" ? figma.createRectangle() : figma.createFrame();
+      node.name = name;
+      parent.appendChild(node);
+      this.nodes.set(node.id, node);
+      return node.id;
+    }
+    setProp(nodeId, prop, value) {
+      const node = this.node(nodeId);
+      switch (prop) {
+        case "x":
+          node.x = value;
+          return;
+        case "y":
+          node.y = value;
+          return;
+        case "width":
+        case "height": {
+          const frame = node;
+          if (node.type === "FRAME" && frame.layoutMode !== "NONE") {
+            const primaryIsVertical = frame.layoutMode === "VERTICAL";
+            const axisIsPrimary = prop === "height" ? primaryIsVertical : !primaryIsVertical;
+            if (axisIsPrimary) frame.primaryAxisSizingMode = "FIXED";
+            else frame.counterAxisSizingMode = "FIXED";
+          }
+          const width = prop === "width" ? value : node.width;
+          const height = prop === "height" ? value : node.height;
+          node.resize(Math.max(width, 0.01), Math.max(height, 0.01));
+          return;
+        }
+        case "cornerRadius":
+          node.cornerRadius = value;
+          return;
+        case "fontSize":
+          node.fontSize = value;
+          return;
+        case "layoutMode": {
+          const frame = node;
+          frame.layoutMode = value;
+          frame.primaryAxisSizingMode = "AUTO";
+          frame.counterAxisSizingMode = "AUTO";
+          return;
+        }
+        case "itemSpacing":
+          node.itemSpacing = value;
+          return;
+        case "padding": {
+          const frame = node;
+          frame.paddingTop = value;
+          frame.paddingRight = value;
+          frame.paddingBottom = value;
+          frame.paddingLeft = value;
+          return;
+        }
+        case "counterAxisAlignItems":
+          node.counterAxisAlignItems = value;
+          return;
+        default:
+          throw new Error(`"${prop}" is not a property this plugin sets`);
+      }
+    }
+    setText(nodeId, characters) {
+      this.node(nodeId).characters = characters;
+    }
+    bind(nodeId, field, collection, name) {
+      const node = this.node(nodeId);
+      const variable = this.variable(collection, name);
+      if (field === "fill") {
+        const paint = figma.variables.setBoundVariableForPaint(
+          { type: "SOLID", color: { r: 0, g: 0, b: 0 }, opacity: 1 },
+          "color",
+          variable
+        );
+        node.fills = [paint];
+        return;
+      }
+      node.setBoundVariable(field, variable);
+    }
+    setExplicitMode(nodeId, collection, mode) {
+      const node = this.node(nodeId);
+      const found = this.collections.filter((c) => c.name === collection)[0];
+      if (!found) throw new Error(`no collection named "${collection}"`);
+      const modeId = found.modes.filter((m) => m.name === mode)[0];
+      if (!modeId) throw new Error(`collection "${collection}" has no mode named "${mode}"`);
+      node.setExplicitVariableModeForCollection(found, modeId.modeId);
+    }
+    node(id) {
+      const cached = this.nodes.get(id);
+      if (!cached) throw new Error(`node ${id} is not loaded`);
+      return cached;
+    }
+    variable(collection, name) {
+      const found = this.collections.filter((c) => c.name === collection)[0];
+      if (!found) throw new Error(`no collection named "${collection}"`);
+      const variable = this.variables.filter((v) => v.variableCollectionId === found.id && v.name === name)[0];
+      if (!variable) throw new Error(`no variable "${name}" in collection "${collection}"`);
+      return variable;
+    }
+  };
 
   // src/code.ts
   var pending = null;
+  var pendingSheet = null;
   figma.showUI(__html__, { width: 720, height: 640, themeColors: true });
   figma.ui.onmessage = async (message) => {
     try {
@@ -1101,6 +1820,58 @@
         });
         figma.notify(
           result.failures.length === 0 ? `Sync complete \u2014 ${result.applied} change${result.applied === 1 ? "" : "s"} written.` : `Sync finished with ${result.failures.length} failure${result.failures.length === 1 ? "" : "s"}.`
+        );
+        return;
+      }
+      if (message.type === "preview-sheet") {
+        const snapshot = await captureSnapshot();
+        const sheet = await captureSheetSnapshot(SHEET_PAGE_NAME, snapshot);
+        const plan = planSheet(message.bundle, snapshot, sheet);
+        pendingSheet = { bundle: message.bundle, plan };
+        figma.ui.postMessage({ type: "sheet-plan", plan });
+        return;
+      }
+      if (message.type === "apply-sheet") {
+        if (!pendingSheet) {
+          figma.ui.postMessage({ type: "error", message: "Nothing to build. Preview the sheet first." });
+          return;
+        }
+        if (!isSheetApplicable(pendingSheet.plan)) {
+          figma.ui.postMessage({
+            type: "error",
+            message: "This sheet plan has errors. A half-drawn sheet documents nothing \u2014 fix the source, or run the sync first, and preview again."
+          });
+          return;
+        }
+        const snapshot = await captureSnapshot();
+        const adapter = await FigmaNodes.create(SHEET_PAGE_NAME, snapshot, pendingSheet.plan.fonts);
+        const fresh = planSheet(pendingSheet.bundle, snapshot, adapter.readSheet());
+        if (fresh.signature !== message.signature) {
+          pendingSheet = { bundle: pendingSheet.bundle, plan: fresh };
+          figma.ui.postMessage({
+            type: "sheet-stale",
+            message: "The document changed since the preview. Here is the current diff \u2014 review it and confirm again.",
+            plan: fresh
+          });
+          return;
+        }
+        const result = applySheet(fresh, adapter);
+        const afterSnapshot = await captureSnapshot();
+        const after = planSheet(
+          pendingSheet.bundle,
+          afterSnapshot,
+          await captureSheetSnapshot(SHEET_PAGE_NAME, afterSnapshot)
+        );
+        pendingSheet = { bundle: pendingSheet.bundle, plan: after };
+        figma.ui.postMessage({
+          type: "sheet-applied",
+          applied: result.applied,
+          failures: result.failures.map((f) => ({ message: f.message, action: f.action })),
+          remaining: after.actions.length,
+          plan: after
+        });
+        figma.notify(
+          result.failures.length === 0 ? `Proof sheet built \u2014 ${result.applied} change${result.applied === 1 ? "" : "s"} written.` : `Proof sheet finished with ${result.failures.length} failure${result.failures.length === 1 ? "" : "s"}.`
         );
         return;
       }
