@@ -30,12 +30,12 @@ Do not fix `broken/`. Its defects are the test.
 
 ## `pairs/` — declarations, not values
 
-Two alternative pairs files for `check-contrast.mjs`, both pointed at `valid/`
+Three alternative pairs files for `check-contrast.mjs`, all pointed at `valid/`
 with `--pairs`. They live outside both token roots on purpose: every `.json`
 under a subdirectory of a root is loaded as a token document, so a pairs fixture
 filed inside one would be read back as tokens.
 
-Nothing in either is about arithmetic — every pairing they name is one of
+Nothing in any of them is about arithmetic — every pairing they name is one of
 `valid/pairs.json`'s, and the ratios are the ones already asserted elsewhere.
 What they exercise is the *declaration*: which combinations a pairing is checked
 in, and what happens when the answer is none.
@@ -46,6 +46,11 @@ in, and what happens when the answer is none.
   looked at.
 - `unknown-mode.json` — a mode id misspelt on a pair and another on an
   exception. Do not correct the spellings; they are the test.
+- `missing-kind.json` — one exception with no `"kind"` and one with a kind
+  outside the vocabulary. Both are errors, because the field is required rather
+  than defaulted: a default would silently enrol every unlabelled waiver in
+  whichever population it named, and the population counts are what decision
+  010's revisit trigger reads. Do not add the missing kinds; they are the test.
 
 ## `targets/` — a floor read in every combination
 

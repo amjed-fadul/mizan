@@ -16,6 +16,7 @@
     {
       "foreground": "border.default",
       "background": "surface.default",
+      "kind": "palette",
       "reason": "Fixture only. This pair passes; the entry exists to prove that an exception is reported prominently even when it is not currently rescuing anything."
     }
   ]

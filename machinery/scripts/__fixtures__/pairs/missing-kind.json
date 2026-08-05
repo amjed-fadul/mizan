@@ -1,0 +1,36 @@
+{
+  "$description": "Fixture only, for check-contrast.mjs against valid/. Two exceptions: one declares no \"kind\" at all, the other declares one that is not on the list. Both are errors. Decision 019 granted the first exceptions in the system and noted that decision 010 watches the exception count as its trigger for reworking the palette — a count that folds composite parts in with palette failures measures nothing, so the kind is required rather than defaulted. Defaulting it would be worse than omitting it: every unlabelled exception would silently join whichever bucket the default named. Do not add the missing kinds — they are the test.",
+  "pairs": [
+    {
+      "foreground": "text.primary",
+      "background": "surface.default",
+      "context": "text",
+      "$description": "Sound, and here so the run still has something to check — a file in which nothing is evaluated would prove the errors were raised without proving the rest of the gate kept working."
+    },
+    {
+      "foreground": "border.default",
+      "background": "surface.default",
+      "context": "ui",
+      "$description": "The pair the first exception below waives."
+    },
+    {
+      "foreground": "text.secondary",
+      "background": "surface.default",
+      "context": "text",
+      "$description": "The pair the second exception below waives."
+    }
+  ],
+  "exceptions": [
+    {
+      "foreground": "border.default",
+      "background": "surface.default",
+      "reason": "Fixture only. A complete, well-argued exception with a stated reason and no kind. This is the shape every exception in the system had before the field existed, which is exactly why it has to be rejected rather than accepted with an assumed default — the file cannot be read as though the author had chosen."
+    },
+    {
+      "foreground": "text.secondary",
+      "background": "surface.default",
+      "kind": "cosmetic",
+      "reason": "Fixture only. A kind outside the vocabulary. Only \"palette\" and \"composite\" mean anything to decision 010's watch signal, and a third word invented at the point of use would be counted as neither."
+    }
+  ]
+}

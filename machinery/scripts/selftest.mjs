@@ -58,6 +58,7 @@ const FIGMA_ALIGNED = join(FIXTURES, 'figma', 'aligned.json');
 const FIGMA_DRIFTED = join(FIXTURES, 'figma', 'drifted.json');
 const PAIRS_MODE_SCOPES = join(FIXTURES, 'pairs', 'mode-scopes.json');
 const PAIRS_UNKNOWN_MODE = join(FIXTURES, 'pairs', 'unknown-mode.json');
+const PAIRS_MISSING_KIND = join(FIXTURES, 'pairs', 'missing-kind.json');
 const FIGMA_MODE_DELETED = join(FIXTURES, 'figma', 'mode-deleted.json');
 const FIGMA_DIMENSION_FLATTENED = join(FIXTURES, 'figma', 'dimension-flattened.json');
 const TARGETS_ROOT = join(FIXTURES, 'targets', 'tokens');
@@ -310,6 +311,57 @@ assert(unknownCodes.has('exception-mode-unknown'),
 assert((unknownMode.payload?.results ?? []).length === 4,
   'pair scopes: while the sound pair in the same file is still checked in all four combinations — one bad id does not take the run with it',
   JSON.stringify((unknownMode.payload?.results ?? []).map((r) => r.modeLabel)));
+
+/* ------------------------------------------------------------------ *
+ * Exception kinds — decision 019's owed field, and why it is required
+ *
+ * Decision 010's revisit trigger is a COUNT of exceptions. Decision 019 then
+ * granted the first two, both of them parts of one two-tone focus indicator,
+ * and observed that the trigger had stopped measuring what it was written to
+ * measure. The field separates the two populations; these assertions are what
+ * stop it from being optional, because an optional label on half the entries
+ * produces a count that is wrong in a new way rather than a way anybody noticed.
+ * ------------------------------------------------------------------ */
+
+process.stdout.write('\nException kinds: a waiver states which population it belongs to, or it is not a waiver\n');
+
+const missingKind = run('check-contrast.mjs', ['--root', VALID, '--pairs', PAIRS_MISSING_KIND]);
+const kindCodes = codes(missingKind.payload?.errors);
+const kindErrors = (missingKind.payload?.errors ?? []).filter((e) => e.code === 'exception-missing-kind');
+
+assert(missingKind.status === 1 && kindCodes.has('exception-missing-kind'),
+  'exception kinds: an exception with a stated reason and no kind is still an error — the field is required rather than defaulted, because a default would silently enrol every unlabelled waiver in whichever population it named',
+  `exit ${missingKind.status}; ${[...kindCodes].join(', ') || '(no errors)'}`);
+
+assert(kindErrors.length === 2,
+  'exception kinds: and a kind outside the vocabulary is the same error as no kind at all — an invented third word is counted by neither population',
+  `${kindErrors.length} exception-missing-kind error(s), expected 2`);
+
+assert((missingKind.payload?.results ?? []).length === 12,
+  'exception kinds: while all three sound pairs in the same file are still checked in all four combinations — a bad waiver does not take the run with it',
+  `${(missingKind.payload?.results ?? []).length} result(s), expected 12`);
+
+/* The field earns its place only if the split is readable at a glance, which is
+ * the whole of 019's argument: the number 010 watches has to be legible on its
+ * own rather than inferred by subtracting one report from another.
+ *
+ * Asserted against the fixture rather than against content/, because this file
+ * may not know that content/ exists — the valid fixture carries exactly one
+ * exception and it is declared "palette", so the shape of the summary is
+ * provable without a single Mizan token being involved. */
+const kindSplit = spawnSync(process.execPath, [join(SCRIPTS_DIR, 'check-contrast.mjs'), '--root', VALID], { encoding: 'utf8' });
+const kindSplitLine = kindSplit.stdout.split('\n').find((l) => l.startsWith('Result:')) ?? '(no result line)';
+assert(/4 excepted check\(s\) from 1 declaration\(s\) \(1 palette, 0 composite\)/.test(kindSplitLine),
+  'exception kinds: the summary reports the two populations separately, so decision 010\'s trigger can be read without arithmetic',
+  kindSplitLine);
+
+/* The distinction the line above is really protecting. ONE waiver, applying in
+ * four combinations, is four excepted checks — so a split that counted checks
+ * would report "4 palette" for a single decision and fire 010's third-exception
+ * trigger on the first one. The declaration count is the one 010 means. */
+assert(/from 1 declaration\(s\)/.test(kindSplitLine) && /^Result: pass\. 12 check/.test(kindSplitLine),
+  'exception kinds: and it counts decisions rather than the checks they waive — one waiver spanning four combinations is one exception, not four',
+  kindSplitLine);
 
 /* The backstop, which holds however the scope rules are written. `--mode` is a
  * narrowing of the run rather than of the declaration, so it is the one way left
@@ -1551,6 +1603,9 @@ if (failures.length === 0) {
     + 'one stops being true, including the edit no comparison against a source could ever catch; '
     + 'the tap-target gate proven to hold a control step to a size bar in every mode combination — '
     + 'accepting a footprint that clears it everywhere and catching the one a mode drops under it; '
+    + 'every contrast waiver proven to state which population it belongs to, and the two counted '
+    + 'apart by decision rather than by check, so the trigger that watches the palette cannot be '
+    + 'fired by a widened mode scope; '
     + 'and the read bridge proven read-only by construction — one port agreed across four files, '
     + 'a vocabulary of four words none of which is a verb, and a round trip over a real socket.\n'
     + (skipped.length === 0
