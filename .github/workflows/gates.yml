@@ -226,10 +226,34 @@ jobs:
       # passed — Dialog's Escape story asserted a user-agent default action that
       # no dispatched event produces. A check nobody runs is not a weaker check,
       # it is a claim.
+      # NO_COLOR because Vitest writes ANSI escapes even through a pipe, and the
+      # count below is extracted with sed. The first version of this step read
+      # `Tests  58 passed (58)` locally, where the reporter had already dropped
+      # colour, and read nothing at all on a runner — where the same line is
+      # wrapped in escape sequences. Every test passed and the gate failed.
+      #
+      # It failed the RIGHT way, which is the only reason this is a footnote:
+      # an unreadable count is treated as no count and stops the build, rather
+      # than defaulting to zero-is-fine. A floor that cannot find its number and
+      # shrugs is worse than no floor.
+      #
+      # BOTH belts. NO_COLOR asks for a plain log, which is also the log somebody
+      # reads when this fails — and the escapes are stripped before matching
+      # anyway, because NO_COLOR is a convention rather than a guarantee and this
+      # step cannot be tested from a laptop: a local run is not a TTY, so Vitest
+      # emits no colour there whatever you set, and the bug was invisible until
+      # a runner produced it.
+      #
+      # The stripping is what is actually verified. Replaying the exact line the
+      # failing run emitted, the unstripped match returns nothing and the
+      # stripped one returns 58.
       - name: 'Gate 7/7 — npm run check:stories (every story renders, plays and clears axe)'
+        env:
+          NO_COLOR: '1'
         run: |
           npm run check:stories 2>&1 | tee "$RUNNER_TEMP/stories.log"
-          count=$(sed -nE 's/^[[:space:]]*Tests[[:space:]]+([0-9]+) passed \([0-9]+\)$/\1/p' "$RUNNER_TEMP/stories.log" | tail -n 1)
+          count=$(sed -E 's/\x1B\[[0-9;]*[a-zA-Z]//g' "$RUNNER_TEMP/stories.log" \
+            | sed -nE 's/^[[:space:]]*Tests[[:space:]]+([0-9]+) passed.*/\1/p' | tail -n 1)
           echo "stories: ${count:-no} test(s) reported, floor $STORIES_FLOOR"
           if [ -z "$count" ] || [ "$count" -lt "$STORIES_FLOOR" ]; then
             echo "::error title=Gate 7: story count regressed::npm run check:stories reported ${count:-no} passing test(s); the floor is $STORIES_FLOOR. Every story is one test, so a dropped count means a story stopped being discovered or was deleted — coverage falling while the gate stays green. Floors go up with work, never down to pass."
