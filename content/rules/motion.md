@@ -10,7 +10,7 @@ This file is the rule half of decision 021. The token half is `content/tokens/pr
 
 ## Sources
 
-- **WCAG 2.2**, for the two success criteria that govern animation — [2.3.3 Animation from Interactions](https://www.w3.org/WAI/WCAG22/Understanding/animation-from-interactions.html) (Level AAA) and [2.2.2 Pause, Stop, Hide](https://www.w3.org/WAI/WCAG22/Understanding/pause-stop-hide.html) (Level A). Both carry an *essential* exemption, and §4 below turns on it.
+- **WCAG 2.2**, for the two success criteria that govern animation — [2.3.3 Animation from Interactions](https://www.w3.org/WAI/WCAG22/Understanding/animation-from-interactions.html) (Level AAA) and [2.2.2 Pause, Stop, Hide](https://www.w3.org/WAI/WCAG22/Understanding/pause-stop-hide.html) (Level A). Both carry an *essential* exemption. §4 below reads them narrowly: they establish that an exemption of this kind exists, and neither of them names this one.
 - **Emil Kowalski's design-engineering material**, the practitioner source behind the easing-by-question rule in §2 and the "fewer and gentler" reading in §4. Where it disagrees with the token ramp, §1 says so rather than smoothing it over.
 - **Apple's motion guidance**, translated for the web, for the reduced-motion posture in §4 and the additional preference signals recorded as open questions in §6.
 
@@ -65,7 +65,7 @@ This is the rule the file exists for. It is transcribed from decision 021, which
 
 > **Reduced motion means fewer and gentler, never none.** Remove movement and position animations — translates, scales, slides, anything that changes where a thing is or how big it is. Keep opacity and colour transitions, which aid comprehension and carry no motion. Keep indeterminate progress indicators rotating: an indicator that stops indicating reports the wrong system state. Never use the blanket `animation-duration: 0.01ms !important` override — it cannot tell a slide from a spinner, and the spinner is the one case where it is actively harmful.
 
-### Why the spinner is exempt, in the specification's own words
+### Why the spinner is exempt, and what the specifications do and do not say about it
 
 Decision 021 argued this from first principles — *an accessibility feature whose failure mode is lying about whether the app is working is not an accessibility feature* — and **that argument is the one this rule rests on.** The success criteria below are consistent with it. Neither adjudicates it, and an earlier version of this section claimed they did.
 
