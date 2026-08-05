@@ -27,7 +27,8 @@
     "build:storybook": "npm run build:storybook --workspace @mizan/components",
     "figma:bundle": "node machinery/figma-plugin/bundle.mjs",
     "figma:build": "npm --prefix machinery/figma-plugin run build",
-    "figma:dry-run": "npm --prefix machinery/figma-plugin run dry-run"
+    "figma:dry-run": "npm --prefix machinery/figma-plugin run dry-run",
+    "check:stories": "npm run test:stories --workspace @mizan/components"
   },
   "engines": {
     "node": ">=22"

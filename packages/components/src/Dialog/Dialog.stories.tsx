@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, fn, userEvent } from 'storybook/test'
+import { expect, fn, waitFor } from 'storybook/test'
 import { Button } from '../Button'
 import { Dialog } from './Dialog'
 
@@ -176,15 +176,70 @@ export const Acknowledge: Story = {
  * that the box is unpredictable.
  */
 export const EscapeDismisses: Story = {
+  /*
+    A STATEFUL render, and it is the point of the story rather than scaffolding.
+
+    An args-driven version of this story asserts something false. Escape closes
+    the element, the `close` listener reports it through `onDismiss` — and with
+    a mock consumer `open` stays `true`, so the effect that opens the dialog
+    sees `open && !element.open` on the next render and calls `showModal()`
+    again. The dialog reopens in the same frame it closed, and a test that reads
+    `dialog.open` finds `true` and concludes Escape does not work.
+
+    That is correct behaviour for a controlled component and a genuine footgun:
+    a consumer who renders `open` from a constant, or forgets to handle
+    `onDismiss`, gets a modal that cannot be escaped or dismissed at all. The
+    README records it under Constraints; this story is where it is demonstrated.
+  */
+  render: (args) => {
+    const [open, setOpen] = useState(true)
+    return (
+      <Dialog
+        {...args}
+        open={open}
+        onDismiss={() => {
+          args.onDismiss()
+          setOpen(false)
+        }}
+      />
+    )
+  },
   play: async ({ args, step }) => {
-    await step('pressing Escape closes the dialog', async () => {
-      await userEvent.keyboard('{Escape}')
+    /*
+      The platform close is invoked directly, and NOT with
+      `userEvent.keyboard('{Escape}')`. That is not a shortcut — it is the only
+      honest way to test this.
+
+      Closing a `<dialog>` on Escape is a user-agent DEFAULT ACTION of a real
+      key press. A dispatched `keydown` does not carry one, so no synthetic
+      event library can produce it: the element stays open, no `close` fires,
+      and the assertion below fails no matter how correct the component is.
+
+      This story used to press Escape and assert `dialog.open === false`, and
+      it could never have passed. It shipped that way for a whole stage,
+      because nothing ran the play functions — which is the gap
+      `vitest.config.ts` was added to close, and this is the first thing it
+      caught.
+
+      What the component actually owns is the line above: the element closes
+      itself, and this component REPORTS it so the consumer's state cannot
+      drift out of step with the DOM. `element.close()` is exactly what the
+      platform does on Escape, so triggering it tests the component's half and
+      leaves the browser's half to the browser.
+    */
+    await step('when the platform closes the dialog, the consumer is told', async () => {
       const dialog = document.querySelector('dialog')
-      await expect(dialog?.open).toBe(false)
+      await expect(dialog).toBeTruthy()
+      dialog?.close()
+      // `close` is dispatched as a task, so the listener has not run yet at the
+      // point close() returns. Asserting straight after it reads the state
+      // before the component has been told anything.
+      await waitFor(() => expect(args.onDismiss).toHaveBeenCalled())
     })
 
-    await step('and the consumer is told, so its state cannot drift', async () => {
-      await expect(args.onDismiss).toHaveBeenCalled()
+    await step('and because this consumer listens, it stays closed', async () => {
+      const dialog = document.querySelector('dialog')
+      await expect(dialog?.open).toBe(false)
     })
   }
 }
