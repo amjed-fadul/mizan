@@ -11,9 +11,9 @@
   content/rules/rtl-arabic.md §1 records as reading worse than one that did not
   flip at all.
 
-  One written number, the 1px separator and marker, for the seventh time.
-  Still no border-width scale, and this is the last component of the stage to
-  route around its absence.
+  No written numbers. The 1px separator and marker were the seventh and last
+  occurrence of the literal this stage kept routing around; decision 026 turned
+  the count into a scale, and both now resolve from stroke.100.
 */
 
 .mz-nav {
@@ -121,7 +121,7 @@
     would sit above it in a vertical arrangement, and the day this bar becomes a
     sidebar that rule would need rewriting rather than reading.
   */
-  border-block-end: 1px solid var(--action-primary);
+  border-block-end: var(--stroke-100) solid var(--action-primary);
 }
 
 /*
@@ -137,7 +137,7 @@
   under the bidirectional algorithm rather than staying between two things.
 */
 .mz-nav--separators .mz-nav__item + .mz-nav__item {
-  border-inline-start: 1px solid var(--border-default);
+  border-inline-start: var(--stroke-100) solid var(--border-default);
   padding-inline-start: var(--space-200);
 }
 

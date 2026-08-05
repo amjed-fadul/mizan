@@ -16,8 +16,9 @@
   content/tokens/primitive/motion.json, and everything under "the motion" below
   resolves from it.
 
-  Two written numbers remain, both named at the point they are written: the 1px
-  control edge, and the 0.97 of the press scale.
+  One written number remains, named at the point it is written: the 0.97 of the
+  press scale. The 1px control edge was the other one until decision 026 built
+  the stroke scale it had been routed around in seven components.
 */
 
 /* -------------------------------------------------------------- the control */
@@ -47,16 +48,17 @@
   border-style: solid;
 
   /*
-    1px, and it is the one number in this file that is written rather than
-    resolved. There is no border-width scale in content/tokens/ — a hairline is
-    a hairline in every mode, `border.default` and `border.control` are colours
-    and not widths, and decision 019 and packages/tokens/docs/button.md both
-    describe the control edge as "1px" in prose and in their reference CSS. The
-    preview writes it the same way in eight places. Reaching for space.25 here
-    would be a 2px edge chosen because a spacing token happened to be nearby,
-    which is a worse answer than the honest literal. README records it.
+    The control edge. This was a written 1px for four components, on the
+    argument that `border.default` and `border.control` are colours and not
+    widths and that reaching for space.25 would be a 2px edge chosen because a
+    spacing token happened to be nearby. That argument was right about space.25
+    and wrong about the conclusion: the answer to a spacing token being the
+    wrong shape is a stroke scale, not a literal. Decision 026 built one, and
+    stroke.100 is the hairline it is named against. A hairline is still a
+    hairline in every mode — the value does not resolve per product, and that
+    is stated in the token's own description rather than here.
   */
-  border-width: 1px;
+  border-width: var(--stroke-100);
 
   font-family: var(--font-family-sans);
   font-weight: var(--font-weight-medium);
@@ -294,13 +296,14 @@
 /*
   The press.
 
-  0.97 is a written number and it is the second one in this file after the 1px
-  control edge. There is no scale ramp in content/tokens/ — dimension.json holds
-  a space ramp and a radius ramp, both of them lengths — and a fraction of a
-  control's own size is not a length, so no spacing step could carry it even in
-  principle. Named here and recorded in README beside the other gaps, on the
-  same terms as the border width: an honest literal with the gap written down
-  beats a token invented backwards from one component.
+  0.97 is a written number and it is now the only one in this file. There is no
+  scale ramp in content/tokens/ — dimension.json holds a space ramp, a radius
+  ramp and a stroke ramp, all three of them lengths — and a fraction of a
+  control's own size is not a length, so no step on any of them could carry it
+  even in principle. That is a sharper reason to stay a literal than the one
+  the border width had, and it is why 026 built a scale for the edge and left
+  this alone: the edge was a length with no ramp, this is not a length at all.
+  Named here and recorded in README beside the other gaps.
 
   It scales rather than moving, and that is an RTL decision as much as a motion
   one. A translate has a direction and every directional value in this component
@@ -578,14 +581,18 @@
   border-style: solid;
 
   /*
-    The stroke does not scale and the diameter does. A ring's stroke is a
-    hairline-class value like the control edge — it reads as a stroke at 2px on
-    a 13px ring and at 2px on an 18px one, and scaling it would make Move's
-    indicator a thicker ring rather than a bigger one. space.25 is a token, so
-    this is a named value rather than a written number, unlike the border width
-    at the top of the file.
+    The stroke does not scale and the diameter does. A ring's stroke reads as a
+    stroke at 2px on a 13px ring and at 2px on an 18px one, and scaling it
+    would make Move's indicator a thicker ring rather than a bigger one.
+
+    This was space.25 — the right number reached out of the wrong scale, and
+    the line above once said so approvingly, calling it "a named value rather
+    than a written number, unlike the border width at the top of the file".
+    Both halves of that sentence have been answered by decision 026: the edge
+    is named now, and this is named against the scale that measures ink rather
+    than the one that measures emptiness.
   */
-  border-width: var(--space-25);
+  border-width: var(--stroke-200);
 
   /*
     THE DIAMETER IS ONE EM, AND THE em IS THE POINT.

@@ -10,12 +10,10 @@
   description: "anything that needs to feel further away than this needs a
   scrim behind it, which is a separate mechanism and not a fourth shadow."
 
-  THREE written numbers, and an earlier version of this header said one. They
-  are counted here because the house rule is to name each and say what the
-  token layer owes:
+  TWO written numbers, and earlier versions of this header said one and then
+  three. They are counted here because the house rule is to name each and say
+  what the token layer owes:
 
-  - `1px`, the control edge, for the fifth time. Still no border-width scale,
-    and this is now the strongest evidence that one is owed.
   - `28rem`, the readable ceiling on the dialog's width. A maximum measure is
     one of the few things that legitimately belongs to a dialog rather than to
     a token, because it is about how far an eye tracks a line of text; it is
@@ -102,7 +100,7 @@
   background-color: var(--surface-default);
 
   border-radius: var(--radius-200);
-  border: 1px solid var(--border-default);
+  border: var(--stroke-100) solid var(--border-default);
 
   /*
     shadow.300 — the top of the elevation scale, described as "the element is

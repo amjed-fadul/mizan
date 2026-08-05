@@ -19,14 +19,9 @@
     written down, and the extraction happened one component later than that
     trigger said it should.
 
-  Two written numbers, both named at the point they are written, which is the
-  discipline Button.css states and this file inherits:
+  One written number, named at the point it is written, which is the discipline
+  Button.css states and this file inherits:
 
-  - The 1px control edge, the same literal Button carries and for the same
-    reason — there is still no border-width scale in content/tokens/, and
-    decision 023 states why the invalid state changes the edge's COLOUR rather
-    than its width. Reaching for space.25 would be a 2px edge chosen because a
-    spacing token happened to be nearby.
   - `--mz-input-supporting-scale`, the 0.875 ratio the label, hint and error
     are set at. Argued where it is defined, and the first thing in this library
     that wants the component token layer nobody has built.
@@ -150,14 +145,14 @@
   border-style: solid;
 
   /*
-    1px, and it is the one number in this file that is written rather than
-    resolved — the same literal Button.css carries and for the same reason.
-    There is no border-width scale in content/tokens/; `border.control` and
-    `border.error` are colours, not widths. Decision 023 records that this is
-    now the second component to route around the missing scale, which makes it
-    a pattern rather than an incident.
+    The control edge, the same stroke.100 Button carries. `border.control` and
+    `border.error` are still colours and not widths — decision 023 states why
+    the invalid state changes the edge's COLOUR rather than its width, and that
+    is unaffected by the width now having a name. This was the second of seven
+    literals; 023 called that a pattern rather than an incident, and 026 is the
+    scale the pattern was asking for.
   */
-  border-width: 1px;
+  border-width: var(--stroke-100);
   border-color: var(--border-control);
 
   font-family: inherit;

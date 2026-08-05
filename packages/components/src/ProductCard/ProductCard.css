@@ -17,8 +17,9 @@
   Two tokens, two contexts, and the difference is in pairs.json rather than in
   anybody's judgment at the moment of writing CSS.
 
-  One written number, the 1px control edge, for the fourth time. Still no
-  border-width scale.
+  No written numbers. The 1px control edge was the fourth of seven occurrences;
+  decision 026 built the stroke scale, and the low-stock mark below moved with
+  it — it was drawn at space.25, a spacing step standing in for ink.
 */
 
 .mz-product-card {
@@ -32,7 +33,7 @@
   color: var(--text-primary);
 
   border-radius: var(--radius-200);
-  border: 1px solid var(--border-default);
+  border: var(--stroke-100) solid var(--border-default);
 
   font-family: var(--font-family-sans);
   letter-spacing: var(--letter-spacing-none);
@@ -244,7 +245,7 @@
   other version of this and axe caught it; this one starts correct.
 */
 .mz-product-card__stock[data-level='low'] {
-  border-inline-start: var(--space-25) solid var(--commerce-stock-low);
+  border-inline-start: var(--stroke-200) solid var(--commerce-stock-low);
   padding-inline-start: var(--space-100);
 }
 

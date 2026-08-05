@@ -72,7 +72,7 @@ It is not required by the type, because a card may legitimately show no old pric
 - No `className`, no `style`, no numbers, no prop that shortens a string.
 - **No heading-level prop.** The heading is an `h3`. Exposing `level` would let a call site produce an outline that skips levels, which is the more common failure; if a screen needs it, the fix is a heading-level context rather than a prop on every card.
 - **No alt text invented here.** This component cannot know whether an image adds information the name does not already carry — in a grid where the name is right there, the correct alt is usually empty, and an invented one is noise on every card.
-- One written number, the 1px edge — and one value the token layer owes a name to: the `0.25em` underline offset, which §2 says belongs in the token layer for the same reason the optical size correction does.
+- **One value the token layer owes a name to:** the `0.25em` underline offset, which §2 says belongs in the token layer for the same reason the optical size correction does. The 1px edge was a written number until [decision 026](../../../../decisions/026-the-stroke-scale.md); it resolves from `stroke.100` now, and the low-stock mark from `stroke.200`.
 
 ## Accessibility guaranteed
 

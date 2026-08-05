@@ -103,7 +103,7 @@ The honest reading of 0.23 is that a red on a tinted dark panel is close to the 
 - **Both theme files gain two lines each.** The product files gain none: this pair depends on theme alone, exactly like `commerce.discount` and `mobility.safety`.
 - **106 tokens build, 19 mode-dependent** (was 104 and 17).
 - **Input can now be built**, and its invalid state has a colour it is entitled to.
-- **The border-width scale is still owed**, and this entry is the second component to route around it rather than fix it. That is now a pattern rather than an incident.
+- **~~The border-width scale is still owed~~, and this entry is the second component to route around it rather than fix it. That is now a pattern rather than an incident. Landed:** the pattern this bullet named ran to seven components before [decision 026](./026-the-stroke-scale.md) built `stroke.100` and `stroke.200`. The sentence was right and the count it predicted was low — which is the useful thing about writing a pattern down at the moment you notice it rather than at the moment it becomes unbearable.
 - **`check:drift` will report both new variables as missing** against the live Figma file until somebody syncs.
 
 ## What would make us revisit this?

@@ -64,7 +64,22 @@
 
 .mz-focus-ring:focus-visible,
 .mz-focus-ring-within:has(:focus-visible) {
-  outline: var(--space-25) solid var(--focus-ring);
+  /*
+    Three declarations, and only the first of them is ink.
+
+    The outline WIDTH is a stroke and resolves from stroke.200. The outline
+    OFFSET is the gap between the control's edge and that stroke, and stays on
+    the spacing scale. The box-shadow spread is the outer extent of the third
+    band rather than a line width, so it stays there too.
+
+    Until decision 026 the first two lines were the same token — space.25,
+    twice, one of them ink and the other emptiness — which is the clearest
+    evidence in the library that a stroke scale was owed. They are still both
+    2px. That is a coincidence of value and not of meaning, and it is now
+    written as one: if the emphatic stroke ever moves, the offset does not
+    follow it, and before this change nothing could have expressed that.
+  */
+  outline: var(--stroke-200) solid var(--focus-ring);
   outline-offset: var(--space-25);
   box-shadow: 0 0 0 var(--space-100) var(--focus-ring-contrast);
 }

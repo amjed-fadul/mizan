@@ -75,7 +75,7 @@ Likewise `rideType` is a node rather than a key. v0 holds a `RIDE_TYPE_LABELS` m
 - No width, no fixed height, no `className`, no `style`.
 - No numbers, and no prop that shortens a string.
 - No colour used outside the context it was declared in — see above.
-- One written number: the 1px control edge, for the third time in the library. Still no border-width scale.
+- **No written numbers.** The 1px control edge was the third of seven occurrences and resolves from `stroke.100` since [decision 026](../../../../decisions/026-the-stroke-scale.md); the surge mark moved to `stroke.200` in the same change, having been drawn at `space.25` — the right width taken from the scale that measures gaps rather than ink.
 
 ## Accessibility guaranteed
 

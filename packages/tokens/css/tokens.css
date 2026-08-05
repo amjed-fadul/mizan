@@ -92,6 +92,8 @@
   --space-400: 32px;
   --space-500: 40px;
   --space-600: 48px;
+  --stroke-100: 1px;
+  --stroke-200: 2px;
   --border-control: var(--neutral-600);
   --commerce-stock-low: var(--amber-600);
   --control-lg-min-block: var(--space-600);
