@@ -75,7 +75,7 @@ The role already says the word, so `label="Main navigation"` is announced as **"
 - **No dropdown, submenu or expandable section.** A hierarchy needs expanded state this does not have.
 - **No skip link.** It belongs to the page, not to one landmark — a component that emitted one would emit several on a page with several navigations.
 - No `className`, no `style`, no prop that shortens a label.
-- One written number, the 1px separator and current-page rule, for the **seventh** time. Still no border-width scale, and this is the last component of the stage to route around its absence.
+- **No written numbers.** The 1px separator and current-page rule were the **seventh** and last occurrence of the literal, and the count is what finally bought the scale: [decision 026](../../../../decisions/026-the-stroke-scale.md) added `stroke.100` and `stroke.200`, and both lines resolve from `stroke.100`.
 - One value the token layer owes a name to: the `0.25em` underline offset, which is §2's Arabic rule and the second place in the library to write it after `ProductCard`.
 
 ## Accessibility guaranteed

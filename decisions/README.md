@@ -51,3 +51,4 @@ Entries are numbered sequentially in the order decisions actually happen. Number
 | [023](./023-the-error-semantic-is-two-tokens.md) | The error semantic is two tokens, and neither of them is the red that already exists | 4 |
 | [024](./024-productcard-and-ridecard-stay-separate.md) | ProductCard and RideCard stay separate, because one is a container and the other is a control | 4 |
 | [025](./025-the-scrim-is-one-value-and-carries-no-pairing.md) | The scrim is one value in all four combinations, and the first token with no contrast pairing | 4 |
+| [026](./026-the-stroke-scale.md) | Ink gets its own scale, and it is two values because two is what the library draws | 4 |

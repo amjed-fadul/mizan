@@ -85,6 +85,8 @@ public enum DesignTokensLightMove {
     public static let space50 = CGFloat(4)
     public static let space500 = CGFloat(40)
     public static let space600 = CGFloat(48)
+    public static let stroke100 = CGFloat(1)
+    public static let stroke200 = CGFloat(2)
     public static let surfaceDefault = UIColor(red: 1.000, green: 1.000, blue: 1.000, alpha: 1)
     public static let surfaceScrim = UIColor(red: 0.000, green: 0.000, blue: 0.000, alpha: 0.5019607843137255)
     public static let surfaceSunken = UIColor(red: 0.949, green: 0.949, blue: 0.949, alpha: 1)

@@ -71,7 +71,7 @@ Prefer a visible heading beside the list. A name only assistive technology can r
 - **No empty state.** A list with nothing in it is a screen's decision about what to say, and it is usually a sentence.
 - **No virtualisation, pagination or sorting.** Those are behaviours of a screen's data, not of its markup.
 - No `className`, no `style`.
-- One written number, the 1px divider, for the sixth time in the library. **Still no border-width scale.**
+- **No written numbers.** The 1px divider was the sixth of seven occurrences of the literal; it resolves from `stroke.100` since [decision 026](../../../../decisions/026-the-stroke-scale.md).
 
 ## Accessibility guaranteed
 

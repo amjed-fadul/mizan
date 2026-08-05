@@ -110,7 +110,8 @@
     "border.default",
     "font-family.sans",
     "letter-spacing.none",
-    "space.150"
+    "space.150",
+    "stroke.100"
   ],
   "tokens_absent": [],
   "props": [

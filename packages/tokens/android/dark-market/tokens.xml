@@ -85,6 +85,8 @@
   <dimen name="space_400">32dp</dimen>
   <dimen name="space_500">40dp</dimen>
   <dimen name="space_600">48dp</dimen>
+  <dimen name="stroke_100">1dp</dimen>
+  <dimen name="stroke_200">2dp</dimen>
   <color name="surface_default">#ff141414</color>
   <color name="surface_scrim">#80000000</color>
   <color name="surface_sunken">#ff1f1f1f</color>

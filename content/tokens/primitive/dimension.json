@@ -50,7 +50,7 @@
 
   "radius": {
     "$type": "dimension",
-    "$description": "Corner radii. Four values, because a radius is a soft signal and more of them produces inconsistency rather than nuance. Numbered on the same eighths convention as space so the two scales read alike.",
+    "$description": "Corner radii. Four values, because a radius is a soft signal and more of them produces inconsistency rather than nuance. Numbered in the same style as space — the number carries a ratio rather than a position in a list — but against its own base of 4px, so radius.200 is twice radius.100 and is not the same measurement as space.200. This sentence previously claimed the two scales shared the eighths convention and therefore read alike; they do not, radius.100 is 4px where that convention predicts 8px, and a reader who trusted it would have mis-set every corner in the system.",
     "0": {
       "$value": { "value": 0, "unit": "px" },
       "$description": "Square. For anything that meets an edge or another element flush — a full-bleed image, a table cell, a sheet against the viewport."
@@ -66,6 +66,19 @@
     "full": {
       "$value": { "value": 9999, "unit": "px" },
       "$description": "Fully rounded. Named rather than numbered because it is a shape instruction, not a measurement: it produces a pill or a circle at any size, which is what avatars, dots and pill badges actually want. The 9999 is an implementation detail of expressing that in px."
+    }
+  },
+
+  "stroke": {
+    "$type": "dimension",
+    "$description": "Border and outline widths. Two values, because two is what the seven components actually draw and a third would be invented rather than found. Its own scale rather than a reach into space, because a stroke and a gap are different jobs that happen to share two numbers: styles/focus.css drew the outline width and the outline offset from space.25 on adjacent lines, one of them ink and the other emptiness, and nothing in the system could tell them apart. Numbered against its own base of 1px — the hairline — so the number is a multiple of the thinnest line the system draws, in the same style as space and radius and, like radius, on a base of its own. Every mature system consulted keeps this separate: Polaris, Primer and Spectrum each ship a stroke scale distinct from spacing, and each of them has exactly these two widths at the bottom of it.",
+    "100": {
+      "$value": { "value": 1, "unit": "px" },
+      "$description": "The hairline, and the width of nearly every line in the system: the edge of a control, the outline of a card, the divider between list rows. One device pixel at 1x, and deliberately not scaled by density — a hairline that thickens with the control stops reading as an edge and starts reading as a frame."
+    },
+    "200": {
+      "$value": { "value": 2, "unit": "px" },
+      "$description": "The emphatic stroke, for a line that has to be seen rather than merely bound a shape: the focus outline, the busy indicator's ring, and the inline-start mark that flags low stock or a surge fare. Twice the hairline is the smallest step that reads as deliberate at arm's length; anything between the two is a rendering accident on a fractional-density screen."
     }
   }
 }

@@ -96,7 +96,7 @@ The edge colour, the message, and `aria-invalid`.
 - A message alone is missed by somebody scanning a long form for what to fix.
 - `aria-invalid` alone is invisible to anyone looking at the screen.
 
-[Decision 023](../../../../decisions/023-the-error-semantic-is-two-tokens.md) is why the edge changes **colour** rather than width: there is no border-width scale, so a heavier edge would either invent one in passing or hard-code a second literal — and a thicker line is the weakest of the three signals anyway.
+[Decision 023](../../../../decisions/023-the-error-semantic-is-two-tokens.md) is why the edge changes **colour** rather than width. When that was decided there was no border-width scale, so a heavier edge would have invented one in passing; [decision 026](../../../../decisions/026-the-stroke-scale.md) has since built one, and the reasoning does not change — a thicker line is the weakest of the three signals regardless of whether the system can name its thickness.
 
 ### What this component does not announce
 
@@ -134,7 +134,7 @@ One thing, and it got it: **an error colour.**
 
 Button hit the same wall from the other side — [decision 020](../../../../decisions/020-the-button-consolidation.md) refused a destructive variant partly because `mobility.safety` is unreachable from a shared component. Button could refuse and ship. Input cannot: a field with no way to say "this is wrong" is not a field. Two components reaching for the same missing name from opposite directions is what [023](../../../../decisions/023-the-error-semantic-is-two-tokens.md) rests on, and it added **two** names rather than one, because the message is gated at 4.5 and the edge at 3.0 and one name could only have been declared at one of them.
 
-**Still owed, and this is now the second component to route around it:** a **border-width scale**. `Input.css` writes the same literal `1px` Button does. Decision 023 records that as a pattern rather than an incident.
+**~~Still owed, and this is now the second component to route around it: a border-width scale.~~ Landed:** [decision 026](../../../../decisions/026-the-stroke-scale.md) added `stroke.100` and `stroke.200` to `content/tokens/primitive/dimension.json`, and the edge resolves from `stroke.100`. Decision 023 called the repetition a pattern rather than an incident at two components; it reached seven before the scale was built.
 
 **One value that is not a token and says so:** `--mz-input-supporting-scale`, the `0.875` the label, hint and error are set at. It is declared in the contract's `tokens_absent` with its reason — it is a *ratio* against the resolved step, so supporting text tracks the field's type when the product mode makes it larger, and a ramp step would stay 14px while Move's field grew to 16. This is the component token layer [022](../../../../decisions/022-control-geometry-resolves-by-product.md) named and nobody has built.
 
