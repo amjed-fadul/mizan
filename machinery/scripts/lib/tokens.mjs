@@ -378,6 +378,32 @@ export function discoverModes(root, diagnostics) {
             );
             continue;
           }
+          /* A name reaches a filename in the build directory and identifies the
+             emitted block, so two overlays sharing one would write over each
+             other's intermediate file and emit the second's values under the
+             first's selector — with no error anywhere. */
+          if (overlays.some((existing) => existing.name === overlay.name)) {
+            diagnostics.error(
+              'duplicate-overlay-name',
+              `Two overlays are both named "${overlay.name}". An overlay's name identifies its emitted block and its build artefact, so a duplicate silently overwrites.`,
+              { file: manifestPath },
+            );
+            continue;
+          }
+          /* A mode belongs to a dimension or to an overlay, never both: as a
+             dimension member it joins the cartesian product, and as an overlay
+             it is composed on top of all of it. Claiming both would do each
+             once and the collision guard would catch it later by accident,
+             naming a token path rather than the actual mistake. */
+          if (byId.get(overlay.mode).dimension) {
+            diagnostics.error(
+              'overlay-claims-dimension-mode',
+              `Overlay "${overlay.name}" names mode "${overlay.mode}", which dimension "${byId.get(overlay.mode).dimension}" already claims. `
+                + 'A mode takes part in the cartesian product or is applied on top of it, never both.',
+              { file: manifestPath },
+            );
+            continue;
+          }
           /* Marked so the not-in-manifest check below passes, and marked as an
              overlay rather than a dimension so nothing downstream mistakes it
              for one and multiplies the matrix by it. */

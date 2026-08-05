@@ -70,7 +70,7 @@
     "No styling of the rows. A row is styled by what it contains.",
     "No empty state. A list with nothing in it is a screen's decision about what to say, and it is usually a sentence rather than a component.",
     "No virtualisation, no pagination, no sorting. Those are behaviours of a screen's data rather than of its markup.",
-    "One written number, the 1px divider, for the sixth time in the library. Still no border-width scale."
+    "No written numbers. The 1px divider was the sixth of seven occurrences and resolves from stroke.100 since decision 026."
   ],
   "rtl": {
     "behaviour": [

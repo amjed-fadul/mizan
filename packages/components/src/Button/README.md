@@ -341,7 +341,7 @@ Every value, and this is the table that has to keep matching `packages/tokens/do
 | Hover ground, unfilled variants | `surface.sunken` |
 | Disabled fill / label | `surface.sunken` / `text.secondary` |
 | Focus indicator | `focus.ring`, `focus.ring-contrast` |
-| Indicator band widths | `space.25`, `space.100` |
+| Indicator band widths | `stroke.200` (outline), `space.25` (offset), `space.100` (shadow extent) |
 | Inline padding | `space.150` / `space.200` / `space.300` |
 | Block padding | `space.100` / `space.150` / `space.200` |
 | Icon-to-label gap | `space.100` |

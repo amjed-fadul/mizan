@@ -78,7 +78,7 @@
     "No dropdown, no submenu, no expandable section. A hierarchy needs expanded state this component does not have.",
     "No skip link. It belongs to the page rather than to one landmark, and a component that emitted one would emit several on a page with several navigations.",
     "No prop shortens a label.",
-    "One written number, the 1px separator and current-page rule, for the seventh time in the library. Still no border-width scale.",
+    "No written numbers. The 1px separator and current-page rule were the seventh and last occurrence of the literal, and the count is what bought the scale: decision 026 added stroke.100 and stroke.200, and both resolve from stroke.100.",
     "One value the token layer owes a name to: the 0.25em underline offset, which is the Arabic rule from §2 and the second place in the library to write it after ProductCard."
   ],
   "rtl": {

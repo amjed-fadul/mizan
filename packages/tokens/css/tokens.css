@@ -214,3 +214,10 @@
   --line-height-relaxed: var(--line-height-arabic-relaxed);
   --line-height-tight: var(--line-height-arabic-tight);
 }
+
+:lang(ar) :not(:lang(ar)) {
+  --font-family-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.7;
+  --line-height-tight: 1.25;
+}

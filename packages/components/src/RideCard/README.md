@@ -210,7 +210,7 @@ There is no `[dir='rtl']` selector anywhere.
 |---|---|
 | `value` | the input's `value` attribute, and the argument `onChange` reports |
 | `name` | the input's `name` attribute — the shared string that makes the set one group |
-| `checked` | the input's `checked` property. Controlled; there is no uncontrolled mode |
+| `checked` | the input's `checked` property. Optional, so a standalone card — or one inside a `RideCardGroup` with no `value` — renders `checked={undefined}` and React treats the input as **uncontrolled**. Adding `value` to the group later switches it, which is React's controlled/uncontrolled warning. Pass `checked` or pass the group a `value` |
 | `disabled` | the input's `disabled` **attribute**, plus `.mz-ride-card--disabled` on the label for the paint |
 | `vehicle` | `span.mz-ride-card__vehicle` |
 | `rideType` | `span.mz-ride-card__type` |

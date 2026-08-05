@@ -405,6 +405,43 @@ assert((overlayModel.overlays[0]?.entries.length ?? 0) > overlayChanged.split(',
   'overlays: while the document behind it is the whole composed set, so the aliases in the delta have their targets in the same source',
   `${overlayModel.overlays[0]?.entries.length} entr(ies) behind a delta of ${overlayChanged.split(', ').length}`);
 
+/* The claim the whole mechanism reduces to, asserted against EMITTED CSS
+ * rather than against the model. `:root` and a one-pseudo-class subtree
+ * selector share a specificity, so the overlay wins on source order alone —
+ * and every model-level assertion above would still pass if the loop that
+ * emits it were moved above the combination loop, while Arabic silently
+ * reverted to Latin leading. This is the only check that would notice. */
+const overlayOut = mkdtempSync(join(tmpdir(), 'mizan-overlay-'));
+const overlayBuild = spawnSync(process.execPath, [
+  join(SCRIPTS_DIR, 'build-tokens.mjs'),
+  '--root', OVERLAY_ROOT, '--out', overlayOut, '--work', join(overlayOut, '.work'), '--no-check', '--quiet',
+], { encoding: 'utf8' });
+
+const overlayCss = existsSync(join(overlayOut, 'css', 'tokens.css'))
+  ? readFileSync(join(overlayOut, 'css', 'tokens.css'), 'utf8')
+  : '';
+const selectorOrder = overlayCss.split('\n')
+  .map((l, i) => ({ l: l.trim(), i }))
+  .filter((x) => /^(:root|:lang)/.test(x.l) && x.l.endsWith('{'));
+const lastCombination = selectorOrder.filter((x) => x.l.startsWith(':root')).at(-1);
+const firstOverlay = selectorOrder.find((x) => x.l.startsWith(':lang(zz)'));
+
+assert(overlayBuild.status === 0 && lastCombination && firstOverlay && firstOverlay.i > lastCombination.i,
+  'overlays: the overlay block is emitted AFTER every combination block in the CSS — the mechanism wins on source order, so the order is the mechanism',
+  `exit ${overlayBuild.status}; order: ${selectorOrder.map((x) => x.l).join(' | ') || '(no selectors)'}`);
+
+/* The restore. Custom properties inherit, so an island inside the overlay's
+ * scope that does not itself match the selector would inherit the overlaid
+ * values with nothing to fall back to. For a script overlay that is the
+ * mixed-content case — a Latin run in an Arabic page — which is the case
+ * subtree scoping exists to serve. */
+const restoreBlock = selectorOrder.find((x) => x.l.startsWith(':lang(zz) :not(:lang(zz))'));
+assert(restoreBlock && firstOverlay && restoreBlock.i > firstOverlay.i,
+  'overlays: and a restore block follows it, so a non-matching island inside the scope falls back instead of inheriting the overlay',
+  selectorOrder.map((x) => x.l).join(' | ') || '(no selectors)');
+
+rmSync(overlayOut, { recursive: true, force: true });
+
 let overlayCollisionCode = '(no error thrown)';
 try {
   adaptTokenSet(OVERLAY_COLLISION_ROOT);

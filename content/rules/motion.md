@@ -67,12 +67,12 @@ This is the rule the file exists for. It is transcribed from decision 021, which
 
 ### Why the spinner is exempt, in the specification's own words
 
-Decision 021 argued this from first principles — *an accessibility feature whose failure mode is lying about whether the app is working is not an accessibility feature* — and the argument stands on its own. It also happens to be the position both relevant success criteria already take, which is worth having on the record because it moves the exemption from a judgment we made to a judgment we share.
+Decision 021 argued this from first principles — *an accessibility feature whose failure mode is lying about whether the app is working is not an accessibility feature* — and **that argument is the one this rule rests on.** The success criteria below are consistent with it. Neither adjudicates it, and an earlier version of this section claimed they did.
 
-- **2.3.3** requires that interaction-triggered motion animation can be disabled *"unless the animation is essential to the functionality or the information being conveyed."* An indeterminate busy indicator conveys exactly one piece of information — the system is working — and removing it does not reduce the motion, it deletes the message.
-- **2.2.2** governs content that moves for more than five seconds and exempts the preload case explicitly, noting that a loading animation needs no pause mechanism *"even though the animation may run for more than 5 seconds."*
+- **2.3.3** (Level AAA, which Mizan does not target) requires that interaction-triggered motion animation can be disabled *"unless the animation is essential to the functionality or the information being conveyed."* Its own examples are parallax and scroll-triggered movement, not busy indicators. And WCAG's definition of *essential* has a second half — the information cannot be conveyed another way that would conform — which a spinner arguably fails, because `aria-busy` with a static "Loading…" carries "the system is working" without motion. **What the criterion supports is that an exemption of this kind exists. It does not name this one.**
+- **2.2.2** (Level A) governs content that moves for more than five seconds. Its *Understanding* document — informative, not the criterion's normative text — treats a preload animation as essential *when interaction cannot occur during that phase*. Button's indicator sits on one control in a page that stays interactive, so the condition is not met as written.
 
-Neither criterion is being stretched here. The spinner is the textbook example both of them use.
+**The honest summary is that the criteria are consistent with this position and neither settles it.** The reason the spinner keeps turning is 021's, and it does not need borrowed authority: an indicator that stops indicating reports the wrong system state, and the users least able to afford that confusion are the ones the preference is for.
 
 ### What this means in practice
 
@@ -83,7 +83,18 @@ Guard the **property**, not the duration. Zeroing a duration on a `transform` le
   .thing:active { transform: none; }          /* the movement itself, removed */
   .thing { transition-duration: var(--duration-0); }
 }
+
+/* `transition-duration` is LIST-valued. One value applies to every transitioned
+   property, so the block above also zeroes the colour crossfade this rule says
+   to keep. On an element transitioning more than one property, restate the list
+   with the movement at zero and the rest at its tier. Button's list is
+   `transform, background-color`: */
+@media (prefers-reduced-motion: reduce) and (hover: hover) and (pointer: fine) {
+  .thing { transition-duration: var(--duration-0), var(--duration-100); }
+}
 ```
+
+**That second block is not optional polish.** Without it the rule contradicts itself: `duration.0` applied to a list removes the colour transition, which is the one thing §4 says to preserve, and the failure is invisible in a screenshot. `Button.css` carries both blocks and says why.
 
 ### What the library does today
 
@@ -102,7 +113,9 @@ Dialog states the question and changes nothing, because it has no motion to redu
 
 `content/rules/rtl-arabic.md` owns direction, and two of its rules are motion rules from the other side. They are cross-referenced rather than restated, because a rule stated twice is a rule that can disagree with itself.
 
-- **Transforms do not flip.** `translateX(6px)` moves six pixels rightward in both directions, so an arrow that nudges forward on hover in English nudges backwards in Arabic. A transform that means "forward" either takes its sign from the direction or is not used — animate `margin-inline-start` or `inset-inline-start` instead. (rtl-arabic §1.)
+- **Transforms do not flip.** `translateX(6px)` moves six pixels rightward in both directions, so an arrow that nudges forward on hover in English nudges backwards in Arabic. A transform that means "forward" either takes its sign from the direction or is not used. (rtl-arabic §1.)
+
+  rtl-arabic offers `margin-inline-start`/`inset-inline-start` as the alternative, and that advice is about **static layout**. Do not lift it into motion: those are layout properties, and animating one runs layout on every frame. `Button.css` states the opposing rule — *"No geometry property transitions, so no state change in this file can cause a layout"* — and `Input.css` and `RideCard.css` each repeat it. In a *transition* the answer is the first branch: derive the transform's sign from the direction, or do not animate the position at all.
 - **Rotation is not mirrored.** Clockwise is clockwise in every locale, for the same reason a clock does not mirror. The busy indicator spins the same way in both directions. (rtl-arabic §5.)
 
 The press scale is the one transform in the library and it is deliberately a `scale` rather than a `translate`: **a scale is the only transform with no side.**
@@ -115,7 +128,6 @@ These are genuinely unsettled. They are listed so that nobody quietly settles th
 
 - **The other two preference signals.** `prefers-reduced-transparency` and `prefers-contrast: more` are real user preferences the system does not currently answer. The first has an obvious consumer — [decision 025](../../decisions/025-the-scrim-is-one-value-and-carries-no-pairing.md) gave the scrim a single translucent value and explicitly refused it a contrast pairing on the grounds that a translucent value has no rankable contrast, which is precisely the case `prefers-reduced-transparency` exists for. Whether the answer is a rule here, a second scrim token, or nothing at all is undecided, and it is not decided here because 021 did not decide it.
 - **Whether motion tiers differ by product.** They could — Move is the compact, high-stakes product and a case could be made that it should move faster. Today they do not, and nobody has produced the case. [Decision 022](../../decisions/022-control-geometry-resolves-by-product.md) is the shape this would take if the case arrives.
-- **Motion on the mobile targets.** `build-tokens.mjs` emits only `color` and `dimension` to iOS and Android, so **neither duration nor easing reaches the Swift or XML output at all.** The motion scale is a web-and-Figma decision that the mobile targets currently cannot see. Recorded because it is a real limit rather than a rounding error.
 - **A second cycle length.** `cycle.spin` is a category with one member. A marquee or an indeterminate progress bar would make it a scale, and the numbering convention would need deciding at that point rather than now.
 
 When any of these is decided, it moves out of this section into the rules above and gets a Decision Log entry.

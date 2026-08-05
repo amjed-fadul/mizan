@@ -75,7 +75,7 @@
     "No nested interactive content, ever. It is a radio.",
     "No colour that content/tokens/pairs.json has not seen, and none used outside the context it was declared in.",
     "No click handler on the card. The label forwards activation to the input, which is what makes the keyboard work.",
-    "One written number, the 1px control edge, because there is still no border-width scale."
+    "No written numbers. The 1px control edge was the third of seven occurrences and resolves from stroke.100 since decision 026; the surge mark moved to stroke.200 in the same change, having been drawn at space.25."
   ],
   "rtl": {
     "behaviour": [

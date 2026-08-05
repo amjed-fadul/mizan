@@ -193,7 +193,7 @@ Six props across two components, and every one of them lands somewhere in the DO
 | Prop | Rendered as |
 |---|---|
 | `label` | `aria-label` on the `<nav>`, verbatim |
-| `separators` | `.mz-nav--separators` on the `<nav>` when `true`; the class is absent when `false`, and no attribute or element changes either way |
+| `separators` | `.mz-nav--separators` on the `<nav>` when `true`; the class is absent when `false`. The `class` attribute is the only thing that differs — no element, no ARIA attribute, and an identical accessibility tree either way |
 | `children` | the contents of `ul.mz-nav__list`, which carries `role="list"` |
 
 The `<ul>` is always rendered, and there is no element between the `<nav>` and it. `separators` puts its class on the landmark rather than on the list because the rule it draws is on the items, and the selector needs an ancestor to scope from — `.mz-nav--separators .mz-nav__item + .mz-nav__item`, which is why the first destination never has one.

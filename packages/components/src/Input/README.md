@@ -82,7 +82,7 @@ Three props look like variants at a glance and are each something else, which is
 | Prop | Looks like | Actually is |
 |---|---|---|
 | `size` | a variant | the **geometry step**, the same axis Button carries. It names a step and the product mode decides what the step resolves to ([022](../../../../decisions/022-control-geometry-resolves-by-product.md)). Geometry is not appearance in the sense the variant test means, and Button's Variants section already refuses to let the two axes merge. |
-| `type` | a variant | a **platform behaviour**. `email`, `tel`, `url`, `search` and `password` change the software keyboard, the autofill contract and — through §2 above — the resolved direction of the value. Two of them change what the browser renders inside the field, and none of them is a look this system chose. |
+| `type` | a variant | a **platform behaviour**. Every `type` changes the software keyboard and the autofill contract, and four of them — `email`, `tel`, `url`, `password` — are Latin by nature and resolve the value's direction to `ltr`, which "The direction decision" above argues in full. **`search` is not one of them**: it inherits the page like plain `text`, because a search term is written in the language of the person searching. `password` also changes what the browser renders inside the field. None of them is a look this system chose. |
 | `valueDirection` | a variant | a **content decision**, argued in full above. It changes which way the value reads, not how the field is drawn. |
 
 ### Which differences would be legitimate
@@ -92,7 +92,7 @@ The same axis Button's are on: a declared foreground/background pairing. A field
 ### What is not here, and the request each refusal will arrive as
 
 - **No `variant="search"` with an inset icon.** Search is a `type`, and an icon inside the field is a slot this component does not have — it would need a second focusable target inside a control with one, or a decorative element that pushes the text and has to be mirrored under RTL. If search needs a distinct treatment it is a component that composes this one, not a variant of it.
-- **No `variant="ghost"` or borderless field.** The resting edge is the only thing distinguishing a field from static text, and `border.control` on `surface.sunken` is a declared pairing precisely so that boundary is checked. Removing it removes the affordance and the gate at once.
+- **No `variant="ghost"` or borderless field.** The resting edge is the only thing distinguishing a field from static text, and `border.control` on `surface.default` — the ground this field actually draws on — is a declared pairing precisely so that boundary is checked. (`border.control` on `surface.sunken` is declared too, but 023 added it for Button; on this component `surface.sunken` is the read-only and disabled ground, and in the disabled state the edge is `transparent`.) Removing it removes the affordance and the gate at once.
 - **No `variant="inline"` for a label beside the field rather than above it.** That is a layout decision belonging to the form, and the block-axis stack in Anatomy is what keeps `dir` out of this component entirely. An inline label puts a side back into a component that currently has none.
 
 ## States

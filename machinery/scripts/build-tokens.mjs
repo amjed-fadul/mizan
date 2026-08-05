@@ -331,6 +331,39 @@ function createOverlayDictionary(overlay, { prefix }) {
   });
 }
 
+/**
+ * The companion to `createOverlayDictionary`: the same paths at their base
+ * values, scoped to descendants of the overlay that are not themselves in it.
+ *
+ * `outputReferences` is OFF here, and that is the one real difference. This
+ * block redefines the same custom properties the overlay does, so emitting a
+ * reference would produce `--x: var(--x)` — a property defined in terms of the
+ * value being replaced. The literal is correct and is the same value the
+ * `:root` block already carries.
+ */
+function createRestoreDictionary(overlay, model, { prefix }) {
+  return new StyleDictionary({
+    source: [model.combinations[0].file],
+    log: { verbosity: 'silent', warnings: 'disabled' },
+    platforms: {
+      css: {
+        transformGroup: 'css',
+        prefix,
+        files: [{
+          destination: `overlay.${overlay.name}.restore.css`,
+          format: 'css/variables',
+          filter: (token) => overlay.changed.has(token.path.join('.')),
+          options: {
+            outputReferences: false,
+            showFileHeader: false,
+            selector: `${overlay.selector} :not(${overlay.selector})`,
+          },
+        }],
+      },
+    },
+  });
+}
+
 /* ------------------------------------------------------------------ *
  * Build
  * ------------------------------------------------------------------ */
@@ -401,6 +434,33 @@ async function build(model, outDir, { prefix }) {
     if (overlay.changed.size === 0) continue;
     const dictionary = createOverlayDictionary(overlay, { prefix });
     for (const { destination, output } of await dictionary.formatPlatform('css')) {
+      cssBlocks.push({ destination, output: output.trim() });
+    }
+
+    /* THE RESTORE BLOCK, and it is not optional.
+     *
+     * Custom properties inherit. An overlay redefines names on the subtree its
+     * selector matches, so a nested island that does NOT match the selector
+     * inherits the overlaid values rather than falling back to the base ones —
+     * there is nothing to fall back to, because no declaration applies to it.
+     *
+     * For a script overlay that is the mixed-content case exactly: a Latin run
+     * inside an Arabic page would be set in the Arabic face at Arabic leading.
+     * That is the case subtree scoping exists to serve, so an overlay that
+     * cannot express the restore does not actually solve the problem it claims.
+     *
+     * `<selector> :not(<selector>)` is the general form — descendants of the
+     * scope that are not themselves in it — and it composes from the selector
+     * content already supplies, so machinery still never parses it. It carries
+     * one more compound than the overlay block, so it wins on specificity
+     * rather than on order.
+     *
+     * Sourced from the first combination rather than from a base-only document
+     * because every overlaid path is invariant by construction (the collision
+     * guard refuses anything else), so any combination carries the base value.
+     */
+    const restore = createRestoreDictionary(overlay, model, { prefix });
+    for (const { destination, output } of await restore.formatPlatform('css')) {
       cssBlocks.push({ destination, output: output.trim() });
     }
   }

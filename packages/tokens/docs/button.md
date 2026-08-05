@@ -45,7 +45,7 @@ Semantics arrive as custom properties. Nothing is imported per-mode: the whole m
 .button--secondary {
   background: transparent;
   color: var(--text-primary);
-  border: 1px solid var(--border-control);
+  border: var(--stroke-100) solid var(--border-control);
 }
 
 [data-density="compact"] .button {                /* when a density dimension exists */

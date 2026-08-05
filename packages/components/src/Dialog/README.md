@@ -136,7 +136,7 @@ There is no size variant either. The width is a ceiling the content stays under 
 
 ## States
 
-Two, and the interesting column is not what changes but who owns it.
+Three, and the interesting column is not what changes but who owns it.
 
 | State | Trigger | The platform owns | The component owns |
 |---|---|---|---|
