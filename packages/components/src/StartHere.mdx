@@ -1,0 +1,134 @@
+import { Meta } from '@storybook/addon-docs/blocks'
+
+<Meta title="Start here" />
+
+# Start here
+
+This is Mizan — the design system behind **Mizan Market** (grocery) and **Mizan Move** (rides). Two products, one core, and the interesting part is what they share and what they deliberately do not.
+
+This page is for designers. It is about finding things, changing things, and asking for things. Nothing on it requires you to read code.
+
+---
+
+## The four switches at the top
+
+Every story you open has them. They are the whole system in one row, and they are worth playing with before anything else.
+
+- **Theme** — Light / Dark
+- **Product** — Market / Move
+- **Direction** — LTR / RTL
+- **Language** — English / Arabic
+
+Open **Input → Sizes** and flip **Product**. The fields change height and type size, and nothing else about them changes. Same component, same setting, two products.
+
+Open any component and flip **Direction**. The layout mirrors. No component in this library has a right-to-left version — there is one component, and it flips.
+
+**They are independent on purpose.** You can put English text in a right-to-left layout, which looks fine and proves nothing. The mismatch stays reachable so you can tell the difference between a component that flips and a component that merely looks symmetrical.
+
+---
+
+## Finding a component
+
+Search the sidebar by **what the thing does**, not what it looks like. The search matches the words in each component's description, so "confirm", "are you sure" and "destructive" all reach Dialog.
+
+If two components look like the same box, they probably are not. The system asks three questions, and if the answers differ, so do the components:
+
+1. **What is it?** Something you read, something you click, or something that holds other things.
+2. **How many things inside it can you tab to?** One is a control. Several is a container.
+3. **Does the other product have this concept at all?**
+
+That is why **ProductCard** and **RideCard** are two components and not one with a switch. A ride card is *chosen* — the whole card is the target, like a radio button. A product card *contains* a link and an Add to cart button, which are two separate targets. A card that selects itself cannot also hold a button you press independently.
+
+The same three questions made **Navigation** one component for both products, because both answered them identically.
+
+---
+
+## What each component's page tells you
+
+Every component has a **Docs** page. Past the examples, each one lists:
+
+- **What it does not do**, and why — usually with what to use instead
+- **What you may not change**, and the reason
+- **What it guarantees** about keyboard and screen-reader use
+- **How it behaves in Arabic**
+
+The "do not use when" list is the one worth reading before you design something new. It is the system telling you where its edges are, and it always names an alternative rather than leaving you at a dead end.
+
+---
+
+## What the system will not let you do
+
+These are refusals, not gaps. Each one exists because the alternative broke something real.
+
+**You cannot set a width on a control.** A button sized to fit "Done" clips تم — measured, the Arabic is 39% of the width. And "Add to cart" against أضف إلى السلة runs the other way, at 117%. Arabic is not shorter than English, it is *differently* long, string by string. So width comes from content plus padding, always.
+
+**You cannot set a height either.** Arabic descends below the baseline as a matter of course, and its diacritics reach above where the font says its ascent is. A control fitted to Latin ink cuts the tops off marks — and a lost mark is a different word, not a cosmetic loss.
+
+**You cannot shorten a string.** There is no "truncate to 12 characters" anywhere. Arabic has no abbreviations: السبت does not shorten to three letters, because its letters are joined and the first three are not a word. Short and long forms are two written strings, never a substring.
+
+**You cannot use a colour the system has not checked.** Every colour pairing that renders is declared and measured for contrast, in all four theme-and-product combinations. A colour outside that set is a contrast ratio nobody can see.
+
+**There is no red "destructive" button.** Deliberately. A red fill is invisible to a colour-blind user and looks the same whether a thing is undoable or merely annoying. The weight goes in the words instead: "Cancel trip" and "Keep trip", with the consequence written underneath — *"Your driver is two minutes away."* Open **Dialog → Cancel Trip** to see it.
+
+---
+
+## When detaching is okay
+
+Detaching an instance in Figma is a normal thing to do. It is only a problem when it becomes the design.
+
+**Fine to detach:**
+
+- You are exploring. Sketching five versions of something is not a system decision.
+- You need a one-off illustration, an empty state, a marketing moment — something that will exist once and never become a pattern.
+- You are showing what a *new* component should be. A detached mock is the clearest way to ask for one.
+
+**Stop and ask instead:**
+
+- You are detaching **the same component the same way** more than twice. That is not a detach, that is an unnamed variant, and it will be rebuilt slightly differently by the next person.
+- You are detaching to change a **colour, a spacing value, or a type size**. Those come from tokens, and a hand-picked value is a value no contrast check has seen.
+- You are detaching to make something **narrower or shorter**. See above — that is usually the change that breaks Arabic, and it will not show up until someone switches the language.
+- You are detaching to **remove a focus ring, a label, or a state**. Those are the guarantees, not the decoration.
+
+The honest test: *if two designers detached this the same way, would they land on the same result?* If not, it wants to be a decision rather than a detach.
+
+---
+
+## Asking for something new
+
+**Say it plainly: the contribution flow is not built yet.** It is planned, and until it exists here is what actually works.
+
+Open an issue on the repository with three things:
+
+1. **The problem, not the solution.** "Users cannot tell which filters are active" rather than "we need a chip component."
+2. **Where you hit it** — the screen, and how often.
+3. **What you did instead**, including the detached mock if you made one.
+
+What happens next is that someone checks whether an existing component already solves it, and whether it is a **component** or a **pattern**. That distinction matters more than it sounds: a component is a thing the system builds and maintains; a pattern is a way of arranging things the system already has. Most requests turn out to be patterns, and the answer is usually a short piece of guidance rather than new code.
+
+**A "no" is a real answer, and it comes with reasons.** Every refusal in this system is written down in the Decision Log with what was asked for and why the answer was no. If your request is refused, you get the argument, and you can argue back.
+
+---
+
+## Arabic and RTL, before you draw
+
+Four things that change what you design, not just how it is built.
+
+**The layout mirrors; the content does not necessarily.** An email address, a phone number, a promo code and a licence plate stay left-to-right inside an Arabic screen — they are compared against something in the world, so their order is not ours to rearrange. Open **Input → Latin Value In An Arabic Page** and type into it.
+
+**Some icons mirror and some must not.** Back and next arrows mirror. Maps, play buttons, clocks, logos and *turn-right* arrows do not — they describe the world, not the reading direction. Turn-right icons catch almost everyone.
+
+**Numbers are Western digits in both languages**, and currency placement flips on its own: `AED 12.50` in English, `12.50 د.إ` in Arabic. You do not place the symbol; the formatter does.
+
+**Never put an instruction in a placeholder.** It disappears at the first keystroke, and in a Latin-value field on an Arabic screen it sits against the wrong edge. Instructions go in the label or the hint underneath.
+
+---
+
+## Where the reasoning lives
+
+Everything here is short on purpose. When you want the argument rather than the rule:
+
+- **Each component's Docs page** — what it does, refuses and guarantees.
+- **The Decision Log** in the repository — one entry per significant call, including every refusal, with what it cost.
+- **The RTL and Arabic rules** — the single place those rules are decided, which every component and every agent reads.
+
+If something here is wrong, or you cannot find what you need, that is a defect in this page. Say so.

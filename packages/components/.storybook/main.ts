@@ -9,7 +9,15 @@ import type { StorybookConfig } from '@storybook/react-vite'
 const repoRoot = fileURLToPath(new URL('../../../', import.meta.url))
 
 const config: StorybookConfig = {
-  stories: ['../src/**/*.stories.tsx'],
+  /*
+    The .mdx glob is listed FIRST, and the order matters: Storybook builds the
+    sidebar in the order files are discovered, and the Start Here page has to be
+    the first thing a designer sees rather than something below Button. The
+    storySort in preview.tsx pins it regardless, but a glob that already reads
+    in the right order means the two mechanisms agree instead of one correcting
+    the other.
+  */
+  stories: ['../src/**/*.mdx', '../src/**/*.stories.tsx'],
   addons: [
     '@storybook/addon-docs',
     // The a11y addon runs axe against every story on render. It is the
