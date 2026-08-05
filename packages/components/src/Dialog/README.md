@@ -88,11 +88,91 @@ This is the first consumer of `surface.scrim`, which [decision 025](../../../../
 
 Measured in dark, which is where the scrim does least: the page composites to `#0a0a0a` behind a panel that stays `#141414`, and `border.default` at `#3d3d3d` plus `shadow.300` carry the edge. 025 says so rather than pretending one value does everything.
 
+## Responsibilities
+
+**What Dialog owns:**
+
+- Driving the element's modal state from `open` — always through `showModal()`, never through the `open` attribute.
+- Placing initial focus once the dialog is actually open, on the action `confirmIsSafe` names. See Focus, above; it is the one guarantee here that the platform does not supply.
+- Reconciling the platform's own closing with the consumer's state. The element closes itself on Escape, and this component reports that upward, so `open` and the DOM never disagree — without that, the next `open={true}` would be a no-op on an element already closed in its own eyes.
+- Collapsing the three ways out — Escape, the backdrop, the dismissing action — into one event.
+- Naming itself. The `<h2>` it renders is wired as the accessible name and the description as the accessible description; neither is optional plumbing the caller can forget.
+- The order of the actions row: dismiss first, confirm last, in both directions.
+- Its own surface — scrim, elevation, edge, and a ceiling on the measure.
+
+**What Dialog does not own, and who does:**
+
+| Not owned | Owner | Why not here |
+|---|---|---|
+| Whether it is open | the call site | It is controlled, and this component never closes itself without saying so through `onDismiss`. A dialog that owned its own visibility would have two sources of truth for one boolean. |
+| The focus trap, the inertness of everything behind it, Escape, and the return of focus to the trigger | the browser | Why the platform element. Each is a thing a `div` re-implementation gets subtly wrong. |
+| What the title, the description and the two labels say | the call site, and eventually the string catalogue | The same reason [`Button`](../Button/README.md) gives: a component that authors a string authors content, and the catalogue does not exist yet. Here it is sharper — the label *is* the destructive signal, so a component supplying one would be supplying the warning. |
+| Whether confirming is in fact the safe choice | the call site, through `confirmIsSafe` | Nothing in the component can tell. It is a fact about the action, not about the box, and it defaults to the cautious reading rather than guessing. |
+| What confirming does | the call site, through `onConfirm` | Same line [decision 020](../../../../decisions/020-the-button-consolidation.md) drew for Button: what pressing it means belongs to the screen. |
+| How the two actions look | [`Button`](../Button/README.md) | Both are a plain `variant="secondary"`. Dialog chooses *that* neither is primary — see above — and nothing else about them. |
+| What the colours and the elevation are | `content/tokens/` | Rule 1, and [decision 025](../../../../decisions/025-the-scrim-is-one-value-and-carries-no-pairing.md) for the one value that was added to serve this component. |
+| Opening it from a real control | the consumer | A dialog raised by a `<div onClick>` has no trigger for focus to return to, and there is nothing this component can do about that from the inside. |
+
+Button's test for that line was *is this true of the control, or true of the situation the control is in?* Dialog's is narrower and easier to apply: **is this true of the box, or true of the decision inside it?** The box is this component. The decision belongs to the screen that raised it.
+
+## Variants
+
+**None, and that is the specification rather than a gap.**
+
+A variant names how something looks. The only thing that varies between one confirmation and another is what it will cost to press the confirming action, and that is meaning — so a variant is the wrong shape for it before any particular variant is proposed.
+
+The obvious proposal is a `destructive` or `danger` dialog: red title, red confirm, a warning icon. It is refused for the same reasons [decision 020](../../../../decisions/020-the-button-consolidation.md) refused a destructive Button variant, one level up:
+
+- **The token layer still has no action-danger semantic**, and inventing one here to serve a dialog would be designing a token backwards from a component exactly as it would have been in Button. 007 keeps `mobility.safety` out of a shared component.
+- **A colour is a weaker carrier than a sentence.** Already argued under *Where the weight of a destructive action goes*: invisible to a colour-blind user, and the same red whether the thing is undoable or merely annoying.
+- **The sharper cost is what a variant would let a caller skip.** Today the only way to say "this is serious" is to write `description` and to name the verb in `confirmLabel`. Add `variant="destructive"` and there is a way to signal severity without writing either — and a red box whose text still reads *Are you sure? / Yes / No* is a dialog that has been decorated instead of written. The absence of the variant is what keeps the writing mandatory.
+- **A variant named after the action is the same refusal again.** 020's second judgment: `confirm` and `cancel` are the semantics of the action rather than the appearance of the control, and a vocabulary that names verbs grows a term per feature until it is a list of the product's screens. `<Dialog variant="delete">` is that list starting.
+
+The axis that genuinely does vary with severity is exposed — as **behaviour, not appearance**. `confirmIsSafe` moves where a habitual Enter lands. It changes no colour, no icon and no size, which is why it is a boolean about the action rather than a name for a look.
+
+There is no size variant either. The width is a ceiling the content stays under rather than a choice a caller makes — see Constraints.
+
+**And no `alertdialog` variant.** That is a different ARIA role rather than a different appearance, and roles are not variants; see Accessibility guaranteed for where this component sits against the APG patterns and why it does not reach for that one.
+
+## States
+
+Two, and the interesting column is not what changes but who owns it.
+
+| State | Trigger | The platform owns | The component owns |
+|---|---|---|---|
+| Closed | `open={false}` | the element is not rendered to the user, nothing is inert, nothing is trapped | calling `close()` when `open` goes false, so the element's own state cannot drift from the prop |
+| Open | `open={true}` → `showModal()` | the top layer, the `::backdrop`, the focus trap, the inertness of the rest of the document, `Escape`, and returning focus to the invoking element on close | placing initial focus **after** the element is open, on the dismissing action or — when `confirmIsSafe` — on the confirming one |
+| Closing | Escape · a backdrop click · the dismissing action | closes the element itself on Escape and fires `close` | listening for `close` and calling `onDismiss`; and, for the backdrop, testing that the click landed on the `<dialog>` rather than on anything inside it |
+
+**There is no third state, and one that looks like a state is not reachable.** `<dialog open>` renders a *non-modal* dialog — no top layer, no trap, nothing inert, Escape doing nothing. It is one attribute away and this component never takes it; see *Why the platform element*.
+
+**Nothing here has a hover, a press or an entrance.** The panel is a surface rather than a control, and the two things inside it that respond to a pointer are `Button`s with `Button`'s states. The absence of an entrance animation is argued in Constraints, and it is a decision rather than a state nobody got round to.
+
+**Focus placement is a one-shot rather than a state.** It happens on the transition into open and never again: changing `confirmIsSafe` on an already-open dialog moves nothing, because the effect that would act on it is guarded on the element not yet being open. That is the right behaviour — focus jumping under a user mid-read is worse than a stale default — but it is a consequence of the guard rather than something separately implemented, and it is recorded here so a later change to that effect does not quietly alter it.
+
 ## Properties exposed
 
 `open` (required) · `title` (required) · `description` · `children` · `dismissLabel` (required) · `onDismiss` (required) · `confirmLabel` · `onConfirm` · `confirmIsSafe`
 
-Three are required and two of those are about the way out: `dismissLabel` and `onDismiss`. There is always one.
+Four are required, and two of those are about the way out: `dismissLabel` and `onDismiss`. There is always one.
+
+## Content designers control
+
+More of this component than of any other in the library, because the whole signal is text.
+
+- **The title.** Required, rendered as a real `<h2>`, and it is the accessible name. **There is no `aria-label` escape hatch and no unlabelled dialog**, which is the one place this spec takes a decision out of a writer's hands on purpose: a modal takes the whole screen away from someone, and arriving in one with no name is arriving somewhere with no idea what it is.
+- **The description.** Optional in the API and effectively required for anything irreversible — it is where the consequence goes, and it is announced on open rather than only seen.
+- **Both action labels.** Name the verb. `Cancel trip` and `Keep trip`, never `Yes` and `No`, and never "Cancel" in a cancel-the-trip dialog — argued above.
+- **Whether there is a confirming action at all.** A dialog with only a way out is an acknowledgement; a dialog with two is a decision. That choice is made by passing labels, not by setting a mode.
+- **Anything longer than a sentence**, through `children`. Most dialogs should not need it, and one that does is usually a dialog that should have been a page.
+
+What a writer may **not** do, and what rejects each:
+
+- **Ship it unnamed.** `title` is required by the type.
+- **Shorten a label to fit.** Nothing here truncates or abbreviates, and §2 is why: Arabic has no abbreviations.
+- **Put the emphasis somewhere other than the words.** There is no primary action, no tone and no icon to reach for. The label is the signal — which is a constraint on the writing before it is a constraint on the API.
+
+The first two items carry the weight, and they are design work rather than a codemod: the two v0 actions this component replaces have no title and no description to migrate, because a control that fires immediately never had to say what it was about to do.
 
 ## Constraints
 
@@ -114,6 +194,12 @@ Three are required and two of those are about the way out: `dismissLabel` and `o
 - Focus returns to the trigger on close.
 - **0 axe violations across all seven stories**, checked in dark + RTL.
 
+**The pattern is APG's Modal Dialog**, and almost none of it is code in this file. `role="dialog"` and `aria-modal="true"` are implicit on a `<dialog>` opened with `showModal()` — neither is written in the source, and writing them would be restating the platform. The focus trap, `Escape`, and the return of focus to the invoking element are the browser's. An accessible name is guaranteed because `title` is required. Every control is a descendant of the dialog because nothing is drawn on the scrim and nothing may be — see The scrim.
+
+What the component contributes is the one thing the pattern leaves to judgment: **initial focus placement**, where APG says that for a destructive action the least harmful option is worth focusing. `confirmIsSafe` is that recommendation turned into an API rather than left to each call site's taste, and it defaults to the cautious reading. Naming it as conformance matters, because otherwise it reads as a preference somebody could reasonably reverse.
+
+**Where it departs, deliberately.** APG has a separate Alert Dialog pattern, `role="alertdialog"`, for a message that interrupts to demand a response. This component never sets a `role` attribute, so it is always a plain dialog. That is not an oversight to be fixed with a prop: `alertdialog` is for messages, and a message that needs no decision belongs in the status region named under What is not here. Adding the role here would make it easier to use this component for exactly the thing it says it is not for.
+
 Two page-level rules — `landmark-one-main` and `page-has-heading-one` — fire on the `FromATrigger` story when axe is run against the whole iframe document. They are not this component: a plain `Button` story reports the identical two. Scoped to the component root, as Storybook's own addon runs it, Dialog is clean.
 
 **What the consumer must still do** is in the contract's `accessibility.consumer_must` — open it from a real control, write labels that name the verb, decide `confirmIsSafe` honestly, and keep the content to a decision.
@@ -127,6 +213,66 @@ Two page-level rules — `landmark-one-main` and `page-has-heading-one` — fire
 - Below a narrow breakpoint the actions stretch rather than huddling at one end — §6 measured Arabic running to 117 per cent of English on some strings, and a wrapped row of end-aligned buttons reads as a mistake.
 
 There is no `[dir='rtl']` selector anywhere.
+
+## Code API mapping
+
+### To the rendered DOM
+
+| Prop | What it renders |
+|---|---|
+| — | `<dialog class="mz-dialog">`, the click target for backdrop dismissal and the carrier of no padding |
+| — | `div.mz-dialog__panel`, everything visible |
+| `title` | `<h2 class="mz-dialog__title" dir="auto">`, with a generated `id` |
+| `description` | `<p class="mz-dialog__description" dir="auto">`, with a generated `id`. Not rendered at all when omitted |
+| `children` | `div.mz-dialog__body`, between the description and the actions. Not rendered when omitted |
+| `dismissLabel` | a `<Button variant="secondary">`, **first** in `div.mz-dialog__actions` |
+| `confirmLabel` | a `<Button variant="secondary">`, **last** in the row — rendered only when `confirmLabel` **and** `onConfirm` are both passed. Either alone renders nothing, which is deliberate: a labelled action with no handler is a button that does nothing |
+
+The ids are generated with `useId`, so two dialogs on one page cannot collide.
+
+### To the platform
+
+| Prop | HTML / ARIA |
+|---|---|
+| `open: true` | `showModal()` — top layer, `::backdrop`, focus trap, the rest of the document inert, `Escape` |
+| `open: false` | `close()` |
+| — | `role="dialog"` and `aria-modal="true"`, implicit and unwritten. See Accessibility guaranteed |
+| `title` | `aria-labelledby`, pointing at the `<h2>` |
+| `description` | `aria-describedby`, and the attribute is **absent** rather than empty when there is no description |
+| `onDismiss` | called by the dismissing `Button`, by a backdrop click, and by the element's own `close` event — which is how `Escape` arrives |
+| `onConfirm` | `click` on the confirming `Button` |
+| `confirmIsSafe` | which of the two buttons receives `.focus()` after `showModal()`, and **nothing else**. With no confirming action there is one button in the row and both readings land on it |
+
+`Escape` is listened for as `close` rather than intercepted as `cancel`. The distinction is the point: the platform's Escape keeps working exactly as defined, and this component only reports that it happened.
+
+### To the token layer
+
+Every value, and the two exceptions are counted in Constraints rather than hidden here.
+
+| Slot | Token |
+|---|---|
+| Scrim | `surface.scrim` |
+| Panel ground | `surface.default` |
+| Panel edge | `border.default` at `stroke.100` |
+| Elevation | `shadow.300` |
+| Corner | `radius.200` |
+| Panel padding | `space.300` |
+| Gap between title, description, body and actions | `space.150` |
+| Gap between the actions, and the space above the row | `space.100` |
+| Viewport margin, in both the inline ceiling and the block one | `space.400` |
+| Dialog text / description text | `text.primary` / `text.secondary` |
+| Title size and weight | `font-size.500`, `font-weight.medium` |
+| Description and body size | `font-size.300` |
+| Leading, all three | `line-height.normal` |
+| Face | `font-family.sans` |
+| Tracking | `letter-spacing.none` |
+| The two actions | `Button`'s own, all of them |
+
+### To Figma
+
+Not yet wired. When Code Connect lands, `title`, `description`, `dismissLabel` and `confirmLabel` are text properties and whether there is a confirming action is a boolean.
+
+`open`, `onDismiss` and `onConfirm` have no Figma counterpart and must not acquire one — a design tool has no state and no handlers. **`confirmIsSafe` is the one to watch.** It changes nothing visible, so there is nothing for a component property to show; giving it one would mean inventing a visual difference on the design side that the component deliberately does not have, which is the destructive variant arriving through the tool that has no contrast gate.
 
 ## How we would deprecate it
 
