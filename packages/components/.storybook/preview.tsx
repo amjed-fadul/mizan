@@ -104,6 +104,19 @@ const preview: Preview = {
   initialGlobals,
   decorators: [withModes],
   parameters: {
+    /*
+      Start Here first, then the components alphabetically.
+
+      It is pinned rather than left to file order because the sidebar is the
+      only navigation a designer has, and the page that explains how to find
+      things is worthless if it is found by scrolling past the things.
+    */
+    options: {
+      storySort: {
+        order: ['Start here', 'Components']
+      }
+    },
+
     controls: { expanded: true },
     a11y: {
       // Report rather than warn silently. A violation that only appears in a
