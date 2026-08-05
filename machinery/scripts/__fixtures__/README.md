@@ -52,6 +52,28 @@ in, and what happens when the answer is none.
   whichever population it named, and the population counts are what decision
   010's revisit trigger reads. Do not add the missing kinds; they are the test.
 
+## `overlay/` and `overlay-collision/` — a mode that is not a dimension
+
+Two tiny token roots, each one dimension of two modes plus one overlay. They are
+separate roots rather than pairs files because an overlay is declared in
+`modes.json`, and a root has exactly one of those.
+
+- `overlay/` is the legal case. The overlay re-points two **invariant** paths at
+  their counterparts, which is an overlay's whole legal surface: a path that does
+  not vary across the matrix can be overridden by one extra block without any
+  question of which block wins. The assertions are counts — two combinations, not
+  four — because the claim being tested is that the overlay does not multiply.
+- `overlay-collision/` is the refusal. Its overlay reaches `ink.base`, which the
+  theme dimension already sets, so the rendered value would be decided by
+  selector specificity rather than by anybody. The adapter throws
+  `overlay-collides-with-dimension`. Do not make it legal by removing the theme
+  override; the collision is the test.
+
+The selector in both is `:lang(zz)` — a real syntax, a reserved-for-private-use
+language subtag, and nothing this repository ships. Machinery emits the selector
+it is given and never parses it, so the fixture proves the pass-through without
+implying that overlays are about language.
+
 ## `targets/` — a floor read in every combination
 
 A self-contained token root and five declaration files for `check-tap-target.mjs`.

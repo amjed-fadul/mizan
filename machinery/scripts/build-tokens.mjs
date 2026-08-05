@@ -301,6 +301,36 @@ function createDictionary(combination, model, { prefix }) {
   });
 }
 
+/**
+ * One instance per overlay, CSS only.
+ *
+ * Simpler than `createDictionary` because an overlay has no matrix behind it:
+ * its adapted document already holds exactly the paths it changes, so there is
+ * nothing to filter and no invariant/varying split to respect. `outputReferences`
+ * stays on so the emitted block aliases the primitive it was written against —
+ * `var(--line-height-arabic-normal)` rather than a re-stated `1.75` — which is
+ * what keeps the two scales from drifting apart in the output the way the
+ * source already keeps them from drifting apart at the top.
+ */
+function createOverlayDictionary(overlay, { prefix }) {
+  return new StyleDictionary({
+    source: [overlay.file],
+    log: { verbosity: 'silent', warnings: 'disabled' },
+    platforms: {
+      css: {
+        transformGroup: 'css',
+        prefix,
+        files: [{
+          destination: `overlay.${overlay.name}.css`,
+          format: 'css/variables',
+          filter: (token) => overlay.changed.has(token.path.join('.')),
+          options: { outputReferences: true, showFileHeader: false, selector: overlay.selector },
+        }],
+      },
+    },
+  });
+}
+
 /* ------------------------------------------------------------------ *
  * Build
  * ------------------------------------------------------------------ */
@@ -352,12 +382,51 @@ async function build(model, outDir, { prefix }) {
     );
   }
 
+  /* Overlay blocks are emitted LAST and the order is load-bearing.
+   *
+   * An overlay may only carry paths that do not vary across the matrix — the
+   * adapter refuses anything else — so every path here also appears in the
+   * plain `:root` block above. `:root` and a subtree selector such as
+   * `:lang(ar)` are both one pseudo-class, so specificity does not separate
+   * them and source order decides. Last wins, and last is where these go.
+   *
+   * They are emitted for CSS only. An overlay applies to a SUBTREE, and the
+   * mobile resource models have no subtree to apply it to: a Swift enum and an
+   * Android resource file are flat name/value tables resolved at build time,
+   * with no equivalent of an element that changes what a name means for its
+   * descendants. Emitting one there would mean picking a winner globally,
+   * which is the opposite of what an overlay is for.
+   */
+  for (const overlay of model.overlays ?? []) {
+    if (overlay.changed.size === 0) continue;
+    const dictionary = createOverlayDictionary(overlay, { prefix });
+    for (const { destination, output } of await dictionary.formatPlatform('css')) {
+      cssBlocks.push({ destination, output: output.trim() });
+    }
+  }
+
+  /* `changed`, not `entries`. An overlay's `entries` is the whole composed set
+     — it always has members — so filtering on it would announce a block in the
+     header that the loop above declined to emit. */
+  const overlayLines = (model.overlays ?? []).filter((o) => o.changed.size > 0);
   const cssHeader = blockComment(headerLines(model.root, [
     '',
     'One file, one block per mode combination, switched at runtime by attribute:',
     '',
     ...model.combinations.map((c) => `  ${cssSelector(c.attributes)}`),
     '',
+    ...(overlayLines.length > 0
+      ? [
+        'Then one block per overlay — a mode that is not a dimension, applied on',
+        'top of whichever combination is active and scoped to a subtree:',
+        '',
+        ...overlayLines.map((o) => `  ${o.selector}`),
+        '',
+        'Overlays come last on purpose: they share a specificity with :root, so',
+        'source order is what makes them win.',
+        '',
+      ]
+      : []),
     'The bare :root block holds every value that is identical in all of them.',
   ]));
 

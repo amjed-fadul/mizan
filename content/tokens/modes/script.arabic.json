@@ -1,0 +1,13 @@
+{
+  "$description": "script: arabic. The Arabic side of decision 013 — one set of typography names, resolved by script. Every value here is an alias to a primitive in typography-arabic.json, not a restated number, so the two scales cannot drift apart: this file states WHICH counterpart applies, and typography-arabic.json states what it is. That split is the same one product.market and product.move use for the text.secondary slots, and it is why this file is four lines of judgment rather than a copy of a scale.\n\nWhat makes this an overlay rather than a dimension is decision 027, and the short version is that no value here depends on theme or product: the Arabic face and the Arabic leading are the same in light Market and dark Move. Declaring script as a third dimension would multiply four combinations into eight, four of which would be byte-identical copies, and would double every declared contrast pairing for a dimension in which not one colour value changes — which is verbatim the refusal decision 014 made of direction. So it is applied as one additional block, scoped by :lang(ar) to a subtree, exactly as 013 said script must be: an Arabic page contains Latin runs and an English page contains Arabic ones, and a script mode applied at the document root is wrong for precisely the content the bidi rules exist for.\n\nWhat is NOT here, and the omission is deliberate: font-size. The optical correction is a multiplier (font-size.arabic-scale, 1.08), and a mode file states values rather than computing them. Stating eight scaled sizes here would be eight numbers to keep in step with eight Latin ones — the exact drift 013 created a single multiplier to avoid — and having the build multiply them would put brand knowledge into machinery/, which rule 2 forbids. So the correction stays where it can be expressed once and relatively, in the component layer, and decision 027 records that as the open half.",
+
+  "font-family": {
+    "sans": { "$value": "{font-family.arabic}" }
+  },
+
+  "line-height": {
+    "tight": { "$value": "{line-height.arabic-tight}" },
+    "normal": { "$value": "{line-height.arabic-normal}" },
+    "relaxed": { "$value": "{line-height.arabic-relaxed}" }
+  }
+}

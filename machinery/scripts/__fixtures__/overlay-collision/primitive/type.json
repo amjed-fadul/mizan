@@ -1,0 +1,14 @@
+{
+  "font-family": {
+    "$type": "fontFamily",
+    "$description": "Fixture only. Two stacks that are counterparts of each other — the shape decision 013 calls a mode rather than a parallel scale.",
+    "sans": { "$value": ["Fixture Sans", "sans-serif"] },
+    "alt-script": { "$value": ["Fixture Alt", "sans-serif"] }
+  },
+  "line-height": {
+    "$type": "number",
+    "$description": "Fixture only. One step and its counterpart, so the overlay has something to re-point.",
+    "normal": { "$value": 1.5 },
+    "alt-script-normal": { "$value": 1.75 }
+  }
+}

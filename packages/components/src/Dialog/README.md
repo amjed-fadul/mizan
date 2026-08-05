@@ -209,7 +209,7 @@ Two page-level rules — `landmark-one-main` and `page-has-heading-one` — fire
 - The actions sit at the reading **end** of their row via `justify-content: flex-end` — a position on the inline axis, not a physical edge — so the row flips with the document.
 - **The dismissing action stays first in reading order** and the committing action last, in both directions. Last is the last thing read before acting.
 - Title and description carry `dir="auto"` as blocks, on the §3 reasoning [`Input`](../Input/README.md) learned by rendering.
-- Arabic line height on the title, because a short heading is exactly where a tight leading looks safe and clips a diacritic.
+- Arabic line height on the title, because a short heading is exactly where a tight leading looks safe and clips a diacritic. **This was false when written** and is true now: the title writes `line-height.normal`, which was 1.5 — a Latin value — until [decision 027](../../../../decisions/027-script-is-an-overlay-not-a-dimension.md) made `:lang(ar)` re-resolve that name to the Arabic step. The declaration did not change; what it resolves to did.
 - Below a narrow breakpoint the actions stretch rather than huddling at one end — §6 measured Arabic running to 117 per cent of English on some strings, and a wrapped row of end-aligned buttons reads as a mistake.
 
 There is no `[dir='rtl']` selector anywhere.

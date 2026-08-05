@@ -12,6 +12,14 @@
  *   :root[data-theme="dark"][data-product="market"]
  *   :root[data-theme="dark"][data-product="move"]
  *
+ * Then one block per overlay — a mode that is not a dimension, applied on
+ * top of whichever combination is active and scoped to a subtree:
+ *
+ *   :lang(ar)
+ *
+ * Overlays come last on purpose: they share a specificity with :root, so
+ * source order is what makes them win.
+ *
  * The bare :root block holds every value that is identical in all of them.
  *
  * Change the source tokens and run `npm run build:tokens`.
@@ -198,4 +206,11 @@
   --text-secondary-market: var(--neutral-400);
   --text-secondary-move: var(--neutral-500);
   --text-secondary: var(--text-secondary-move);
+}
+
+:lang(ar) {
+  --font-family-sans: var(--font-family-arabic);
+  --line-height-normal: var(--line-height-arabic-normal);
+  --line-height-relaxed: var(--line-height-arabic-relaxed);
+  --line-height-tight: var(--line-height-arabic-tight);
 }

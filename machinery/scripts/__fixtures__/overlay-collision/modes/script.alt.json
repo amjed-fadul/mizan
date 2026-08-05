@@ -1,0 +1,4 @@
+{
+  "$description": "Fixture only, and deliberately wrong. This overlay overrides ink.base, which the theme dimension already sets — so the token varies across the matrix AND is claimed by a block that sits on top of all of it. Which value renders would be decided by selector specificity rather than by anybody, so the adapter refuses it. Do not make this legal by removing the theme override; the collision is the test.",
+  "ink": { "base": { "$value": { "colorSpace": "srgb", "components": [0.5, 0.5, 0.5], "alpha": 1 } } }
+}

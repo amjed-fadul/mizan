@@ -1,0 +1,9 @@
+{
+  "$description": "Fixture only. One dimension and one overlay, which is the smallest set that can tell them apart: the dimension multiplies the combinations and the overlay does not.",
+  "dimensions": [
+    { "name": "theme", "modes": ["theme.light", "theme.dark"] }
+  ],
+  "overlays": [
+    { "name": "script", "mode": "script.alt", "selector": ":lang(zz)" }
+  ]
+}

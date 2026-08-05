@@ -1,0 +1,4 @@
+{
+  "$description": "Fixture only. theme: dark. Differs from light so ink.base is a varying path.",
+  "ink": { "base": { "$value": { "colorSpace": "srgb", "components": [1, 1, 1], "alpha": 1 } } }
+}

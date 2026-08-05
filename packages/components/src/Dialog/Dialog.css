@@ -122,10 +122,22 @@
   font-size: var(--font-size-500);
   font-weight: var(--font-weight-medium);
   /*
-    Arabic leading, for the reason §2 gives and §6 measures: مُخفَّض reaches
-    above the font's declared ascent, and a heading set to a Latin-fitted
-    line-height clips the diacritics. A dialog title is short, which is exactly
-    when a tight leading looks safe and is not.
+    The generous step rather than the tight one, for the reason §2 gives and §6
+    measures: مُخفَّض reaches above the font's declared ascent, and a heading set
+    to a Latin-fitted line-height clips the diacritics. A dialog title is short,
+    which is exactly when a tight leading looks safe and is not.
+
+    This comment used to open "Arabic leading", and until decision 027 that was
+    false: line-height.normal was 1.5, a Latin value, and no rule in this file
+    ever reached the Arabic steps. What was actually happening was the right
+    choice described by the wrong mechanism — the generous Latin step, picked so
+    Arabic would not be actively clipped, which is what typography.json's own
+    description says the Latin ratios were set generously FOR.
+
+    It is true now, and nothing in this declaration changed to make it true:
+    `:lang(ar)` re-resolves line-height.normal to the Arabic step at the token
+    layer, so this line is Latin leading on a Latin page and Arabic leading on
+    an Arabic one. That is what a mode is, and it is why the fix was not here.
   */
   line-height: var(--line-height-normal);
 }

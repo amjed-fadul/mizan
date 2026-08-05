@@ -40,6 +40,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { defaultTokensRoot, displayPath, parseArgs } from './lib/tokens.mjs';
 import { narrowFontStack } from './lib/projection.mjs';
+import { adaptTokenSet } from './dtcg-adapt.mjs';
 import {
   BRIDGE_PORT,
   BRIDGE_PROTOCOL,
@@ -362,6 +363,57 @@ assert(/4 excepted check\(s\) from 1 declaration\(s\) \(1 palette, 0 composite\)
 assert(/from 1 declaration\(s\)/.test(kindSplitLine) && /^Result: pass\. 12 check/.test(kindSplitLine),
   'exception kinds: and it counts decisions rather than the checks they waive — one waiver spanning four combinations is one exception, not four',
   kindSplitLine);
+
+/* ------------------------------------------------------------------ *
+ * Overlays — a mode that is deliberately not a dimension
+ *
+ * The whole claim of an overlay is that it costs one block rather than
+ * doubling the matrix. That claim is a count, so it is asserted as one: a root
+ * with one dimension and one overlay must produce the dimension's combinations
+ * and no more. If an overlay ever starts multiplying, every gate that resolves
+ * something in every combination silently doubles its work, and the first
+ * symptom is a slower build rather than a failure — which is why this is
+ * checked rather than trusted.
+ * ------------------------------------------------------------------ */
+
+process.stdout.write('\nOverlays: a mode that applies on top of the matrix rather than multiplying it\n');
+
+const OVERLAY_ROOT = join(FIXTURES, 'overlay');
+const OVERLAY_COLLISION_ROOT = join(FIXTURES, 'overlay-collision');
+
+const overlayModel = adaptTokenSet(OVERLAY_ROOT);
+
+assert(overlayModel.combinations.length === 2,
+  'overlays: a root with one two-mode dimension and one overlay has two combinations — the overlay does not multiply the matrix',
+  `${overlayModel.combinations.length} combination(s), expected 2`);
+
+assert(overlayModel.overlays.length === 1 && overlayModel.overlays[0].selector === ':lang(zz)',
+  'overlays: the selector is carried through verbatim — machinery emits what content states and never parses it',
+  JSON.stringify(overlayModel.overlays.map((o) => o.selector)));
+
+const overlayChanged = [...(overlayModel.overlays[0]?.changed ?? [])].sort().join(', ');
+assert(overlayChanged === 'font-family.sans, line-height.normal',
+  'overlays: the emitted block is the DELTA against the base, not the whole composed set — an overlay that restated every token would bury the two decisions in it',
+  overlayChanged || '(nothing changed)');
+
+/* The document is the whole composed set even though the block is the delta,
+ * and the two are different on purpose: the aliases in the delta point at
+ * primitives that have to be in the same source for Style Dictionary to
+ * resolve them. Getting this wrong fails the build with a reference error,
+ * which is how it was found. */
+assert((overlayModel.overlays[0]?.entries.length ?? 0) > overlayChanged.split(', ').length,
+  'overlays: while the document behind it is the whole composed set, so the aliases in the delta have their targets in the same source',
+  `${overlayModel.overlays[0]?.entries.length} entr(ies) behind a delta of ${overlayChanged.split(', ').length}`);
+
+let overlayCollisionCode = '(no error thrown)';
+try {
+  adaptTokenSet(OVERLAY_COLLISION_ROOT);
+} catch (error) {
+  overlayCollisionCode = error.code ?? error.name;
+}
+assert(overlayCollisionCode === 'overlay-collides-with-dimension',
+  'overlays: an overlay reaching a path the dimension already varies is REFUSED — one block on top of all four combinations would be resolved by selector specificity rather than by a decision',
+  overlayCollisionCode);
 
 /* The backstop, which holds however the scope rules are written. `--mode` is a
  * narrowing of the run rather than of the declaration, so it is the one way left
@@ -1605,7 +1657,8 @@ if (failures.length === 0) {
     + 'accepting a footprint that clears it everywhere and catching the one a mode drops under it; '
     + 'every contrast waiver proven to state which population it belongs to, and the two counted '
     + 'apart by decision rather than by check, so the trigger that watches the palette cannot be '
-    + 'fired by a widened mode scope; '
+    + 'fired by a widened mode scope; an overlay proven to cost one block rather than doubling the '
+    + 'matrix, and to be refused outright when it reaches a path a dimension already owns; '
     + 'and the read bridge proven read-only by construction — one port agreed across four files, '
     + 'a vocabulary of four words none of which is a verb, and a round trip over a real socket.\n'
     + (skipped.length === 0

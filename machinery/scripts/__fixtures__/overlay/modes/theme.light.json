@@ -1,0 +1,4 @@
+{
+  "$description": "Fixture only. theme: light.",
+  "ink": { "base": { "$value": { "colorSpace": "srgb", "components": [0, 0, 0], "alpha": 1 } } }
+}

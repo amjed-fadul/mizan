@@ -307,11 +307,18 @@
           file: MODES_MANIFEST
         });
       }
+      if (isPlainObject(manifest) && Array.isArray(manifest.overlays)) {
+        for (const entry of manifest.overlays) {
+          if (!isPlainObject(entry) || typeof entry.mode !== "string") continue;
+          const claimed = byId.get(entry.mode);
+          if (claimed) claimed.overlay = typeof entry.name === "string" ? entry.name : entry.mode;
+        }
+      }
       for (const mode of byId.values()) {
-        if (!mode.dimension) {
+        if (!mode.dimension && !mode.overlay) {
           diagnostics.error(
             "mode-not-in-manifest",
-            `Mode file ${mode.file} is not listed in any dimension of ${MODES_MANIFEST}. Every mode file must belong to a dimension.`,
+            `Mode file ${mode.file} is not listed in any dimension or overlay of ${MODES_MANIFEST}. Every mode file must belong to one or the other.`,
             { file: mode.file }
           );
         }
