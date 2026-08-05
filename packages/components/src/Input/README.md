@@ -73,6 +73,28 @@ The trailing neutrals thrown to the far end — the bidirectional algorithm work
 
 **Its known weakness is §3's own:** `auto` reads the first strong character and nothing else, so a message opening with a Latin brand name resolves LTR whatever follows it. A caller who knows the direction — and an application with a string catalogue nearly always does — passes a node that declares it. These props are `ReactNode` rather than `string` precisely so that is possible. **`auto` is the floor, not the ceiling.**
 
+## Variants
+
+**None, and that is the finding rather than an omission.** Button's test is that a variant names a legitimate difference in *appearance* — a fill, a label token, an edge, each of them a pairing `pairs.json` declares. Nothing on this component's API changes what the field looks like at rest. A field is a field.
+
+Three props look like variants at a glance and are each something else, which is worth writing down because each will be *proposed* as a variant eventually:
+
+| Prop | Looks like | Actually is |
+|---|---|---|
+| `size` | a variant | the **geometry step**, the same axis Button carries. It names a step and the product mode decides what the step resolves to ([022](../../../../decisions/022-control-geometry-resolves-by-product.md)). Geometry is not appearance in the sense the variant test means, and Button's Variants section already refuses to let the two axes merge. |
+| `type` | a variant | a **platform behaviour**. `email`, `tel`, `url`, `search` and `password` change the software keyboard, the autofill contract and — through §2 above — the resolved direction of the value. Two of them change what the browser renders inside the field, and none of them is a look this system chose. |
+| `valueDirection` | a variant | a **content decision**, argued in full above. It changes which way the value reads, not how the field is drawn. |
+
+### Which differences would be legitimate
+
+The same axis Button's are on: a declared foreground/background pairing. A field variant would have to be a different edge or a different ground, both of which already exist here as **states** rather than variants — `border.control` at rest, `border.error` when invalid, `surface.sunken` when disabled. That is the distinction to hold: **the same field passing through a condition is a state; two fields that are permanently different are variants.** Nothing in this component is permanently different from anything else in it.
+
+### What is not here, and the request each refusal will arrive as
+
+- **No `variant="search"` with an inset icon.** Search is a `type`, and an icon inside the field is a slot this component does not have — it would need a second focusable target inside a control with one, or a decorative element that pushes the text and has to be mirrored under RTL. If search needs a distinct treatment it is a component that composes this one, not a variant of it.
+- **No `variant="ghost"` or borderless field.** The resting edge is the only thing distinguishing a field from static text, and `border.control` on `surface.sunken` is a declared pairing precisely so that boundary is checked. Removing it removes the affordance and the gate at once.
+- **No `variant="inline"` for a label beside the field rather than above it.** That is a layout decision belonging to the form, and the block-axis stack in Anatomy is what keeps `dir` out of this component entirely. An inline label puts a side back into a component that currently has none.
+
 ## States
 
 | state | what changes | how it reaches assistive technology |
