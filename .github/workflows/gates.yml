@@ -75,10 +75,16 @@ jobs:
     # is held here because there is nowhere better: each number is a property of
     # a script's output that the script itself cannot assert about its own run.
     env:
-      CHECK_FLOOR: 44
+      CHECK_FLOOR: 70
       TAP_TARGET_FLOOR: 12
-      SELFTEST_FLOOR: 212
-      DRY_RUN_FLOOR: 187
+      SELFTEST_FLOOR: 224
+      DRY_RUN_FLOOR: 203
+      # Every story is a test: it renders, its play function passes if it has
+      # one, and axe finds nothing — the last of those only because preview.tsx
+      # sets `a11y.test: 'error'` globally. The floor is a coverage floor like
+      # the others: a story deleted, or a `.stories.tsx` that stops being
+      # discovered, drops this number while everything still passes.
+      STORIES_FLOOR: 58
 
     steps:
       - name: Checkout
@@ -138,7 +144,7 @@ jobs:
       # "N footprint check(s)". Schema has no count of its own to floor. The two
       # greps are anchored to each gate's distinct wording, so neither can pick
       # up the other's number, and both take the last matching line.
-      - name: 'Gate 1/6 — npm run check (schema + contrast + tap-target)'
+      - name: 'Gate 1/7 — npm run check (schema + contrast + tap-target)'
         run: |
           npm run check 2>&1 | tee "$RUNNER_TEMP/check.log"
           count=$(sed -nE 's/^Result: pass\. ([0-9]+) check\(s\) passed.*/\1/p' "$RUNNER_TEMP/check.log" | tail -n 1)
@@ -166,10 +172,10 @@ jobs:
       # when a component is added and is not a measure of how much was checked.
       # The claim that this gate rejects things is held by selftest's fixtures,
       # which is where the floor above already covers it.
-      - name: 'Gate 2/6 — npm run check:contracts (contracts against their components)'
+      - name: 'Gate 2/7 — npm run check:contracts (contracts against their components)'
         run: npm run check:contracts
 
-      - name: 'Gate 3/6 — npm run selftest (proves the gates reject things)'
+      - name: 'Gate 3/7 — npm run selftest (proves the gates reject things)'
         run: |
           npm run selftest 2>&1 | tee "$RUNNER_TEMP/selftest.log"
           count=$(sed -nE 's/^Result: pass\. ([0-9]+) assertion\(s\)\..*/\1/p' "$RUNNER_TEMP/selftest.log" | tail -n 1)
@@ -181,7 +187,7 @@ jobs:
             exit 1
           fi
 
-      - name: 'Gate 4/6 — npm run build:tokens'
+      - name: 'Gate 4/7 — npm run build:tokens'
         run: npm run build:tokens
 
       # Nothing in dry-run is conditional the way selftest's read-bridge sections
@@ -189,7 +195,7 @@ jobs:
       # floor is here anyway: it is the file most likely to grow assertions, and
       # a floor that only exists where a regression has already happened once is
       # a record of past incidents rather than a rule.
-      - name: 'Gate 5/6 — npm run figma:dry-run (the plugin against the real token root)'
+      - name: 'Gate 5/7 — npm run figma:dry-run (the plugin against the real token root)'
         run: |
           npm run figma:dry-run 2>&1 | tee "$RUNNER_TEMP/dry-run.log"
           count=$(sed -nE 's/^([0-9]+) assertion\(s\) passed, .*/\1/p' "$RUNNER_TEMP/dry-run.log" | tail -n 1)
@@ -199,8 +205,36 @@ jobs:
             exit 1
           fi
 
-      - name: 'Gate 6/6 — npm run build:preview'
+      - name: 'Gate 6/7 — npm run build:preview'
         run: npm run build:preview
+
+      # The browser the story gate runs in. `--with-deps` installs the system
+      # libraries Chromium needs on a bare runner, which is the difference
+      # between this step and a one-line failure two steps later.
+      - name: Install Chromium (the story gate runs in a real browser)
+        run: npx playwright install chromium --with-deps
+
+      # Gate 7, and the one this repository was describing before it existed.
+      #
+      # The a11y addon and eighteen play functions were configured correctly for
+      # a whole stage and executed by nobody: the addon runs axe on render, so it
+      # ran when a human opened Storybook, and the play functions ran when a
+      # human clicked the story. "a11y addon running" was true of a browser tab
+      # and false of the repository.
+      #
+      # The first run of this gate found a play function that could never have
+      # passed — Dialog's Escape story asserted a user-agent default action that
+      # no dispatched event produces. A check nobody runs is not a weaker check,
+      # it is a claim.
+      - name: 'Gate 7/7 — npm run check:stories (every story renders, plays and clears axe)'
+        run: |
+          npm run check:stories 2>&1 | tee "$RUNNER_TEMP/stories.log"
+          count=$(sed -nE 's/^[[:space:]]*Tests[[:space:]]+([0-9]+) passed \([0-9]+\)$/\1/p' "$RUNNER_TEMP/stories.log" | tail -n 1)
+          echo "stories: ${count:-no} test(s) reported, floor $STORIES_FLOOR"
+          if [ -z "$count" ] || [ "$count" -lt "$STORIES_FLOOR" ]; then
+            echo "::error title=Gate 7: story count regressed::npm run check:stories reported ${count:-no} passing test(s); the floor is $STORIES_FLOOR. Every story is one test, so a dropped count means a story stopped being discovered or was deleted — coverage falling while the gate stays green. Floors go up with work, never down to pass."
+            exit 1
+          fi
 
 # On the sockets, since it is the question a reader of this file will have:
 # `selftest` binds real loopback listeners on 58791–58794 and dials them with
