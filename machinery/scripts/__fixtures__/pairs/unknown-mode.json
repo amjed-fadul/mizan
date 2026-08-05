@@ -19,6 +19,7 @@
     {
       "foreground": "border.default",
       "background": "surface.default",
+      "kind": "palette",
       "reason": "Fixture only. The waiver itself is sound; its mode id is not. An exception that silently stops applying fails safe rather than open, but it is still a documented decision that has quietly left the building, so the unknown id is an error here too.",
       "modes": ["theme.darc"]
     }

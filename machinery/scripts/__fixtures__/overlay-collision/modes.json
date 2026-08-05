@@ -1,0 +1,9 @@
+{
+  "$description": "Fixture only. Same shape as ../overlay, with an overlay that reaches a path the dimension owns.",
+  "dimensions": [
+    { "name": "theme", "modes": ["theme.light", "theme.dark"] }
+  ],
+  "overlays": [
+    { "name": "script", "mode": "script.alt", "selector": ":lang(zz)" }
+  ]
+}

@@ -1,8 +1,12 @@
 # Decision 013 — The Arabic type scale is a mode of the Latin scale, and script becomes a third dimension
 
 **Date:** 2026-08-04
-**Status:** accepted — decided, not yet implemented
+**Status:** accepted — implemented by [027](./027-script-is-an-overlay-not-a-dimension.md), which corrected one consequence
 
+> **~~Implementation gap, stated so it is not mistaken for done.~~ CLOSED by [decision 027](./027-script-is-an-overlay-not-a-dimension.md), and the paragraph below is left standing because one of its claims is what 027 had to correct.** The Arabic tokens are no longer `arabic-*` names nobody resolves: `:lang(ar)` re-points `font-family.sans` and the three `line-height` steps at their counterparts, and all seven components render Arabic in the Arabic face without one of them naming a script. What did NOT happen is the eight-combination matrix this entry predicted — script is applied as an **overlay** rather than as a third dimension, because no Arabic typography value depends on theme or product, so the product would have materialised four identical copies and doubled the work of every gate that resolves something in every combination. That is [014](./014-direction-is-not-a-mode-dimension.md)'s refusal of direction, applied to script. The optical size correction is the one part still owed, and 027 states why a multiplier cannot be a mode value.
+>
+> The original notice, unedited:
+>
 > **Implementation gap, stated so it is not mistaken for done.** `content/tokens/modes.json` still declares two dimensions (theme × product) and `packages/tokens/` still holds four combinations. The Arabic typography tokens currently exist as `arabic-*` primitive names rather than being resolved by a script mode. This entry records the decision and its costs; the eight-combination matrix is Stage 3 work, alongside the Figma mode mapping that makes the ceiling concrete.
 
 ## Context

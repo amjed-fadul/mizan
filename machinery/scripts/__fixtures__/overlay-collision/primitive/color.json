@@ -1,0 +1,7 @@
+{
+  "ink": {
+    "$type": "color",
+    "$description": "Fixture only. Varies by theme, so the model has a varying path for the collision fixture to aim at.",
+    "base": { "$value": { "colorSpace": "srgb", "components": [0, 0, 0], "alpha": 1 } }
+  }
+}

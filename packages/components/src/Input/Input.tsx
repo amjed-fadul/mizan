@@ -154,9 +154,11 @@ export interface InputProps {
    * and `aria-invalid`. Colour alone fails WCAG 1.4.1 for a colour-blind user;
    * a message alone is missed by somebody scanning a long form; `aria-invalid`
    * alone is invisible to everyone looking at the screen. Decision 023 is why
-   * the edge is a colour change rather than a heavier line: there is no
-   * border-width scale, and a thicker edge is the weakest of the three signals
-   * anyway.
+   * the edge is a colour change rather than a heavier line. When 023 was
+   * written there was no border-width scale to reach for; decision 026 has
+   * since built one, and the reasoning is unchanged — a thicker edge is the
+   * weakest of the three signals whether or not the system can name its
+   * thickness.
    */
   invalid?: boolean
 

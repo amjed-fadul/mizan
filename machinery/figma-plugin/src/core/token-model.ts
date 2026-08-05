@@ -108,6 +108,10 @@ export interface ModeRecord {
   id: string;
   file: string;
   dimension?: string;
+  /** Set when the manifest claims this mode as an overlay. Mutually exclusive
+   *  with `dimension`: an overlay is not part of the cartesian product, so it
+   *  never contributes a Figma mode. Present so the file is not an orphan. */
+  overlay?: string;
   overrides: Map<string, TokenNode>;
 }
 
@@ -351,11 +355,38 @@ export function discoverModes(
       });
     }
 
+    /*
+      Overlays are recognised and deliberately NOT projected.
+
+      An overlay is a mode that is not a dimension: it applies on top of
+      whichever combination is active, scoped to a subtree by a selector the
+      token set states. Figma has no equivalent of a subtree scope — a variable
+      resolves per mode of its collection, for the whole document — so the only
+      faithful projection would be a script collection whose modes re-resolve
+      the typography names, and that is a decision about the Figma file rather
+      than a translation of one. Guessing it here would put values into the
+      library that nobody chose.
+
+      So the mode file is claimed (its tokens are not orphans) and skipped (its
+      resolution is not projected). What that costs is stated in decision 027
+      rather than discovered: a designer picking line-height/normal in Figma
+      gets the Latin value, and the Arabic resolution exists in code and not in
+      the library. The primitives it aliases DO project, so the values are all
+      present in the file — it is the mapping between them that is not.
+    */
+    if (isPlainObject(manifest) && Array.isArray(manifest.overlays)) {
+      for (const entry of manifest.overlays as unknown[]) {
+        if (!isPlainObject(entry) || typeof entry.mode !== 'string') continue;
+        const claimed = byId.get(entry.mode);
+        if (claimed) claimed.overlay = typeof entry.name === 'string' ? entry.name : entry.mode;
+      }
+    }
+
     for (const mode of byId.values()) {
-      if (!mode.dimension) {
+      if (!mode.dimension && !mode.overlay) {
         diagnostics.error(
           'mode-not-in-manifest',
-          `Mode file ${mode.file} is not listed in any dimension of ${MODES_MANIFEST}. Every mode file must belong to a dimension.`,
+          `Mode file ${mode.file} is not listed in any dimension or overlay of ${MODES_MANIFEST}. Every mode file must belong to one or the other.`,
           { file: mode.file },
         );
       }

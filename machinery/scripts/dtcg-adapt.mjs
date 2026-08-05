@@ -336,6 +336,78 @@ export function adaptTokenSet(root, { modes: requestedModes = [], diagnostics = 
     }
   }
 
+  /* Overlays.
+   *
+   * An overlay is composed on top of the BASE rather than on top of each
+   * combination, and the delta it contributes is the set of paths whose adapted
+   * value the overlay changed. Composing against the base is correct precisely
+   * because an overlay may only carry paths that do not vary across the matrix:
+   * if it changed a path that a combination also sets, one block would silently
+   * win over the other depending on selector specificity, and which one won
+   * would be a fact about CSS rather than a decision anybody made. So that case
+   * is an error here rather than a rendering surprise later.
+   *
+   * Requested-mode runs skip overlays: `--mode` narrows the build to one
+   * combination for debugging, and an overlay is not a combination.
+   */
+  const overlays = [];
+  if (requestedModes.length === 0) {
+    const baseComposed = composeModes(set, [], diagnostics);
+    const baseValues = new Map();
+    for (const [path, node] of baseComposed) {
+      baseValues.set(path, JSON.stringify(adaptValue(node.rawValue, `base: ${path}`)));
+    }
+
+    for (const overlay of set.overlays ?? []) {
+      const label = `overlay ${overlay.name}`;
+      const composed = composeModes(set, [overlay.mode], diagnostics);
+      resolveTokens(composed, diagnostics, label);
+      if (!diagnostics.ok) {
+        throw new AdaptError(
+          `Overlay "${overlay.name}" did not resolve:\n`
+          + diagnostics.errors.map((e) => `  [${e.code}] ${e.message}`).join('\n'),
+          'resolve-failed',
+        );
+      }
+
+      /* `entries` is the WHOLE composed set and `changed` is what the overlay
+         actually moved. Both are needed and they do different jobs: the
+         document written from `entries` is what Style Dictionary reads, so that
+         an alias like {line-height.arabic-normal} has its target in the same
+         source and resolves; `changed` is the filter that decides what reaches
+         the emitted block. Writing only the changed tokens would produce a
+         document whose every value points outside itself. */
+      const entries = [];
+      const changed = new Set();
+      for (const [path, node] of [...composed].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) {
+        if (!node.type) throw new AdaptError(`Token "${path}" has no resolvable $type.`, 'unresolvable-type');
+        const value = adaptValue(node.rawValue, `${label}: ${path}`);
+        entries.push({ path, type: node.type, value, layer: node.layer });
+        if (JSON.stringify(value) === baseValues.get(path)) continue;
+        if (varying.has(path)) {
+          throw new AdaptError(
+            `Overlay "${overlay.name}" changes "${path}", which already varies across the mode combinations. `
+            + 'An overlay is emitted as one block on top of whichever combination is active, so a path it shares with a '
+            + 'combination would be resolved by selector specificity rather than by a decision. Make it a dimension, or '
+            + 'take the path out of the overlay.',
+            'overlay-collides-with-dimension',
+          );
+        }
+        changed.add(path);
+      }
+
+      overlays.push({
+        name: overlay.name,
+        mode: overlay.mode,
+        selector: overlay.selector,
+        label,
+        entries,
+        changed,
+        document: nest(entries),
+      });
+    }
+  }
+
   return {
     root: set.root,
     empty,
@@ -343,6 +415,7 @@ export function adaptTokenSet(root, { modes: requestedModes = [], diagnostics = 
     modeSource: set.modeSource,
     tokenCount: set.base.size,
     combinations: adapted,
+    overlays,
     invariant,
     varying,
     diagnostics,
@@ -366,6 +439,13 @@ export function writeAdapted(model, outDir) {
     combination.file = file;
   }
 
+  for (const overlay of model.overlays ?? []) {
+    const file = join(outDir, `tokens.overlay.${overlay.name}.json`);
+    writeFileSync(file, `${JSON.stringify(overlay.document, null, 2)}\n`, 'utf8');
+    written.push(file);
+    overlay.file = file;
+  }
+
   const manifest = {
     $comment: 'Build artefact of machinery/scripts/dtcg-adapt.mjs. Not a source, not output. Safe to delete.',
     root: model.root,
@@ -377,6 +457,13 @@ export function writeAdapted(model, outDir) {
       modes: c.modes,
       attributes: c.attributes,
       file: c.file,
+    })),
+    overlays: (model.overlays ?? []).map((o) => ({
+      name: o.name,
+      mode: o.mode,
+      selector: o.selector,
+      paths: [...o.changed].sort(),
+      file: o.file,
     })),
     invariant: [...model.invariant].sort(),
     varying: [...model.varying].sort(),

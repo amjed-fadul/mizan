@@ -60,6 +60,26 @@ import {
   resolveTokens,
 } from './lib/tokens.mjs';
 
+/**
+ * The two reasons a declared pairing is allowed to sit under its threshold.
+ *
+ * `palette` — the colours themselves cannot clear the bar. This is a failure of
+ * the palette, and it is the count [decision 010] watches: a third one is the
+ * stated trigger for reworking the ramp rather than granting a third exception.
+ *
+ * `composite` — the pairing is one tone of a multi-tone construction that is
+ * required to clear its bar *as a whole* rather than tone by tone. Decision 019
+ * granted the first two of these for the two-tone focus indicator, on the
+ * argument that a two-tone indicator only earns its name because each tone is
+ * allowed to vanish somewhere.
+ *
+ * They are separated because 010's trigger is a count, and a count that mixes
+ * the two measures nothing. Two composite exceptions are one construction
+ * working as designed; two palette exceptions are a palette in trouble. The
+ * gate cannot tell them apart from the ratio, so the author states which.
+ */
+const EXCEPTION_KINDS = ['palette', 'composite'];
+
 /* ------------------------------------------------------------------ *
  * Mode scopes
  * ------------------------------------------------------------------ */
@@ -198,7 +218,7 @@ function loadPairs(pairsPath, set, diagnostics) {
         diagnostics.error('invalid-exception', `${where} is not an object.`, { file: pairsPath });
         return;
       }
-      const { foreground, background, reason } = exception;
+      const { foreground, background, reason, kind } = exception;
       if (typeof foreground !== 'string' || typeof background !== 'string') {
         diagnostics.error('invalid-exception', `${where} needs string "foreground" and "background" token paths.`, { file: pairsPath });
         return;
@@ -211,11 +231,22 @@ function loadPairs(pairsPath, set, diagnostics) {
         );
         return;
       }
+      if (!EXCEPTION_KINDS.includes(kind)) {
+        diagnostics.error(
+          'exception-missing-kind',
+          `${where} (${foreground} on ${background}) needs a "kind" of ${EXCEPTION_KINDS.map((k) => `"${k}"`).join(' or ')}. `
+            + 'A "palette" exception is a colour that cannot clear its bar; a "composite" one is a part of a multi-tone construction '
+            + 'that is not required to clear it alone. Decision 010 watches the first count and would be misled by a total that mixes in the second.',
+          { file: pairsPath },
+        );
+        return;
+      }
       const modes = Array.isArray(exception.modes) ? exception.modes : null;
       exceptions.push({
         foreground,
         background,
         reason: reason.trim(),
+        kind,
         modes,
         scope: modeScope(
           modes, set,
@@ -373,6 +404,7 @@ function main(argv) {
       if (exception) {
         result.excepted = true;
         result.reason = exception.reason;
+        result.kind = exception.kind;
       }
       results.push(result);
     }
@@ -465,6 +497,7 @@ function report({ args, set, pairsPath, results, exceptions, diagnostics, empty 
     out.push('  Every exception is reported whether it passes or fails. A silent exception is not an exception, it is a hole.');
     for (const result of excepted) {
       out.push(...formatResult(result, exceptionLabel(result.status)));
+      out.push(`      kind: ${result.kind}`);
       out.push(`      reason: ${result.reason}`);
     }
   }
@@ -488,11 +521,31 @@ function report({ args, set, pairsPath, results, exceptions, diagnostics, empty 
     for (const warning of diagnostics.warnings) out.push(`  [${warning.code}] ${warning.message}`);
   }
 
+  /*
+    The exception count is split by kind rather than totalled, because decision
+    010 watches the palette count and a total that folds in composite parts
+    would report a palette in trouble when what is actually there is a two-tone
+    focus indicator working as designed.
+
+    The split counts DECLARATIONS, while the total beside it counts excepted
+    checks — one declaration is excepted once per combination it applies to, so
+    two waivers can and do produce six excepted results. Both numbers are true
+    and they answer different questions: the total says how much of this run was
+    waived, the split says how many decisions did the waiving. 010's trigger is
+    "a third exception", and a third *decision* is what it means — counting
+    instances would fire it on the day somebody widened one waiver's mode scope,
+    which is not a new exception and not evidence of anything about the palette.
+  */
+  const paletteCount = exceptions.filter((entry) => entry.kind === 'palette').length;
+  const compositeCount = exceptions.filter((entry) => entry.kind === 'composite').length;
+  const exceptionSummary = `${excepted.length} excepted check(s) from ${exceptions.length} declaration(s) `
+    + `(${paletteCount} palette, ${compositeCount} composite)`;
+
   out.push('');
   out.push(
     ok
-      ? `Result: pass. ${passing.length} check(s) passed, ${reported.length} reported without a threshold, ${excepted.length} exception(s) in effect.`
-      : `Result: fail. ${failures.length} failing pair(s), ${diagnostics.errors.length} error(s), ${reported.length} reported without a threshold, ${excepted.length} exception(s) in effect.`,
+      ? `Result: pass. ${passing.length} check(s) passed, ${reported.length} reported without a threshold, ${exceptionSummary}.`
+      : `Result: fail. ${failures.length} failing pair(s), ${diagnostics.errors.length} error(s), ${reported.length} reported without a threshold, ${exceptionSummary}.`,
   );
 
   if (!args.quiet || !ok) process.stdout.write(`${out.join('\n')}\n`);

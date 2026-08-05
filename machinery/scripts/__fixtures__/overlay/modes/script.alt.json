@@ -1,0 +1,5 @@
+{
+  "$description": "Fixture only. The overlay. It re-points two INVARIANT paths at their counterparts, which is the whole legal surface of an overlay: a path that does not vary across the matrix can be overridden by one extra block without any question of which block wins.",
+  "font-family": { "sans": { "$value": "{font-family.alt-script}" } },
+  "line-height": { "normal": { "$value": "{line-height.alt-script-normal}" } }
+}

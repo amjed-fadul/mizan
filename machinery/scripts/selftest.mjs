@@ -40,6 +40,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { defaultTokensRoot, displayPath, parseArgs } from './lib/tokens.mjs';
 import { narrowFontStack } from './lib/projection.mjs';
+import { adaptTokenSet } from './dtcg-adapt.mjs';
 import {
   BRIDGE_PORT,
   BRIDGE_PROTOCOL,
@@ -58,6 +59,7 @@ const FIGMA_ALIGNED = join(FIXTURES, 'figma', 'aligned.json');
 const FIGMA_DRIFTED = join(FIXTURES, 'figma', 'drifted.json');
 const PAIRS_MODE_SCOPES = join(FIXTURES, 'pairs', 'mode-scopes.json');
 const PAIRS_UNKNOWN_MODE = join(FIXTURES, 'pairs', 'unknown-mode.json');
+const PAIRS_MISSING_KIND = join(FIXTURES, 'pairs', 'missing-kind.json');
 const FIGMA_MODE_DELETED = join(FIXTURES, 'figma', 'mode-deleted.json');
 const FIGMA_DIMENSION_FLATTENED = join(FIXTURES, 'figma', 'dimension-flattened.json');
 const TARGETS_ROOT = join(FIXTURES, 'targets', 'tokens');
@@ -310,6 +312,145 @@ assert(unknownCodes.has('exception-mode-unknown'),
 assert((unknownMode.payload?.results ?? []).length === 4,
   'pair scopes: while the sound pair in the same file is still checked in all four combinations — one bad id does not take the run with it',
   JSON.stringify((unknownMode.payload?.results ?? []).map((r) => r.modeLabel)));
+
+/* ------------------------------------------------------------------ *
+ * Exception kinds — decision 019's owed field, and why it is required
+ *
+ * Decision 010's revisit trigger is a COUNT of exceptions. Decision 019 then
+ * granted the first two, both of them parts of one two-tone focus indicator,
+ * and observed that the trigger had stopped measuring what it was written to
+ * measure. The field separates the two populations; these assertions are what
+ * stop it from being optional, because an optional label on half the entries
+ * produces a count that is wrong in a new way rather than a way anybody noticed.
+ * ------------------------------------------------------------------ */
+
+process.stdout.write('\nException kinds: a waiver states which population it belongs to, or it is not a waiver\n');
+
+const missingKind = run('check-contrast.mjs', ['--root', VALID, '--pairs', PAIRS_MISSING_KIND]);
+const kindCodes = codes(missingKind.payload?.errors);
+const kindErrors = (missingKind.payload?.errors ?? []).filter((e) => e.code === 'exception-missing-kind');
+
+assert(missingKind.status === 1 && kindCodes.has('exception-missing-kind'),
+  'exception kinds: an exception with a stated reason and no kind is still an error — the field is required rather than defaulted, because a default would silently enrol every unlabelled waiver in whichever population it named',
+  `exit ${missingKind.status}; ${[...kindCodes].join(', ') || '(no errors)'}`);
+
+assert(kindErrors.length === 2,
+  'exception kinds: and a kind outside the vocabulary is the same error as no kind at all — an invented third word is counted by neither population',
+  `${kindErrors.length} exception-missing-kind error(s), expected 2`);
+
+assert((missingKind.payload?.results ?? []).length === 12,
+  'exception kinds: while all three sound pairs in the same file are still checked in all four combinations — a bad waiver does not take the run with it',
+  `${(missingKind.payload?.results ?? []).length} result(s), expected 12`);
+
+/* The field earns its place only if the split is readable at a glance, which is
+ * the whole of 019's argument: the number 010 watches has to be legible on its
+ * own rather than inferred by subtracting one report from another.
+ *
+ * Asserted against the fixture rather than against content/, because this file
+ * may not know that content/ exists — the valid fixture carries exactly one
+ * exception and it is declared "palette", so the shape of the summary is
+ * provable without a single Mizan token being involved. */
+const kindSplit = spawnSync(process.execPath, [join(SCRIPTS_DIR, 'check-contrast.mjs'), '--root', VALID], { encoding: 'utf8' });
+const kindSplitLine = kindSplit.stdout.split('\n').find((l) => l.startsWith('Result:')) ?? '(no result line)';
+assert(/4 excepted check\(s\) from 1 declaration\(s\) \(1 palette, 0 composite\)/.test(kindSplitLine),
+  'exception kinds: the summary reports the two populations separately, so decision 010\'s trigger can be read without arithmetic',
+  kindSplitLine);
+
+/* The distinction the line above is really protecting. ONE waiver, applying in
+ * four combinations, is four excepted checks — so a split that counted checks
+ * would report "4 palette" for a single decision and fire 010's third-exception
+ * trigger on the first one. The declaration count is the one 010 means. */
+assert(/from 1 declaration\(s\)/.test(kindSplitLine) && /^Result: pass\. 12 check/.test(kindSplitLine),
+  'exception kinds: and it counts decisions rather than the checks they waive — one waiver spanning four combinations is one exception, not four',
+  kindSplitLine);
+
+/* ------------------------------------------------------------------ *
+ * Overlays — a mode that is deliberately not a dimension
+ *
+ * The whole claim of an overlay is that it costs one block rather than
+ * doubling the matrix. That claim is a count, so it is asserted as one: a root
+ * with one dimension and one overlay must produce the dimension's combinations
+ * and no more. If an overlay ever starts multiplying, every gate that resolves
+ * something in every combination silently doubles its work, and the first
+ * symptom is a slower build rather than a failure — which is why this is
+ * checked rather than trusted.
+ * ------------------------------------------------------------------ */
+
+process.stdout.write('\nOverlays: a mode that applies on top of the matrix rather than multiplying it\n');
+
+const OVERLAY_ROOT = join(FIXTURES, 'overlay');
+const OVERLAY_COLLISION_ROOT = join(FIXTURES, 'overlay-collision');
+
+const overlayModel = adaptTokenSet(OVERLAY_ROOT);
+
+assert(overlayModel.combinations.length === 2,
+  'overlays: a root with one two-mode dimension and one overlay has two combinations — the overlay does not multiply the matrix',
+  `${overlayModel.combinations.length} combination(s), expected 2`);
+
+assert(overlayModel.overlays.length === 1 && overlayModel.overlays[0].selector === ':lang(zz)',
+  'overlays: the selector is carried through verbatim — machinery emits what content states and never parses it',
+  JSON.stringify(overlayModel.overlays.map((o) => o.selector)));
+
+const overlayChanged = [...(overlayModel.overlays[0]?.changed ?? [])].sort().join(', ');
+assert(overlayChanged === 'font-family.sans, line-height.normal',
+  'overlays: the emitted block is the DELTA against the base, not the whole composed set — an overlay that restated every token would bury the two decisions in it',
+  overlayChanged || '(nothing changed)');
+
+/* The document is the whole composed set even though the block is the delta,
+ * and the two are different on purpose: the aliases in the delta point at
+ * primitives that have to be in the same source for Style Dictionary to
+ * resolve them. Getting this wrong fails the build with a reference error,
+ * which is how it was found. */
+assert((overlayModel.overlays[0]?.entries.length ?? 0) > overlayChanged.split(', ').length,
+  'overlays: while the document behind it is the whole composed set, so the aliases in the delta have their targets in the same source',
+  `${overlayModel.overlays[0]?.entries.length} entr(ies) behind a delta of ${overlayChanged.split(', ').length}`);
+
+/* The claim the whole mechanism reduces to, asserted against EMITTED CSS
+ * rather than against the model. `:root` and a one-pseudo-class subtree
+ * selector share a specificity, so the overlay wins on source order alone —
+ * and every model-level assertion above would still pass if the loop that
+ * emits it were moved above the combination loop, while Arabic silently
+ * reverted to Latin leading. This is the only check that would notice. */
+const overlayOut = mkdtempSync(join(tmpdir(), 'mizan-overlay-'));
+const overlayBuild = spawnSync(process.execPath, [
+  join(SCRIPTS_DIR, 'build-tokens.mjs'),
+  '--root', OVERLAY_ROOT, '--out', overlayOut, '--work', join(overlayOut, '.work'), '--no-check', '--quiet',
+], { encoding: 'utf8' });
+
+const overlayCss = existsSync(join(overlayOut, 'css', 'tokens.css'))
+  ? readFileSync(join(overlayOut, 'css', 'tokens.css'), 'utf8')
+  : '';
+const selectorOrder = overlayCss.split('\n')
+  .map((l, i) => ({ l: l.trim(), i }))
+  .filter((x) => /^(:root|:lang)/.test(x.l) && x.l.endsWith('{'));
+const lastCombination = selectorOrder.filter((x) => x.l.startsWith(':root')).at(-1);
+const firstOverlay = selectorOrder.find((x) => x.l.startsWith(':lang(zz)'));
+
+assert(overlayBuild.status === 0 && lastCombination && firstOverlay && firstOverlay.i > lastCombination.i,
+  'overlays: the overlay block is emitted AFTER every combination block in the CSS — the mechanism wins on source order, so the order is the mechanism',
+  `exit ${overlayBuild.status}; order: ${selectorOrder.map((x) => x.l).join(' | ') || '(no selectors)'}`);
+
+/* The restore. Custom properties inherit, so an island inside the overlay's
+ * scope that does not itself match the selector would inherit the overlaid
+ * values with nothing to fall back to. For a script overlay that is the
+ * mixed-content case — a Latin run in an Arabic page — which is the case
+ * subtree scoping exists to serve. */
+const restoreBlock = selectorOrder.find((x) => x.l.startsWith(':lang(zz) :not(:lang(zz))'));
+assert(restoreBlock && firstOverlay && restoreBlock.i > firstOverlay.i,
+  'overlays: and a restore block follows it, so a non-matching island inside the scope falls back instead of inheriting the overlay',
+  selectorOrder.map((x) => x.l).join(' | ') || '(no selectors)');
+
+rmSync(overlayOut, { recursive: true, force: true });
+
+let overlayCollisionCode = '(no error thrown)';
+try {
+  adaptTokenSet(OVERLAY_COLLISION_ROOT);
+} catch (error) {
+  overlayCollisionCode = error.code ?? error.name;
+}
+assert(overlayCollisionCode === 'overlay-collides-with-dimension',
+  'overlays: an overlay reaching a path the dimension already varies is REFUSED — one block on top of all four combinations would be resolved by selector specificity rather than by a decision',
+  overlayCollisionCode);
 
 /* The backstop, which holds however the scope rules are written. `--mode` is a
  * narrowing of the run rather than of the declaration, so it is the one way left
@@ -1551,6 +1692,10 @@ if (failures.length === 0) {
     + 'one stops being true, including the edit no comparison against a source could ever catch; '
     + 'the tap-target gate proven to hold a control step to a size bar in every mode combination — '
     + 'accepting a footprint that clears it everywhere and catching the one a mode drops under it; '
+    + 'every contrast waiver proven to state which population it belongs to, and the two counted '
+    + 'apart by decision rather than by check, so the trigger that watches the palette cannot be '
+    + 'fired by a widened mode scope; an overlay proven to cost one block rather than doubling the '
+    + 'matrix, and to be refused outright when it reaches a path a dimension already owns; '
     + 'and the read bridge proven read-only by construction — one port agreed across four files, '
     + 'a vocabulary of four words none of which is a verb, and a round trip over a real socket.\n'
     + (skipped.length === 0

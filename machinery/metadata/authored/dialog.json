@@ -77,7 +77,7 @@
     "No entrance animation. Decision 021's scale exists and is deliberately not reached for.",
     "No way to suppress the dismissing action or intercept Escape.",
     "No focus management beyond placing the initial focus. The trap and the restoration are the platform's.",
-    "Three written numbers, counted exactly rather than rounded to one: the 1px edge (fifth time in the library, still no border-width scale); 28rem, the readable ceiling on the dialog's width; and 26rem, the width below which the actions stretch — which is the library's first viewport-dimension media query and therefore a breakpoint in a system with no breakpoint scale, flagged rather than smoothed."
+    "Two written numbers, counted exactly rather than rounded to one: 28rem, the readable ceiling on the dialog's width; and 26rem, the width below which the actions stretch — which is the library's first viewport-dimension media query and therefore a breakpoint in a system with no breakpoint scale, flagged rather than smoothed."
   ],
   "rtl": {
     "behaviour": [

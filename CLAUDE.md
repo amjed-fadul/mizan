@@ -60,7 +60,7 @@ The only legitimate reasons to edit `legacy/` are: adding *more* period-appropri
 | `machinery/agents/` | agent instruction files, each with a rejection path | agents that review other agents |
 | `content/` | Mizan's tokens, rules, Arabic specifics | pipeline logic, build scripts, anything another brand could reuse |
 | `content/tokens/` | DTCG JSON — the only token editing surface | generated CSS or Figma output |
-| `content/rules/` | the RTL/Arabic rule layer every agent reads | product-specific exceptions |
+| `content/rules/` | the rule layers every agent reads — RTL/Arabic, and motion | product-specific exceptions |
 | `decisions/` | the Decision Log — one entry per significant call | status updates, meeting notes |
 | `brief/` | the Mizan Labs brief: company, products, constraints | fictional coworkers or invented arguments |
 | `packages/` | build output and the artifacts that consume it — generated token files, the preview app | a token value, a hex, or any fact not derived from `content/` at build time |
@@ -70,11 +70,13 @@ The only legitimate reasons to edit `legacy/` are: adding *more* period-appropri
 
 ---
 
-## RTL and Arabic
+## The rule layers
 
-`content/rules/rtl-arabic.md` is the single rule layer. Read it before writing any CSS or component code outside `legacy/`. It is a living document — when a new rule is decided, it goes there, not into a component.
+`content/rules/` holds them, and they are living documents — when a new rule is decided it goes there, not into a component. Read the one that applies before writing any CSS or component code outside `legacy/`.
 
-The short version, which the file expands: logical properties only, never `left`/`right`. `letter-spacing: 0` for Arabic, always. `<bdi>` around mixed-direction content. Directional icons mirror; logos, media controls, and maps do not.
+**`rtl-arabic.md`.** The short version, which the file expands: logical properties only, never `left`/`right`. `letter-spacing: 0` for Arabic, always. `<bdi>` around mixed-direction content. Directional icons mirror; logos, media controls, and maps do not.
+
+**`motion.md`.** Durations are chosen against how much of the screen changes, easings against what the element is doing, and neither is ever written as a literal. Reduced motion means fewer and gentler, never none: remove the movement, keep opacity and colour, and leave indeterminate spinners turning — an indicator that stops indicating reports the wrong system state.
 
 ---
 

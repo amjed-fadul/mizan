@@ -698,33 +698,40 @@
 /* -------------------------------------------------------- the script subtree */
 
 /*
-  Decision 013 makes script a mode of the type scale, scoped by :lang() to the
-  subtree that sets the language rather than attached to :root — an Arabic page
-  contains Latin runs and an English page contains Arabic ones. It is decided
-  and not yet in the token layer, so this is the same approximation the preview
-  uses in src/app.css: :lang() says which, and the two sides are separately
-  named primitives rather than one resolved name.
+  THE FACE AND THE LEADING ARE NO LONGER HERE, and their absence is the point.
 
-  The button carries the face and the leading. Arabic needs more line-height at
-  the same size — 1.45 against Latin's 1.25 — because ascenders, descenders and
-  diacritics occupy more vertical space, and مُخفَّض reaches higher above the
-  baseline than the font's own declared ascent.
+  This block used to carry two rules of its own — font-family.arabic and
+  line-height.arabic-tight, applied under :lang(ar) — described at the time as
+  "the same approximation the preview uses", because decision 013 was decided
+  and not yet in the token layer. Decision 027 put it there. `:lang(ar)` now
+  re-resolves font-family.sans and the three line-height steps in the generated
+  CSS, so this component gets the Arabic face and Arabic leading from the two
+  declarations it already had — `var(--font-family-sans)` and
+  `var(--line-height-tight)` — with nothing here naming a script at all.
 
-  The optical size correction is on the label rather than here, and that is not
-  a stylistic choice. In a font-size declaration `1em` is the *parent's* size,
-  so applying the correction on the element that also sets the size would
-  multiply the wrong number. The label is always an inner element inside
-  whatever set the size, so its 1em is the step being corrected and the
-  correction lands exactly once. 1.08 is bounded rather than chosen: the
-  tightest step in the Latin scale is 12px to 13px, a ratio of 1.083, and a
-  larger correction would make one rung's Arabic indistinguishable from the next
-  rung's Latin.
+  That is what made the defect visible: this component was the ONLY one with
+  those rules, so it was the only one that rendered Arabic correctly, and six
+  others shipped Arabic stories set in whatever face the operating system chose.
+  A rule that has to be remembered per component is a rule six components will
+  forget, which is the argument the rule layer already makes about RTL.
+
+  WHAT REMAINS, and why it could not go with the rest. The optical size
+  correction is a MULTIPLIER, and a mode file states values rather than
+  computing them. Expressing it as a mode would mean either eight hand-written
+  Arabic sizes — the drift decision 013 created a single multiplier to avoid —
+  or teaching the build to multiply, which is brand knowledge and belongs
+  nowhere near machinery/. So it stays here, and decision 027 records it as the
+  open half rather than as an oddity.
+
+  It sits on the label rather than on the control, and that is not stylistic. In
+  a font-size declaration `1em` is the *parent's* size, so applying the
+  correction on the element that also sets the size would multiply the wrong
+  number. The label is always an inner element inside whatever set the size, so
+  its 1em is the step being corrected and the correction lands exactly once.
+  1.08 is bounded rather than chosen: the tightest step in the Latin scale is
+  12px to 13px, a ratio of 1.083, and a larger correction would make one rung's
+  Arabic indistinguishable from the next rung's Latin.
 */
-.mz-button:lang(ar) {
-  font-family: var(--font-family-arabic);
-  line-height: var(--line-height-arabic-tight);
-}
-
 .mz-button__label:lang(ar) {
   font-size: calc(1em * var(--font-size-arabic-scale));
 }

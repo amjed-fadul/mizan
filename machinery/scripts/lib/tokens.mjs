@@ -282,6 +282,27 @@ function flattenDocument(data, { file, layer, diagnostics, into }) {
  *
  * A combination takes exactly one mode from each dimension, so the set of
  * applicable combinations is the cartesian product of the dimensions.
+ *
+ * ## Overlays — a mode that is deliberately not a dimension
+ *
+ * A manifest may also declare `overlays`:
+ *
+ *     "overlays": [ { "name": "script", "mode": "script.arabic",
+ *                     "selector": ":lang(ar)" } ]
+ *
+ * An overlay mode is composed on top of whichever combination is active rather
+ * than taking part in the cartesian product. It exists because the product is
+ * the wrong shape for a mode whose values are identical across the whole
+ * matrix: making such a mode a dimension doubles the combinations, doubles the
+ * blocks emitted, and doubles the work of every gate that resolves something in
+ * every combination — to produce copies that differ in nothing.
+ *
+ * The `selector` is content's to state and is emitted verbatim. Nothing here
+ * parses it or knows what it selects: a dimension answers to an attribute this
+ * file can construct from a name, and an overlay answers to whatever selects
+ * the subtree it applies to, which is a fact about the content and not about
+ * the mechanism. A system whose overlay is `[data-density="compact"]` or
+ * `@media print` gets that string through unchanged.
  */
 export function discoverModes(root, diagnostics) {
   const modesDir = join(root, MODES_DIR);
@@ -330,16 +351,78 @@ export function discoverModes(root, diagnostics) {
       diagnostics.error('invalid-modes-manifest', 'Mode manifest must contain a "dimensions" array.', { file: manifestPath });
     }
 
+    const overlays = [];
+    if (manifest && manifest.overlays !== undefined) {
+      if (!Array.isArray(manifest.overlays)) {
+        diagnostics.error('invalid-modes-manifest', '"overlays" must be an array when present.', { file: manifestPath });
+      } else {
+        for (const overlay of manifest.overlays) {
+          if (!isPlainObject(overlay)
+            || typeof overlay.name !== 'string'
+            || typeof overlay.mode !== 'string'
+            || typeof overlay.selector !== 'string'
+            || overlay.selector.trim() === '') {
+            diagnostics.error(
+              'invalid-modes-manifest',
+              'Each entry of "overlays" needs a string "name", a string "mode" naming a mode file, and a non-empty string "selector". '
+                + 'The selector is content\'s to state: an overlay applies to a subtree, and only the token set knows what selects it.',
+              { file: manifestPath },
+            );
+            continue;
+          }
+          if (!byId.has(overlay.mode)) {
+            diagnostics.error(
+              'mode-file-missing',
+              `Manifest overlay "${overlay.name}" names mode "${overlay.mode}" but ${join(MODES_DIR, `${overlay.mode}.json`)} does not exist.`,
+              { file: manifestPath },
+            );
+            continue;
+          }
+          /* A name reaches a filename in the build directory and identifies the
+             emitted block, so two overlays sharing one would write over each
+             other's intermediate file and emit the second's values under the
+             first's selector — with no error anywhere. */
+          if (overlays.some((existing) => existing.name === overlay.name)) {
+            diagnostics.error(
+              'duplicate-overlay-name',
+              `Two overlays are both named "${overlay.name}". An overlay's name identifies its emitted block and its build artefact, so a duplicate silently overwrites.`,
+              { file: manifestPath },
+            );
+            continue;
+          }
+          /* A mode belongs to a dimension or to an overlay, never both: as a
+             dimension member it joins the cartesian product, and as an overlay
+             it is composed on top of all of it. Claiming both would do each
+             once and the collision guard would catch it later by accident,
+             naming a token path rather than the actual mistake. */
+          if (byId.get(overlay.mode).dimension) {
+            diagnostics.error(
+              'overlay-claims-dimension-mode',
+              `Overlay "${overlay.name}" names mode "${overlay.mode}", which dimension "${byId.get(overlay.mode).dimension}" already claims. `
+                + 'A mode takes part in the cartesian product or is applied on top of it, never both.',
+              { file: manifestPath },
+            );
+            continue;
+          }
+          /* Marked so the not-in-manifest check below passes, and marked as an
+             overlay rather than a dimension so nothing downstream mistakes it
+             for one and multiplies the matrix by it. */
+          byId.get(overlay.mode).overlay = overlay.name;
+          overlays.push({ name: overlay.name, mode: overlay.mode, selector: overlay.selector.trim() });
+        }
+      }
+    }
+
     for (const mode of byId.values()) {
-      if (!mode.dimension) {
+      if (!mode.dimension && !mode.overlay) {
         diagnostics.error(
           'mode-not-in-manifest',
-          `Mode file ${basename(mode.file)} is not listed in any dimension of ${MODES_MANIFEST}. Every mode file must belong to a dimension.`,
+          `Mode file ${basename(mode.file)} is not listed in any dimension or overlay of ${MODES_MANIFEST}. Every mode file must belong to one or the other.`,
           { file: mode.file },
         );
       }
     }
-    return { modes: byId, dimensions, source: manifestPath };
+    return { modes: byId, dimensions, overlays, source: manifestPath };
   }
 
   // Filename convention.
@@ -354,7 +437,12 @@ export function discoverModes(root, diagnostics) {
     .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
     .map(([name, modes]) => ({ name, modes: modes.sort() }));
 
-  return { modes: byId, dimensions, source: 'filenames' };
+  /* The filename convention has no way to express an overlay — a filename says
+     which dimension a mode belongs to and cannot carry a selector, and a
+     selector is the one thing an overlay cannot be given a default for. So a
+     root without a manifest has dimensions and no overlays, which is the
+     honest answer rather than a guessed one. */
+  return { modes: byId, dimensions, overlays: [], source: 'filenames' };
 }
 
 /** Cartesian product of the dimensions: every applicable mode combination. */
@@ -430,6 +518,13 @@ export function loadTokenSet(root, diagnostics = new Diagnostics()) {
     base,
     modes,
     dimensions: modeInfo.dimensions,
+    /* Overlays are returned beside the dimensions and deliberately NOT folded
+       into `combinations`. Every consumer that resolves something in every
+       combination — the contrast gate above all — therefore sees exactly the
+       matrix it saw before any overlay existed, which is the whole point of
+       the distinction rather than an oversight. A consumer that wants them
+       asks for them by name. */
+    overlays: modeInfo.overlays ?? [],
     modeSource: modeInfo.source,
     combinations: modeCombinations(modeInfo.dimensions),
     files,

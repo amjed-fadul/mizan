@@ -3,8 +3,14 @@
 
   "$note": "CROSS-DIMENSION DEPENDENCY, and how it is expressed. A mode file belongs to exactly one dimension and cannot see which mode of the other dimension is active, so a token whose value depends on both cannot be written by either file directly. text.secondary is the one such token: theme sets how light the neutral ramp runs, product picks which step of it applies. It is NOT solved with a theme.dark.product.market-style combination file — a combination takes exactly one mode from each dimension, so a combination file would have to be its own third dimension and would multiply the matrix rather than refine it. It is solved with indirection instead, which the composition rule already supports: aliases are resolved AFTER all overrides are applied, so a mode may swap a token to a different alias and the chain still resolves. Two slot tokens, text.secondary-market and text.secondary-move, are overridden by the theme dimension with the values that theme implies. The product dimension then overrides text.secondary to alias whichever slot applies. Theme runs first and sets the values; product runs second and selects. The convention, stated once so it does not have to be rediscovered: a token depending on N dimensions is expressed as one selector token plus one slot per mode of the LAST-APPLIED dimension it depends on, and the earlier dimensions set the slots. The slots are plumbing and say so in their $description; nothing outside the mode files may reference them.",
 
+  "$overlays-note": "AN OVERLAY IS A MODE THAT IS NOT A DIMENSION. A dimension multiplies: every mode of it takes part in the cartesian product, so adding one doubles the combinations, doubles the blocks the build emits, and doubles the work of every gate that resolves something in every combination. That price is right for a dimension whose values genuinely differ across the matrix and wrong for one whose values are the same everywhere in it. Script is the second kind — the Arabic face and the Arabic leading do not change between light and dark or between Market and Move — so it is applied as one additional block on top of whichever combination is active, rather than as four more copies of the matrix. Decision 014 refused direction as a dimension for the same arithmetic, and decision 027 records this one. An overlay declares the selector it answers to, because only content knows what selects its subtree; machinery emits the selector it is given and never learns what :lang(ar) means.",
+
   "dimensions": [
     { "name": "theme",   "modes": ["theme.light", "theme.dark"] },
     { "name": "product", "modes": ["product.market", "product.move"] }
+  ],
+
+  "overlays": [
+    { "name": "script", "mode": "script.arabic", "selector": ":lang(ar)" }
   ]
 }
